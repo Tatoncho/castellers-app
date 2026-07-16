@@ -34,6 +34,26 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
+app.get('/api/init-db', async (req, res) => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS castellers (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        height INT,
+        weight INT,
+        role TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    res.json({ success: true, message: 'Tabla creada' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // 🚀 Puerto (Render usa process.env.PORT)
 const PORT = process.env.PORT || 3000;
 
