@@ -34,23 +34,44 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-app.get('/api/init-db', async (req, res) => {
+// api para cargar miembros y sus datos
+app.post('/api/castellers', async (req, res) => {
   try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS castellers (
-        id SERIAL PRIMARY KEY,
-        name TEXT NOT NULL,
-        height INT,
-        weight INT,
-        role TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
+    const { name, height, weight, role } = req.body;
 
-    res.json({ success: true, message: 'Tabla creada' });
+    if (!name) {
+      return res.status(400).json({ error: 'Name es obligatorio' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO castellers (name, height, weight, role)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [name, height || null, weight || null, role || null]
+    );
+
+    res.json({
+      success: true,
+      casteller: result.rows[0]
+    });
+
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ error: error.message });
+  }
+});
+
+//api para visualizar miembros
+app.get('/api/castellers', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM castellers ORDER BY id DESC');
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
