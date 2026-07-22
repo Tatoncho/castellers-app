@@ -1,5 +1,3 @@
-console.log("SERVER VERSION 2");
-
 const express = require('express');
 const { Pool } = require('pg');
 
