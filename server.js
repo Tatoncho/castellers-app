@@ -102,8 +102,8 @@ app.get('/api/generar', async (req, res) => {
     // validación
     if (!baix || Segons.length < 1 || Tersos.length < 1 || !acotxador || !enxaneta) {
       return res.json({
-        exit: false,
-        mensaje: 'Faltan rols necesarios para montar un castell'
+        success: false,
+        mensaje: 'Faltan roles necesarios para montar un castell'
       });
     }
 
