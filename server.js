@@ -120,8 +120,9 @@ app.get('/api/generar', async (req, res) => {
 const riesgo = calcularRiesgo(estructura);
 
     res.json({
-      exit: true,
-      estructura
+      success: true,
+      estructura: estructura,
+	  riesgo
     });
 
   } catch (error) {
