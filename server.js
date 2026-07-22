@@ -150,11 +150,9 @@ app.get('/api/generar', async (req, res) => {
     const resultado = await pool.query('SELECT * FROM castellers');
     const castellers = resultado.rows;
 
-    // helpers
     const obtenerMasAltos = (arr) => [...arr].sort((a, b) => b.altura - a.altura);
     const obtenerMasBajos = (arr) => [...arr].sort((a, b) => a.altura - b.altura);
 
-    // estructuras a evaluar
     const estructuras = [
       { nombre: '2d6', segons: 2, tersos: 2 },
       { nombre: '3d7', segons: 3, tersos: 3 },
@@ -162,18 +160,14 @@ app.get('/api/generar', async (req, res) => {
       { nombre: '5d7', segons: 5, tersos: 5 }
     ];
 
-    // función riesgo
     const calcularRiesgo = ({ baix, segons, tersos, pom }) => {
       let riesgo = 0;
 
       const mediaSegons = segons.reduce((acc, s) => acc + s.altura, 0) / segons.length;
       const mediaTersos = tersos.reduce((acc, t) => acc + t.altura, 0) / tersos.length;
 
-      const diff1 = Math.abs(baix.altura - mediaSegons);
-      const diff2 = Math.abs(mediaSegons - mediaTersos);
-
-      riesgo += diff1 * 0.3;
-      riesgo += diff2 * 0.3;
+      riesgo += Math.abs(baix.altura - mediaSegons) * 0.3;
+      riesgo += Math.abs(mediaSegons - mediaTersos) * 0.3;
 
       if (pom.enxaneta.altura > 140) riesgo += 20;
       if (pom.acotxador.altura > 150) riesgo += 15;
@@ -187,7 +181,6 @@ app.get('/api/generar', async (req, res) => {
       return '🔴 Alto';
     };
 
-    // función generadora por estructura
     const generarParaEstructura = (config) => {
 
       const baixos = castellers.filter(c => c.rol === 'baix');
@@ -202,7 +195,6 @@ app.get('/api/generar', async (req, res) => {
         mensajes: []
       };
 
-      // validaciones
       if (baixos.length < 1) {
         resultado.valido = false;
         resultado.mensajes.push('Falta baix');
@@ -230,7 +222,6 @@ app.get('/api/generar', async (req, res) => {
 
       if (!resultado.valido) return resultado;
 
-      // selección óptima
       const estructura = {
         baix: obtenerMasAltos(baixos)[0],
         segons: obtenerMasAltos(segons).slice(0, config.segons),
@@ -249,9 +240,8 @@ app.get('/api/generar', async (req, res) => {
       resultado.nivel = nivel;
 
       return resultado;
-    };
+    }; // 👈 ESTA LÍNEA ES CLAVE (muchas veces falta)
 
-    // generar todas las propuestas
     const propuestas = estructuras.map(config => generarParaEstructura(config));
 
     res.json({
