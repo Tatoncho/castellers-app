@@ -75,6 +75,48 @@ app.get('/api/castellers', async (req, res) => {
   }
 });
 
+//api generar castells
+app.get('/api/generate', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM castellers');
+    const castellers = result.rows;
+
+    if (castellers.length < 7) {
+      return res.json({
+        success: false,
+        message: 'Necesitas al menos 7 castellers'
+      });
+    }
+
+    // 🔥 separar por altura (clave ahora)
+    const sortedByHeight = [...castellers].sort((a, b) => b.height - a.height);
+
+    const structure = {
+      // base: los más altos
+      baix: sortedByHeight[0],
+
+      // tronco medio
+      segons: [sortedByHeight[1], sortedByHeight[2]],
+      tersos: [sortedByHeight[3], sortedByHeight[4]],
+
+      // pom: los más pequeños
+      pom: {
+        acotxador: sortedByHeight[sortedByHeight.length - 2],
+        enxaneta: sortedByHeight[sortedByHeight.length - 1]
+      }
+    };
+
+    res.json({
+      success: true,
+      structure
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 🚀 Puerto (Render usa process.env.PORT)
 const PORT = process.env.PORT || 3000;
 
