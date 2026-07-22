@@ -34,6 +34,75 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
+//defino estructuras
+const estructuras = [
+  { nombre: '2d6', segons: 2, tersos: 2 },
+  { nombre: '3d7', segons: 3, tersos: 3 },
+  { nombre: '4d7', segons: 4, tersos: 4 },
+  { nombre: '5d7', segons: 5, tersos: 5 }
+];
+
+//Función generadora por estructura
+const generarParaEstructura = (castellers, config) => {
+
+  const obtenerMasAltos = (arr) => [...arr].sort((a, b) => b.altura - a.altura);
+  const obtenerMasBajos = (arr) => [...arr].sort((a, b) => a.altura - b.altura);
+
+  const baixos = castellers.filter(c => c.rol === 'baix');
+  const segons = castellers.filter(c => c.rol === 'segon');
+  const tersos = castellers.filter(c => c.rol === 'terç');
+  const acotxadors = castellers.filter(c => c.rol === 'acotxador');
+  const enxanetes = castellers.filter(c => c.rol === 'enxaneta');
+
+  const resultado = {
+    tipo: config.nombre,
+    valido: true,
+    mensajes: []
+  };
+
+  // VALIDACIONES DINÁMICAS
+  if (baixos.length < 1) {
+    resultado.valido = false;
+    resultado.mensajes.push('Falta baix');
+  }
+
+  if (segons.length < config.segons) {
+    resultado.valido = false;
+    resultado.mensajes.push(`Faltan segons (${config.segons})`);
+  }
+
+  if (tersos.length < config.tersos) {
+    resultado.valido = false;
+    resultado.mensajes.push(`Faltan tersos (${config.tersos})`);
+  }
+
+  if (acotxadors.length < 1) {
+    resultado.valido = false;
+    resultado.mensajes.push('Falta acotxador');
+  }
+
+  if (enxanetes.length < 1) {
+    resultado.valido = false;
+    resultado.mensajes.push('Falta enxaneta');
+  }
+
+  if (!resultado.valido) return resultado;
+
+  // SELECCIÓN ÓPTIMA
+  const estructura = {
+    baix: obtenerMasAltos(baixos)[0],
+    segons: obtenerMasAltos(segons).slice(0, config.segons),
+    tersos: obtenerMasAltos(tersos).slice(0, config.tersos),
+    pom: {
+      acotxador: obtenerMasBajos(acotxadors)[0],
+      enxaneta: obtenerMasBajos(enxanetes)[0]
+    }
+  };
+
+  resultado.estructura = estructura;
+  return resultado;
+};
+
 // api para cargar miembros y sus datos
 app.post('/api/castellers', async (req, res) => {
   try {
@@ -85,37 +154,116 @@ app.get('/api/generar', async (req, res) => {
     const obtenerMasAltos = (arr) => [...arr].sort((a, b) => b.altura - a.altura);
     const obtenerMasBajos = (arr) => [...arr].sort((a, b) => a.altura - b.altura);
 
-    // separar rols
-    const baixos = castellers.filter(c => c.rol === 'baix');
-    const segons = castellers.filter(c => c.rol === 'segon');
-    const tersos = castellers.filter(c => c.rol === 'terç');
-    const acotxadors = castellers.filter(c => c.rol === 'acotxador');
-    const enxanetes = castellers.filter(c => c.rol === 'enxaneta');
+    // estructuras a evaluar
+    const estructuras = [
+      { nombre: '2d6', segons: 2, tersos: 2 },
+      { nombre: '3d7', segons: 3, tersos: 3 },
+      { nombre: '4d7', segons: 4, tersos: 4 },
+      { nombre: '5d7', segons: 5, tersos: 5 }
+    ];
 
-    // elegir mejores dentro del rol
-    const baix = obtenerMasAltos(baixos)[0];
-    const Segons = obtenerMasAltos(segons).slice(0, 2);
-    const Tersos = obtenerMasAltos(tersos).slice(0, 2);
-    const acotxador = obtenerMasBajos(acotxadors)[0];
-    const enxaneta = obtenerMasBajos(enxanetes)[0];
+    // función riesgo
+    const calcularRiesgo = ({ baix, segons, tersos, pom }) => {
+      let riesgo = 0;
 
-    // validación
-    if (!baix || Segons.length < 1 || Tersos.length < 1 || !acotxador || !enxaneta) {
-      return res.json({
-        success: false,
-        mensaje: 'Faltan roles necesarios para montar un castell'
-      });
-    }
+      const mediaSegons = segons.reduce((acc, s) => acc + s.altura, 0) / segons.length;
+      const mediaTersos = tersos.reduce((acc, t) => acc + t.altura, 0) / tersos.length;
 
-    const estructura = {
-      baix,
-      segons: Segons,
-      tersos: Tersos,
-      pom: {
-        acotxador,
-        enxaneta
-      }
+      const diff1 = Math.abs(baix.altura - mediaSegons);
+      const diff2 = Math.abs(mediaSegons - mediaTersos);
+
+      riesgo += diff1 * 0.3;
+      riesgo += diff2 * 0.3;
+
+      if (pom.enxaneta.altura > 140) riesgo += 20;
+      if (pom.acotxador.altura > 150) riesgo += 15;
+
+      return Math.round(riesgo);
     };
+
+    const clasificarRiesgo = (riesgo) => {
+      if (riesgo < 20) return '🟢 Seguro';
+      if (riesgo < 50) return '🟡 Medio';
+      return '🔴 Alto';
+    };
+
+    // función generadora por estructura
+    const generarParaEstructura = (config) => {
+
+      const baixos = castellers.filter(c => c.rol === 'baix');
+      const segons = castellers.filter(c => c.rol === 'segon');
+      const tersos = castellers.filter(c => c.rol === 'terç');
+      const acotxadors = castellers.filter(c => c.rol === 'acotxador');
+      const enxanetes = castellers.filter(c => c.rol === 'enxaneta');
+
+      const resultado = {
+        tipo: config.nombre,
+        valido: true,
+        mensajes: []
+      };
+
+      // validaciones
+      if (baixos.length < 1) {
+        resultado.valido = false;
+        resultado.mensajes.push('Falta baix');
+      }
+
+      if (segons.length < config.segons) {
+        resultado.valido = false;
+        resultado.mensajes.push(`Faltan segons (${config.segons})`);
+      }
+
+      if (tersos.length < config.tersos) {
+        resultado.valido = false;
+        resultado.mensajes.push(`Faltan tersos (${config.tersos})`);
+      }
+
+      if (acotxadors.length < 1) {
+        resultado.valido = false;
+        resultado.mensajes.push('Falta acotxador');
+      }
+
+      if (enxanetes.length < 1) {
+        resultado.valido = false;
+        resultado.mensajes.push('Falta enxaneta');
+      }
+
+      if (!resultado.valido) return resultado;
+
+      // selección óptima
+      const estructura = {
+        baix: obtenerMasAltos(baixos)[0],
+        segons: obtenerMasAltos(segons).slice(0, config.segons),
+        tersos: obtenerMasAltos(tersos).slice(0, config.tersos),
+        pom: {
+          acotxador: obtenerMasBajos(acotxadors)[0],
+          enxaneta: obtenerMasBajos(enxanetes)[0]
+        }
+      };
+
+      const riesgo = calcularRiesgo(estructura);
+      const nivel = clasificarRiesgo(riesgo);
+
+      resultado.estructura = estructura;
+      resultado.riesgo = riesgo;
+      resultado.nivel = nivel;
+
+      return resultado;
+    };
+
+    // generar todas las propuestas
+    const propuestas = estructuras.map(config => generarParaEstructura(config));
+
+    res.json({
+      success: true,
+      propuestas
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error generando castells');
+  }
+});
 
 const riesgo = calcularRiesgo(estructura);
 
