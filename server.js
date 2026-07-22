@@ -119,10 +119,19 @@ app.get('/api/generar', async (req, res) => {
 
 const riesgo = calcularRiesgo(estructura);
 
+const clasificarRiesgo = (riesgo) => {
+  if (riesgo < 20) return '🟢 Seguro';
+  if (riesgo < 50) return '🟡 Medio';
+  return '🔴 Alto';
+};
+
+const nivel = clasificarRiesgo(riesgo);
+
     res.json({
       success: true,
       estructura: estructura,
-	  riesgo
+	  riesgo,
+	  nivel
     });
 
   } catch (error) {
