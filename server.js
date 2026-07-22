@@ -12,6 +12,65 @@ const pool = new Pool({
     rejectUnauthorized: false
   }
 });
+//BORRAR
+app.post('/api/temporal-renombrar', async (req, res) => {
+  const querySql = `
+    UPDATE castellers
+    SET nombre = CASE nombre
+        WHEN 'ejemplo1' THEN 'NAN'
+        WHEN 'ejemplo2' THEN 'Guillem'
+        WHEN 'ejemplo3' THEN 'Roger'
+        WHEN 'ejemplo4' THEN 'Laia'
+        WHEN 'ejemplo5' THEN 'Joan'
+        WHEN 'ejemplo6' THEN 'Núria'
+        WHEN 'ejemplo7' THEN 'Oriol'
+        WHEN 'ejemplo8' THEN 'Mireia'
+        WHEN 'ejemplo9' THEN 'Arnau'
+        WHEN 'ejemplo10' THEN 'Anna'
+        WHEN 'ejemplo11' THEN 'Pol'
+        WHEN 'ejemplo12' THEN 'Marta'
+        WHEN 'ejemplo13' THEN 'Xavier'
+        WHEN 'ejemplo14' THEN 'Clara'
+        WHEN 'ejemplo15' THEN 'Pau'
+        WHEN 'ejemplo16' THEN 'Berta'
+        WHEN 'ejemplo17' THEN 'Martí'
+        WHEN 'ejemplo18' THEN 'Virginia'
+        WHEN 'ejemplo19' THEN 'Guillem'
+        WHEN 'ejemplo20' THEN 'Sílvia'
+        WHEN 'ejemplo21' THEN 'Albert'
+        WHEN 'ejemplo22' THEN 'Laura'
+        WHEN 'ejemplo23' THEN 'Roger'
+        WHEN 'ejemplo24' THEN 'Meritxell'
+        WHEN 'ejemplo25' THEN 'Sergi'
+        WHEN 'ejemplo26' THEN 'Eulàlia'
+        WHEN 'ejemplo27' THEN 'Aleix'
+        WHEN 'ejemplo28' THEN 'Judit'
+        WHEN 'ejemplo29' THEN 'Lluís'
+        WHEN 'ejemplo30' THEN 'Aina'
+        WHEN 'ejemplo31' THEN 'Gerard'
+        WHEN 'ejemplo32' THEN 'Neus'
+        WHEN 'ejemplo33' THEN 'Bernat'
+        WHEN 'ejemplo34' THEN 'Ariadna'
+        WHEN 'ejemplo35' THEN 'Joan Carles'
+        ELSE nombre
+    END
+    WHERE nombre LIKE 'ejemplo%';
+  `;
+
+  try {
+    // NOTA: Reemplaza "db" por el nombre de tu variable de conexión de Postgres 
+    // (comúnmente se llama "pool", "client", "db", "sequelize", o "knex")
+    const resultado = await db.query(querySql); 
+    
+    res.status(200).json({
+      mensaje: "¡Actualización completada con éxito!",
+      filasModificadas: resultado.rowCount
+    });
+  } catch (error) {
+    console.error("Error al renombrar castellers:", error);
+    res.status(500).json({ error: "Error interno en la base de datos" });
+  }
+});
 
 // 🔥 TEST DB
 app.get('/api/test-db', async (req, res) => {
