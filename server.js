@@ -37,17 +37,17 @@ app.get('/api/test-db', async (req, res) => {
 // api para cargar miembros y sus datos
 app.post('/api/castellers', async (req, res) => {
   try {
-    const { name, height, weight, role } = req.body;
+    const { nombre, altura, peso, rol } = req.body;
 
-    if (!name) {
-      return res.status(400).json({ error: 'Name es obligatorio' });
+    if (!nombre) {
+      return res.status(400).json({ error: 'nombre es obligatorio' });
     }
 
     const result = await pool.query(
-      `INSERT INTO castellers (name, height, weight, role)
+      `INSERT INTO castellers (nombre, altura, peso, rol)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [name, height || null, weight || null, role || null]
+      [nombre, altura || null, peso || null, rol || null]
     );
 
     res.json({
@@ -82,15 +82,15 @@ app.get('/api/generar', async (req, res) => {
     const castellers = resultado.rows;
 
     // helpers
-    const obtenerMasAltos = (arr) => [...arr].sort((a, b) => b.height - a.height);
-    const obtenerMasBajos = (arr) => [...arr].sort((a, b) => a.height - b.height);
+    const obtenerMasAltos = (arr) => [...arr].sort((a, b) => b.altura - a.altura);
+    const obtenerMasBajos = (arr) => [...arr].sort((a, b) => a.altura - b.altura);
 
-    // separar roles
-    const baixos = castellers.filter(c => c.role === 'baix');
-    const segons = castellers.filter(c => c.role === 'segon');
-    const tersos = castellers.filter(c => c.role === 'terç');
-    const acotxadors = castellers.filter(c => c.role === 'acotxador');
-    const enxanetes = castellers.filter(c => c.role === 'enxaneta');
+    // separar rols
+    const baixos = castellers.filter(c => c.rol === 'baix');
+    const segons = castellers.filter(c => c.rol === 'segon');
+    const tersos = castellers.filter(c => c.rol === 'terç');
+    const acotxadors = castellers.filter(c => c.rol === 'acotxador');
+    const enxanetes = castellers.filter(c => c.rol === 'enxaneta');
 
     // elegir mejores dentro del rol
     const baix = obtenerMasAltos(baixos)[0];
@@ -103,7 +103,7 @@ app.get('/api/generar', async (req, res) => {
     if (!baix || Segons.length < 1 || Tersos.length < 1 || !acotxador || !enxaneta) {
       return res.json({
         exit: false,
-        mensaje: 'Faltan roles necesarios para montar un castell'
+        mensaje: 'Faltan rols necesarios para montar un castell'
       });
     }
 
@@ -125,21 +125,6 @@ app.get('/api/generar', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).send('Error generando castell');
-  }
-});
-
-//BORRAR
-app.get('/api/alter-db', async (req, res) => {
-  try {
-    await pool.query(`ALTER TABLE castellers RENAME COLUMN name TO nombre`);
-    await pool.query(`ALTER TABLE castellers RENAME COLUMN height TO altura`);
-    await pool.query(`ALTER TABLE castellers RENAME COLUMN weight TO peso`);
-    await pool.query(`ALTER TABLE castellers RENAME COLUMN role TO rol`);
-
-    res.send('✅ Base de datos actualizada a español');
-  } catch (error) {
-    console.error(error);
-    res.status(500).send(error.message);
   }
 });
 
