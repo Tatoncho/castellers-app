@@ -152,17 +152,51 @@ const generarParaEstructura = (castellers, config) => {
 // api para cargar miembros y sus datos
 app.post('/api/castellers', async (req, res) => {
   try {
-    const { nombre, altura, peso, rol } = req.body;
+    const {
+      nombre, altura, peso, rol,
+      external_id, primer_cognom, segon_cognom, alias, posicio_pinya,
+      te_app, email, mobil, data_naixement, data_entrega_samarreta,
+      revisat, estat_acollida, habitual, permisos_app, integrant_colla,
+      lesionat_llarga_durada, formularis
+    } = req.body;
 
     if (!nombre) {
       return res.status(400).json({ error: 'nombre es obligatorio' });
     }
 
     const result = await pool.query(
-      `INSERT INTO castellers (nombre, altura, peso, rol)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO castellers (
+         nombre, altura, peso, rol,
+         external_id, primer_cognom, segon_cognom, alias, posicio_pinya,
+         te_app, email, mobil, data_naixement, data_entrega_samarreta,
+         revisat, estat_acollida, habitual, permisos_app, integrant_colla,
+         lesionat_llarga_durada, formularis
+       )
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
        RETURNING *`,
-      [nombre, altura || null, peso || null, rol || null]
+      [
+        nombre,
+        altura || null,
+        peso || null,
+        rol || null,
+        external_id || null,
+        primer_cognom || null,
+        segon_cognom || null,
+        alias || null,
+        posicio_pinya || null,
+        te_app === undefined ? null : te_app,
+        email || null,
+        mobil || null,
+        data_naixement || null,
+        data_entrega_samarreta || null,
+        revisat === undefined ? null : revisat,
+        estat_acollida || null,
+        habitual === undefined ? null : habitual,
+        permisos_app || null,
+        integrant_colla || null,
+        lesionat_llarga_durada === undefined ? null : lesionat_llarga_durada,
+        formularis === undefined ? null : formularis
+      ]
     );
 
     res.json({
@@ -173,6 +207,29 @@ app.post('/api/castellers', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ⚠️ TEMPORAL: borra TODOS los castellers cargados. Sin ?confirm=si solo
+// muestra un aviso (no hace nada); con ?confirm=si sí que vacía la tabla.
+// Bórrala del código en cuanto hayas reimportado el CSV.
+app.get('/api/reset-castellers', async (req, res) => {
+  if (req.query.confirm !== 'si') {
+    return res.json({
+      success: false,
+      aviso: 'Esto borrará TODOS los castellers de la base de datos. Añade ?confirm=si a la URL para confirmar, ej: /api/reset-castellers?confirm=si'
+    });
+  }
+
+  try {
+    await pool.query('TRUNCATE TABLE castellers RESTART IDENTITY');
+    res.json({
+      success: true,
+      mensaje: 'Tabla castellers vaciada. Ya puedes importar el CSV.'
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
