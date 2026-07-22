@@ -81,28 +81,28 @@ app.get('/api/generate', async (req, res) => {
     const result = await pool.query('SELECT * FROM castellers');
     const castellers = result.rows;
 
-    if (castellers.length < 7) {
+    // Separar por roles
+    const baix = castellers.find(c => c.role === 'baix');
+    const segons = castellers.filter(c => c.role === 'segon');
+    const tersos = castellers.filter(c => c.role === 'terç');
+    const acotxador = castellers.find(c => c.role === 'acotxador');
+    const enxaneta = castellers.find(c => c.role === 'enxaneta');
+
+    // Validación mínima
+    if (!baix || segons.length < 1 || tersos.length < 1 || !acotxador || !enxaneta) {
       return res.json({
         success: false,
-        message: 'Necesitas al menos 7 castellers'
+        message: 'Faltan roles necesarios para montar un castell'
       });
     }
 
-    // 🔥 separar por altura (clave ahora)
-    const sortedByHeight = [...castellers].sort((a, b) => b.height - a.height);
-
     const structure = {
-      // base: los más altos
-      baix: sortedByHeight[0],
-
-      // tronco medio
-      segons: [sortedByHeight[1], sortedByHeight[2]],
-      tersos: [sortedByHeight[3], sortedByHeight[4]],
-
-      // pom: los más pequeños
+      baix,
+      segons: segons.slice(0, 2),
+      tersos: tersos.slice(0, 2),
       pom: {
-        acotxador: sortedByHeight[sortedByHeight.length - 2],
-        enxaneta: sortedByHeight[sortedByHeight.length - 1]
+        acotxador,
+        enxaneta
       }
     };
 
@@ -111,9 +111,9 @@ app.get('/api/generate', async (req, res) => {
       structure
     });
 
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error generando castell');
   }
 });
 
