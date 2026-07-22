@@ -247,7 +247,7 @@ app.get('/api/generar', async (req, res) => {
     res.json({
       success: true,
       propuestas
-    });
+    }
 
   } catch (error) {
     console.error(error);
