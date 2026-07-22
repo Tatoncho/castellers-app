@@ -30,56 +30,6 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-// ⚠️ TEMPORAL: ejecuta la migración de columnas nuevas (alineación con el CSV)
-// al cargar esta URL. BÓRRALA (o comenta esta ruta entera) en cuanto la hayas
-// ejecutado una vez — deja tu base de datos abierta a cualquiera con el link.
-app.get('/api/migrate', async (req, res) => {
-  const statements = [
-    `ALTER TABLE castellers ADD COLUMN IF NOT EXISTS external_id INTEGER UNIQUE`,
-    `ALTER TABLE castellers ADD COLUMN IF NOT EXISTS primer_cognom TEXT`,
-    `ALTER TABLE castellers ADD COLUMN IF NOT EXISTS segon_cognom TEXT`,
-    `ALTER TABLE castellers ADD COLUMN IF NOT EXISTS alias TEXT`,
-    `ALTER TABLE castellers ADD COLUMN IF NOT EXISTS posicio_pinya TEXT`,
-    `ALTER TABLE castellers ADD COLUMN IF NOT EXISTS te_app BOOLEAN`,
-    `ALTER TABLE castellers ADD COLUMN IF NOT EXISTS email TEXT`,
-    `ALTER TABLE castellers ADD COLUMN IF NOT EXISTS mobil TEXT`,
-    `ALTER TABLE castellers ADD COLUMN IF NOT EXISTS data_naixement DATE`,
-    `ALTER TABLE castellers ADD COLUMN IF NOT EXISTS data_entrega_samarreta DATE`,
-    `ALTER TABLE castellers ADD COLUMN IF NOT EXISTS revisat BOOLEAN`,
-    `ALTER TABLE castellers ADD COLUMN IF NOT EXISTS estat_acollida TEXT`,
-    `ALTER TABLE castellers ADD COLUMN IF NOT EXISTS habitual BOOLEAN`,
-    `ALTER TABLE castellers ADD COLUMN IF NOT EXISTS permisos_app TEXT`,
-    `ALTER TABLE castellers ADD COLUMN IF NOT EXISTS integrant_colla TEXT`,
-    `ALTER TABLE castellers ADD COLUMN IF NOT EXISTS lesionat_llarga_durada BOOLEAN`,
-    `ALTER TABLE castellers ADD COLUMN IF NOT EXISTS formularis INTEGER`
-  ];
-
-  const resultados = [];
-  try {
-    for (const sql of statements) {
-      try {
-        await pool.query(sql);
-        resultados.push({ sql, ok: true });
-      } catch (err) {
-        resultados.push({ sql, ok: false, error: err.message });
-      }
-    }
-
-    const fallos = resultados.filter(r => !r.ok);
-    res.json({
-      success: fallos.length === 0,
-      total: statements.length,
-      aplicadas: resultados.length - fallos.length,
-      fallidas: fallos.length,
-      detalle: resultados,
-      aviso: 'Recuerda eliminar esta ruta (/api/migrate) del server.js ahora que ya la has ejecutado.'
-    });
-  } catch (error) {
-    console.error('Error migrando:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
 //defino estructuras
 const estructuras = [
   { nombre: '2d6', segons: 2, tersos: 2 },
