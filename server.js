@@ -76,30 +76,41 @@ app.get('/api/castellers', async (req, res) => {
 });
 
 //api generar castells
-app.get('/api/generate', async (req, res) => {
+app.get('/api/generar', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM castellers');
-    const castellers = result.rows;
+    const resultado = await pool.query('SELECT * FROM castellers');
+    const castellers = resultado.rows;
 
-    // Separar por roles
-    const baix = castellers.find(c => c.role === 'baix');
+    // helpers
+    const obtenerMasAltos = (arr) => [...arr].sort((a, b) => b.height - a.height);
+    const obtenerMasBajos = (arr) => [...arr].sort((a, b) => a.height - b.height);
+
+    // separar roles
+    const baixos = castellers.filter(c => c.role === 'baix');
     const segons = castellers.filter(c => c.role === 'segon');
     const tersos = castellers.filter(c => c.role === 'terç');
-    const acotxador = castellers.find(c => c.role === 'acotxador');
-    const enxaneta = castellers.find(c => c.role === 'enxaneta');
+    const acotxadors = castellers.filter(c => c.role === 'acotxador');
+    const enxanetes = castellers.filter(c => c.role === 'enxaneta');
 
-    // Validación mínima
-    if (!baix || segons.length < 1 || tersos.length < 1 || !acotxador || !enxaneta) {
+    // elegir mejores dentro del rol
+    const baix = obtenerMasAltos(baixos)[0];
+    const Segons = obtenerMasAltos(segons).slice(0, 2);
+    const Tersos = obtenerMasAltos(tersos).slice(0, 2);
+    const acotxador = obtenerMasBajos(acotxadors)[0];
+    const enxaneta = obtenerMasBajos(enxanetes)[0];
+
+    // validación
+    if (!baix || Segons.length < 1 || Tersos.length < 1 || !acotxador || !enxaneta) {
       return res.json({
-        success: false,
-        message: 'Faltan roles necesarios para montar un castell'
+        exit: false,
+        mensaje: 'Faltan roles necesarios para montar un castell'
       });
     }
 
-    const structure = {
+    const estructura = {
       baix,
-      segons: segons.slice(0, 2),
-      tersos: tersos.slice(0, 2),
+      segons: Segons,
+      tersos: Tersos,
       pom: {
         acotxador,
         enxaneta
@@ -107,12 +118,12 @@ app.get('/api/generate', async (req, res) => {
     };
 
     res.json({
-      success: true,
-      structure
+      exit: true,
+      estructura
     });
 
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error(error);
     res.status(500).send('Error generando castell');
   }
 });
