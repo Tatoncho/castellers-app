@@ -128,6 +128,21 @@ app.get('/api/generar', async (req, res) => {
   }
 });
 
+//BORRAR
+app.get('/api/alter-db', async (req, res) => {
+  try {
+    await pool.query(`ALTER TABLE castellers RENAME COLUMN name TO nombre`);
+    await pool.query(`ALTER TABLE castellers RENAME COLUMN height TO altura`);
+    await pool.query(`ALTER TABLE castellers RENAME COLUMN weight TO peso`);
+    await pool.query(`ALTER TABLE castellers RENAME COLUMN role TO rol`);
+
+    res.send('✅ Base de datos actualizada a español');
+  } catch (error) {
+    console.error(error);
+    res.status(500).send(error.message);
+  }
+});
+
 // 🚀 Puerto (Render usa process.env.PORT)
 const PORT = process.env.PORT || 3000;
 
