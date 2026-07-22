@@ -60,7 +60,7 @@ app.post('/api/temporal-renombrar', async (req, res) => {
   try {
     // NOTA: Reemplaza "db" por el nombre de tu variable de conexión de Postgres 
     // (comúnmente se llama "pool", "client", "db", "sequelize", o "knex")
-    const resultado = await db.query(querySql); 
+    const resultado = await pool.query(querySql); 
     
     res.status(200).json({
       mensaje: "¡Actualización completada con éxito!",
