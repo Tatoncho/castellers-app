@@ -36,10 +36,8 @@
   }
 
   ::selection { background: var(--thread); color: var(--paper); }
-
   a { color: var(--thread); }
 
-  /* -------- Header / signature -------- */
   header.top {
     padding: 40px 28px 28px;
     border-bottom: 1px solid var(--line);
@@ -47,10 +45,8 @@
     align-items: center;
     gap: 22px;
   }
-
   .mark { flex-shrink: 0; }
   .mark svg { display: block; }
-
   .wordmark h1 {
     font-family: 'Fraunces', serif;
     font-weight: 700;
@@ -67,10 +63,7 @@
     color: var(--ink-soft);
     margin-top: 4px;
   }
-  .wordmark .tag em {
-    font-style: normal;
-    color: var(--thread);
-  }
+  .wordmark .tag em { font-style: normal; color: var(--thread); }
 
   main {
     max-width: 1080px;
@@ -80,16 +73,13 @@
     grid-template-columns: 1fr 1.35fr;
     gap: 30px;
   }
-  @media (max-width: 860px) {
-    main { grid-template-columns: 1fr; }
-  }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
 
   section.panel {
     background: var(--paper-card);
     border: 1px solid var(--line);
     border-radius: var(--radius);
   }
-
   .panel-head {
     padding: 16px 20px 14px;
     border-bottom: 1px solid var(--line);
@@ -109,15 +99,13 @@
     font-size: 12px;
     color: var(--ink-soft);
   }
-
   .panel-body { padding: 18px 20px 22px; }
 
-  /* -------- Form -------- */
   form.add-member {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px 12px;
-    margin-bottom: 18px;
+    margin-bottom: 14px;
   }
   form.add-member .full { grid-column: 1 / -1; }
 
@@ -130,7 +118,6 @@
     color: var(--ink-soft);
     margin-bottom: 5px;
   }
-
   input, select {
     width: 100%;
     padding: 9px 10px;
@@ -145,7 +132,6 @@
     outline: 2px solid var(--thread);
     outline-offset: 1px;
   }
-
   button {
     cursor: pointer;
     border: none;
@@ -156,32 +142,41 @@
     text-transform: uppercase;
     padding: 11px 16px;
   }
-  button.primary {
-    background: var(--thread);
-    color: var(--paper-card);
-    grid-column: 1 / -1;
-  }
+  button.primary { background: var(--thread); color: var(--paper-card); grid-column: 1 / -1; }
   button.primary:hover { background: #862432; }
-  button.ghost {
-    background: transparent;
-    border: 1px solid var(--ink);
-    color: var(--ink);
-  }
+  button.ghost { background: transparent; border: 1px solid var(--ink); color: var(--ink); }
   button.ghost:hover { background: var(--ink); color: var(--paper-card); }
-  button:disabled { opacity: 0.5; cursor: default; }
+  button.small { padding: 5px 9px; font-size: 11px; }
+  button:disabled { opacity: 0.45; cursor: default; }
 
-  .hint {
-    font-size: 12px;
-    color: var(--ink-soft);
-    margin: -8px 0 16px;
-  }
+  .hint { font-size: 12px; color: var(--ink-soft); margin: 0 0 14px; }
 
-  /* -------- Members table -------- */
-  table.members {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13.5px;
+  .import-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 12px;
+    margin-bottom: 18px;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    background: var(--paper);
   }
+  .import-row .file-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: 1px solid var(--ink);
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+  .import-row .file-label:hover { background: var(--ink); color: var(--paper-card); }
+  .import-row input[type="file"] { display: none; }
+  .import-row .import-status { font-size: 12px; color: var(--ink-soft); }
+
+  table.members { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   table.members th {
     text-align: left;
     font-family: 'IBM Plex Mono', monospace;
@@ -192,11 +187,9 @@
     padding: 6px 8px;
     border-bottom: 1px solid var(--line);
   }
-  table.members td {
-    padding: 8px;
-    border-bottom: 1px solid var(--line);
-  }
+  table.members td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
   table.members tr:last-child td { border-bottom: none; }
+  table.members td input, table.members td select { padding: 6px 7px; font-size: 13px; }
   .rol-tag {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
@@ -206,95 +199,51 @@
     color: var(--ink-soft);
     white-space: nowrap;
   }
-  .empty-note {
-    font-size: 13px;
-    color: var(--ink-soft);
-    font-style: italic;
-    padding: 6px 0;
-  }
+  .empty-note { font-size: 13px; color: var(--ink-soft); font-style: italic; padding: 6px 0; }
+  .row-actions { display: flex; gap: 6px; white-space: nowrap; }
 
-  /* -------- Generator -------- */
-  .gen-cta {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 20px;
-  }
+  .gen-cta { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
   .gen-cta button.primary { grid-column: unset; flex: 0 0 auto; }
   .gen-cta .note { font-size: 12.5px; color: var(--ink-soft); }
 
   .proposals { display: grid; gap: 14px; }
 
-  .card {
+  button.card {
+    display: block;
+    width: 100%;
+    text-align: left;
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: var(--paper);
     padding: 14px 16px 16px;
     position: relative;
+    font-family: inherit;
+    text-transform: none;
+    letter-spacing: normal;
   }
-  .card.invalid { opacity: 0.62; }
+  button.card:not(:disabled):hover { border-color: var(--thread); background: #EFE9DB; }
+  button.card.invalid { opacity: 0.55; cursor: default; }
 
-  .card-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 4px;
-  }
-  .card-top .tipo {
-    font-family: 'Fraunces', serif;
-    font-weight: 700;
-    font-size: 20px;
-  }
-  .risk {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px;
-    letter-spacing: 0.03em;
-  }
-  .risk .dot {
-    width: 9px; height: 9px; border-radius: 50%;
-    display: inline-block;
-  }
+  .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .card-top .tipo { font-family: 'Fraunces', serif; font-weight: 700; font-size: 20px; color: var(--ink); }
+  .risk { display: inline-flex; align-items: center; gap: 7px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.03em; }
+  .risk .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
   .risk .dot.ok { background: var(--ok); }
   .risk .dot.mid { background: var(--mid); }
   .risk .dot.bad { background: var(--bad); }
   .risk .dot.none { background: var(--ink-soft); }
 
-  .messages {
-    font-size: 12.5px;
-    color: var(--thread);
-    margin-top: 6px;
-    line-height: 1.6;
-  }
+  .messages { font-size: 12.5px; color: var(--thread); margin-top: 6px; line-height: 1.6; }
 
-  /* tapering tower */
-  .tower {
-    margin-top: 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-  }
+  .tower { margin-top: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .level {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    border: 1px solid var(--line);
-    background: var(--paper-card);
-    border-radius: var(--radius);
-    padding: 5px 8px;
-    font-size: 12px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    border: 1px solid var(--line); background: var(--paper-card);
+    border-radius: var(--radius); padding: 5px 8px; font-size: 12px;
   }
   .level .role-label {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 9.5px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--ink-soft);
-    flex-shrink: 0;
+    font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--ink-soft); flex-shrink: 0;
   }
   .level .names { font-weight: 500; }
   .level.pom { width: 46%; }
@@ -302,20 +251,28 @@
   .level.segons { width: 78%; }
   .level.baix { width: 100%; }
 
-  footer.note-strip {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 0 28px 60px;
-    font-size: 12px;
-    color: var(--ink-soft);
+  .card-cta {
+    margin-top: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    color: var(--thread); text-transform: uppercase; letter-spacing: 0.05em; text-align: right;
   }
-  footer.note-strip code {
-    font-family: 'IBM Plex Mono', monospace;
-    background: var(--paper-card);
-    padding: 1px 5px;
-    border-radius: 3px;
-    border: 1px solid var(--line);
+
+  footer.note-strip { max-width: 1080px; margin: 0 auto; padding: 0 28px 60px; font-size: 12px; color: var(--ink-soft); }
+  footer.note-strip code { font-family: 'IBM Plex Mono', monospace; background: var(--paper-card); padding: 1px 5px; border-radius: 3px; border: 1px solid var(--line); }
+
+  /* modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(32,36,31,0.55);
+    align-items: center; justify-content: center; padding: 24px; z-index: 50;
   }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--paper); border-radius: var(--radius); max-width: 96vw; max-height: 92vh;
+    overflow: auto; padding: 18px; border: 1px solid var(--line);
+  }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; }
+  .modal-head h3 { font-family: 'Fraunces', serif; font-size: 20px; margin: 0; }
+  .modal-actions { display: flex; gap: 8px; }
+  #fitxa-canvas { display: block; background: #fff; border: 1px solid var(--line); max-width: 100%; height: auto; }
 </style>
 </head>
 <body>
@@ -368,14 +325,20 @@
         </div>
         <button class="primary" type="submit">Afegir casteller</button>
       </form>
-      <p class="hint">El pes es demana per si el necessitem més endavant — ara mateix el generador només fa servir alçada i rol.</p>
+      <p class="hint">El pes es demana per si el necessitem més endavant — el generador ara mateix només fa servir alçada i rol.</p>
+
+      <div class="import-row">
+        <label class="file-label" for="csv-input">Importar CSV de Spond</label>
+        <input type="file" id="csv-input" accept=".csv,text/csv">
+        <span class="import-status" id="import-status">Exporta l'assistència des de Spond i puja aquí el CSV.</span>
+      </div>
 
       <table class="members" id="members-table">
         <thead>
-          <tr><th>Nom</th><th>Alçada</th><th>Rol</th></tr>
+          <tr><th>Nom</th><th>Alçada</th><th>Rol</th><th></th></tr>
         </thead>
         <tbody id="members-body">
-          <tr><td colspan="3" class="empty-note">Carregant…</td></tr>
+          <tr><td colspan="4" class="empty-note">Carregant…</td></tr>
         </tbody>
       </table>
     </div>
@@ -389,7 +352,7 @@
     <div class="panel-body">
       <div class="gen-cta">
         <button class="primary" id="gen-btn" type="button">Generar propostes</button>
-        <span class="note" id="gen-note">Basat en qui tens carregat a la colla ara mateix.</span>
+        <span class="note" id="gen-note">Basat en qui tens carregat a la colla ara mateix. Clica una proposta per veure la fitxa.</span>
       </div>
       <div class="proposals" id="proposals">
         <p class="empty-note">Encara no s'ha generat cap proposta.</p>
@@ -399,38 +362,149 @@
 </main>
 
 <footer class="note-strip">
-  Aquest panell parla directament amb <code>/api/castellers</code> i <code>/api/generar</code>. Import de Spond, assajos i fustes són el següent pas del MVP.
+  Aquest panell parla directament amb <code>/api/castellers</code> i <code>/api/generar</code>. La fitxa mostra el tronc i el pom que generem — la pinya de suport (com al pla real en paper) encara no es gestiona a l'MVP.
 </footer>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="modal-title">Fitxa</h3>
+      <div class="modal-actions">
+        <button class="ghost small" id="download-btn" type="button">Descarregar imatge</button>
+        <button class="ghost small" id="close-modal" type="button">Tancar</button>
+      </div>
+    </div>
+    <canvas id="fitxa-canvas" width="1000" height="560"></canvas>
+  </div>
+</div>
 
 <script>
 const API = '';
+let currentMembers = [];
+let currentProposals = [];
+let editingId = null;
+
+const ROLES = [
+  { value: '', label: '— sense assignar —' },
+  { value: 'baix', label: 'Baix' },
+  { value: 'segon', label: 'Segon' },
+  { value: 'terç', label: 'Terç' },
+  { value: 'acotxador', label: 'Acotxador' },
+  { value: 'enxaneta', label: 'Enxaneta' }
+];
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+/* ---------------- Members: list / edit ---------------- */
 
 async function fetchMembers() {
-  const tbody = document.getElementById('members-body');
   const countEl = document.getElementById('member-count');
   try {
     const res = await fetch(`${API}/api/castellers`);
     const data = await res.json();
-    const rows = data.data || [];
-    countEl.textContent = `${rows.length} casteller${rows.length === 1 ? '' : 's'}`;
-
-    if (rows.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3" class="empty-note">Encara no hi ha cap casteller carregat.</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = rows.map(m => `
-      <tr>
-        <td>${escapeHtml(m.nombre)}</td>
-        <td>${m.altura ? m.altura + ' cm' : '—'}</td>
-        <td>${m.rol ? `<span class="rol-tag">${escapeHtml(m.rol)}</span>` : '<span class="empty-note">sense rol</span>'}</td>
-      </tr>
-    `).join('');
+    currentMembers = data.data || [];
+    countEl.textContent = `${currentMembers.length} casteller${currentMembers.length === 1 ? '' : 's'}`;
+    renderMembersTable();
   } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="3" class="empty-note">No s\'ha pogut carregar la llista. Comprova el servidor.</td></tr>';
+    document.getElementById('members-body').innerHTML =
+      '<tr><td colspan="4" class="empty-note">No s\'ha pogut carregar la llista. Comprova el servidor.</td></tr>';
     console.error(err);
   }
 }
+
+function renderMembersTable() {
+  const tbody = document.getElementById('members-body');
+
+  if (currentMembers.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-note">Encara no hi ha cap casteller carregat.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = currentMembers.map(m => {
+    if (editingId === m.id) return editRowHtml(m);
+
+    return `
+      <tr data-id="${m.id}">
+        <td>${escapeHtml(m.nombre)}</td>
+        <td>${m.altura ? m.altura + ' cm' : '—'}</td>
+        <td>${m.rol ? `<span class="rol-tag">${escapeHtml(m.rol)}</span>` : '<span class="empty-note">sense rol</span>'}</td>
+        <td class="row-actions">
+          <button class="ghost small edit-btn" data-id="${m.id}" type="button">Editar</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function editRowHtml(m) {
+  const roleOptions = ROLES.map(r =>
+    `<option value="${r.value}" ${m.rol === r.value ? 'selected' : ''}>${r.label}</option>`
+  ).join('');
+
+  return `
+    <tr data-id="${m.id}">
+      <td><input type="text" class="edit-nombre" value="${escapeHtml(m.nombre)}"></td>
+      <td><input type="number" class="edit-altura" value="${m.altura ?? ''}" placeholder="cm"></td>
+      <td><select class="edit-rol">${roleOptions}</select></td>
+      <td class="row-actions">
+        <button class="primary small save-btn" data-id="${m.id}" type="button" style="grid-column:unset;">Desar</button>
+        <button class="ghost small cancel-btn" type="button">Cancel·lar</button>
+      </td>
+    </tr>
+  `;
+}
+
+document.getElementById('members-body').addEventListener('click', async (e) => {
+  const editBtn = e.target.closest('.edit-btn');
+  const saveBtn = e.target.closest('.save-btn');
+  const cancelBtn = e.target.closest('.cancel-btn');
+
+  if (editBtn) {
+    editingId = Number(editBtn.dataset.id);
+    renderMembersTable();
+    return;
+  }
+
+  if (cancelBtn) {
+    editingId = null;
+    renderMembersTable();
+    return;
+  }
+
+  if (saveBtn) {
+    const id = saveBtn.dataset.id;
+    const row = saveBtn.closest('tr');
+    const nombre = row.querySelector('.edit-nombre').value.trim();
+    const altura = row.querySelector('.edit-altura').value;
+    const rol = row.querySelector('.edit-rol').value;
+
+    if (!nombre) { alert('El nom no pot quedar buit.'); return; }
+
+    saveBtn.disabled = true;
+    try {
+      await fetch(`${API}/api/castellers/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre,
+          altura: altura ? Number(altura) : null,
+          peso: null,
+          rol: rol || null
+        })
+      });
+      editingId = null;
+      await fetchMembers();
+    } catch (err) {
+      console.error(err);
+      alert('No s\'ha pogut desar el canvi.');
+      saveBtn.disabled = false;
+    }
+  }
+});
 
 document.getElementById('add-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -461,6 +535,69 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
   }
 });
 
+/* ---------------- CSV import (Spond export) ---------------- */
+
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length);
+  if (!lines.length) return [];
+
+  const parseLine = (line) => {
+    const result = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { inQuotes = !inQuotes; continue; }
+      if ((c === ',' || c === ';') && !inQuotes) { result.push(cur); cur = ''; continue; }
+      cur += c;
+    }
+    result.push(cur);
+    return result.map(s => s.trim());
+  };
+
+  const header = parseLine(lines[0]).map(h => h.toLowerCase());
+  const nameIdx = header.findIndex(h => ['name', 'nom', 'nombre', 'fullname', 'full name', 'member', 'membre'].includes(h));
+  const rows = lines.slice(1).map(parseLine);
+
+  return rows
+    .map(cols => ({ nombre: nameIdx >= 0 ? cols[nameIdx] : cols[0] }))
+    .filter(r => r.nombre && r.nombre.toLowerCase() !== 'name');
+}
+
+document.getElementById('csv-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  const statusEl = document.getElementById('import-status');
+  if (!file) return;
+
+  const text = await file.text();
+  const rows = parseCSV(text);
+
+  if (!rows.length) {
+    statusEl.textContent = 'No s\'ha trobat cap nom al fitxer. Comprova que sigui un CSV amb una columna de noms.';
+    e.target.value = '';
+    return;
+  }
+
+  statusEl.textContent = `Important ${rows.length} persones…`;
+  let ok = 0;
+  for (const row of rows) {
+    try {
+      await fetch(`${API}/api/castellers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre: row.nombre, altura: null, peso: null, rol: null })
+      });
+      ok++;
+    } catch (err) { console.error(err); }
+  }
+
+  statusEl.textContent = `${ok} de ${rows.length} importats. Edita'ls per afegir alçada i rol.`;
+  e.target.value = '';
+  await fetchMembers();
+});
+
+/* ---------------- Generator ---------------- */
+
 function riskClass(nivelText) {
   if (!nivelText) return 'none';
   if (nivelText.includes('Seguro') || nivelText.includes('🟢')) return 'ok';
@@ -468,16 +605,14 @@ function riskClass(nivelText) {
   if (nivelText.includes('Alto') || nivelText.includes('🔴')) return 'bad';
   return 'none';
 }
-
 function stripEmoji(nivelText) {
   return (nivelText || '').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
 }
-
 function levelRow(label, names, cls) {
   return `<div class="level ${cls}"><span class="role-label">${label}</span><span class="names">${names}</span></div>`;
 }
 
-function renderProposal(p) {
+function renderProposal(p, index) {
   const cls = p.valido ? '' : 'invalid';
   let towerHtml = '';
   let riskHtml = `<span class="risk"><span class="dot none"></span>sense dades</span>`;
@@ -496,18 +631,20 @@ function renderProposal(p) {
   }
 
   const messagesHtml = (p.mensajes && p.mensajes.length)
-    ? `<div class="messages">${p.mensajes.map(escapeHtml).join(' · ')}</div>`
-    : '';
+    ? `<div class="messages">${p.mensajes.map(escapeHtml).join(' · ')}</div>` : '';
+
+  const ctaHtml = p.valido ? `<div class="card-cta">Veure fitxa →</div>` : '';
 
   return `
-    <div class="card ${cls}">
+    <button class="card ${cls}" data-index="${index}" type="button" ${p.valido ? '' : 'disabled'}>
       <div class="card-top">
         <span class="tipo">${escapeHtml(p.tipo)}</span>
         ${riskHtml}
       </div>
       ${messagesHtml}
       ${towerHtml}
-    </div>
+      ${ctaHtml}
+    </button>
   `;
 }
 
@@ -519,12 +656,12 @@ document.getElementById('gen-btn').addEventListener('click', async () => {
   try {
     const res = await fetch(`${API}/api/generar`);
     const data = await res.json();
-    const propuestas = data.propuestas || [];
-    if (propuestas.length === 0) {
+    currentProposals = data.propuestas || [];
+    if (currentProposals.length === 0) {
       container.innerHTML = '<p class="empty-note">El generador no ha retornat cap proposta.</p>';
       return;
     }
-    container.innerHTML = propuestas.map(renderProposal).join('');
+    container.innerHTML = currentProposals.map(renderProposal).join('');
   } catch (err) {
     container.innerHTML = '<p class="empty-note">No s\'ha pogut generar. Comprova el servidor i la base de dades.</p>';
     console.error(err);
@@ -533,13 +670,219 @@ document.getElementById('gen-btn').addEventListener('click', async () => {
   }
 });
 
-function escapeHtml(str) {
-  return String(str ?? '').replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
+document.getElementById('proposals').addEventListener('click', (e) => {
+  const card = e.target.closest('button.card');
+  if (!card || card.disabled) return;
+  const p = currentProposals[Number(card.dataset.index)];
+  if (p && p.valido) openFitxa(p);
+});
+
+/* ---------------- Fitxa canvas (plantilla estil pla en paper) ---------------- */
+
+const overlay = document.getElementById('modal-overlay');
+const canvas = document.getElementById('fitxa-canvas');
+const ctx = canvas.getContext('2d');
+
+document.getElementById('close-modal').addEventListener('click', () => overlay.classList.remove('open'));
+overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('open'); });
+
+document.getElementById('download-btn').addEventListener('click', () => {
+  const link = document.createElement('a');
+  link.download = `fitxa-castellers-${document.getElementById('modal-title').textContent.trim()}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+});
+
+function openFitxa(p) {
+  document.getElementById('modal-title').textContent = `Fitxa · ${p.tipo}`;
+  drawFitxa(p);
+  overlay.classList.add('open');
 }
 
-fetchMembers();
+function todayStr() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+function drawRotatedBox(cx, cy, w, h, label, angleDeg, style) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angleDeg * Math.PI / 180);
+  ctx.fillStyle = style.fill;
+  ctx.strokeStyle = style.stroke;
+  ctx.lineWidth = 1.4;
+  ctx.fillRect(-w / 2, -h / 2, w, h);
+  ctx.strokeRect(-w / 2, -h / 2, w, h);
+  ctx.fillStyle = style.text;
+  ctx.font = style.font || '600 12px "IBM Plex Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.rotate(-90 * Math.PI / 180);
+  ctx.fillText(label, 0, 0);
+  ctx.restore();
+}
+
+function drawFitxa(p) {
+  const W = canvas.width, H = canvas.height;
+  const e = p.estructura;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#FDFCF8';
+  ctx.fillRect(0, 0, W, H);
+
+  const foldX = W * 0.44;
+  ctx.strokeStyle = '#D8D3C4';
+  ctx.setLineDash([5, 5]);
+  ctx.beginPath();
+  ctx.moveTo(foldX, 20);
+  ctx.lineTo(foldX, H - 20);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // header
+  ctx.fillStyle = '#20241F';
+  ctx.font = '700 15px "IBM Plex Mono", monospace';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(todayStr(), 20, 34);
+
+  const rc = riskClass(p.nivel);
+  const riskColor = { ok: '#3E7A4E', mid: '#B8893D', bad: '#A3323A', none: '#4B5049' }[rc];
+  ctx.fillStyle = riskColor;
+  ctx.beginPath();
+  ctx.arc(W - 150, 28, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#20241F';
+  ctx.font = '600 13px "IBM Plex Mono", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(`${stripEmoji(p.nivel)} · ${p.riesgo}`, W - 138, 32);
+
+  // watermark
+  ctx.save();
+  ctx.translate(foldX * 0.5, H * 0.55);
+  ctx.rotate(-18 * Math.PI / 180);
+  ctx.font = '700 34px "Fraunces", serif';
+  ctx.fillStyle = 'rgba(32,36,31,0.07)';
+  ctx.textAlign = 'center';
+  ctx.fillText('CASTELLERS', 0, -10);
+  ctx.fillText('DE TORTOSA', 0, 30);
+  ctx.restore();
+
+  // --- left: tower illustration ---
+  const cx = foldX * 0.34;
+  const baseY = H - 70;
+  const topY = 90;
+  const levels = [
+    { label: 'ENXANETA', names: [e.pom.enxaneta.nombre] },
+    { label: 'ACOTXADOR', names: [e.pom.acotxador.nombre] },
+    { label: 'TERÇ', names: e.tersos.map(t => t.nombre) },
+    { label: 'SEGON', names: e.segons.map(s => s.nombre) },
+    { label: 'BAIX', names: [e.baix.nombre] }
+  ];
+  const step = (baseY - topY) / (levels.length - 1);
+
+  ctx.strokeStyle = '#20241F';
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.moveTo(cx, baseY);
+  ctx.lineTo(cx, topY);
+  ctx.stroke();
+
+  levels.forEach((lvl, i) => {
+    const y = baseY - step * i;
+    ctx.beginPath();
+    ctx.arc(cx, y, 9 - i, 0, Math.PI * 2);
+    ctx.fillStyle = '#FDFCF8';
+    ctx.fill();
+    ctx.strokeStyle = '#20241F';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+
+    ctx.fillStyle = '#20241F';
+    ctx.font = '600 11px "IBM Plex Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(lvl.label, cx + 18, y - 4);
+    ctx.font = '500 12px "Work Sans", sans-serif';
+    ctx.fillText(lvl.names.join(', '), cx + 18, y + 12);
+  });
+
+  // pinya cluster at base
+  ctx.fillStyle = 'rgba(32,36,31,0.5)';
+  for (let i = 0; i < 14; i++) {
+    const angle = (i / 14) * Math.PI * 2;
+    const rx = cx + Math.cos(angle) * 34;
+    const ry = baseY + 30 + Math.sin(angle) * 14;
+    ctx.beginPath();
+    ctx.arc(rx, ry, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = '#20241F';
+  ctx.font = '700 18px "Fraunces", serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('PINYA', cx, baseY + 66);
+
+  // arrows (right side, top and bottom)
+  function arrow(y) {
+    ctx.fillStyle = '#8A867A';
+    ctx.beginPath();
+    ctx.moveTo(W - 60, y);
+    ctx.lineTo(W - 40, y - 10);
+    ctx.lineTo(W - 40, y + 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#8A867A';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(W - 40, y);
+    ctx.lineTo(W - 20, y);
+    ctx.stroke();
+  }
+  arrow(70);
+  arrow(H - 50);
+
+  // --- right: pinya grid (rows tapering like the real plan) ---
+  const rightMid = foldX + (W - foldX) / 2;
+  const style = { fill: '#F1EEE4', stroke: '#20241F', text: '#20241F' };
+  const styleD = { fill: '#F1EEE4', stroke: '#20241F', text: '#20241F', font: '600 10px "IBM Plex Mono", monospace' };
+
+  function drawRow(y, names, boxW, boxH, rowLabel) {
+    const total = names.length;
+    const gap = 8;
+    const totalW = total * boxW + (total - 1) * gap;
+    let x = rightMid - totalW / 2 + boxW / 2;
+    if (rowLabel) {
+      ctx.fillStyle = '#20241F';
+      ctx.font = '600 11px "IBM Plex Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(rowLabel, rightMid, y - boxH / 2 - 8);
+    }
+    names.forEach(n => {
+      drawRotatedBox(x, y, boxW, boxH, n.toUpperCase(), 0, style);
+      x += boxW + gap;
+    });
+  }
+
+  function drawDiamondCluster(y, names) {
+    const size = 46;
+    const overlap = 26;
+    const totalW = size + (names.length - 1) * overlap;
+    let x = rightMid - totalW / 2 + size / 2;
+    names.forEach(n => {
+      drawRotatedBox(x, y, size * 0.66, size * 0.66, n.toUpperCase(), 45, styleD);
+      x += overlap;
+    });
+  }
+
+  let y = 150;
+  drawDiamondCluster(y, [e.pom.acotxador.nombre]);
+  y += 60;
+  drawRow(y, e.tersos.map(t => t.nombre), 60, 32, 'TERÇ');
+  y += 52;
+  drawRow(y, e.segons.map(s => s.nombre), 60, 32, 'SEGON');
+  y += 60;
+  drawRow(y, [e.baix.nombre], 90, 36, 'BAIX');
+}
 </script>
 
 </body>

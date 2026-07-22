@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Castellers · Panell de l'MVP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EAE6DA;
+    --paper-card: #F1EEE4;
+    --ink: #20241F;
+    --ink-soft: #4B5049;
+    --thread: #9E2B3B;
+    --gold: #B8893D;
+    --line: #C7C2B0;
+    --ok: #3E7A4E;
+    --mid: #B8893D;
+    --bad: #A3323A;
+    --radius: 3px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background:
+      linear-gradient(var(--line) 1px, transparent 1px) 0 0/100% 34px,
+      var(--paper);
+    color: var(--ink);
+    font-family: 'Work Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  ::selection { background: var(--thread); color: var(--paper); }
+
+  a { color: var(--thread); }
+
+  /* -------- Header / signature -------- */
+  header.top {
+    padding: 40px 28px 28px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 22px;
+  }
+
+  .mark { flex-shrink: 0; }
+  .mark svg { display: block; }
+
+  .wordmark h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 30px;
+    letter-spacing: 0.01em;
+    margin: 0;
+    font-variant: small-caps;
+  }
+  .wordmark .tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-top: 4px;
+  }
+  .wordmark .tag em {
+    font-style: normal;
+    color: var(--thread);
+  }
+
+  main {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 34px 28px 80px;
+    display: grid;
+    grid-template-columns: 1fr 1.35fr;
+    gap: 30px;
+  }
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; }
+  }
+
+  section.panel {
+    background: var(--paper-card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+
+  .panel-head {
+    padding: 16px 20px 14px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .panel-head h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 18px;
+    margin: 0;
+  }
+  .panel-head .count {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  .panel-body { padding: 18px 20px 22px; }
+
+  /* -------- Form -------- */
+  form.add-member {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+    margin-bottom: 18px;
+  }
+  form.add-member .full { grid-column: 1 / -1; }
+
+  label {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    margin-bottom: 5px;
+  }
+
+  input, select {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: var(--radius);
+    font-family: 'Work Sans', sans-serif;
+    font-size: 14px;
+  }
+  input:focus, select:focus, button:focus {
+    outline: 2px solid var(--thread);
+    outline-offset: 1px;
+  }
+
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 11px 16px;
+  }
+  button.primary {
+    background: var(--thread);
+    color: var(--paper-card);
+    grid-column: 1 / -1;
+  }
+  button.primary:hover { background: #862432; }
+  button.ghost {
+    background: transparent;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+  }
+  button.ghost:hover { background: var(--ink); color: var(--paper-card); }
+  button:disabled { opacity: 0.5; cursor: default; }
+
+  .hint {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin: -8px 0 16px;
+  }
+
+  /* -------- Members table -------- */
+  table.members {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+  table.members th {
+    text-align: left;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--ink-soft);
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  table.members td {
+    padding: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  table.members tr:last-child td { border-bottom: none; }
+  .rol-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    border: 1px solid var(--ink-soft);
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .empty-note {
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-style: italic;
+    padding: 6px 0;
+  }
+
+  /* -------- Generator -------- */
+  .gen-cta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .gen-cta button.primary { grid-column: unset; flex: 0 0 auto; }
+  .gen-cta .note { font-size: 12.5px; color: var(--ink-soft); }
+
+  .proposals { display: grid; gap: 14px; }
+
+  .card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--paper);
+    padding: 14px 16px 16px;
+    position: relative;
+  }
+  .card.invalid { opacity: 0.62; }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .card-top .tipo {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 20px;
+  }
+  .risk {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+  }
+  .risk .dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    display: inline-block;
+  }
+  .risk .dot.ok { background: var(--ok); }
+  .risk .dot.mid { background: var(--mid); }
+  .risk .dot.bad { background: var(--bad); }
+  .risk .dot.none { background: var(--ink-soft); }
+
+  .messages {
+    font-size: 12.5px;
+    color: var(--thread);
+    margin-top: 6px;
+    line-height: 1.6;
+  }
+
+  /* tapering tower */
+  .tower {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .level {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid var(--line);
+    background: var(--paper-card);
+    border-radius: var(--radius);
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+  .level .role-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    flex-shrink: 0;
+  }
+  .level .names { font-weight: 500; }
+  .level.pom { width: 46%; }
+  .level.tersos { width: 62%; }
+  .level.segons { width: 78%; }
+  .level.baix { width: 100%; }
+
+  footer.note-strip {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 28px 60px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  footer.note-strip code {
+    font-family: 'IBM Plex Mono', monospace;
+    background: var(--paper-card);
+    padding: 1px 5px;
+    border-radius: 3px;
+    border: 1px solid var(--line);
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="mark">
+    <svg width="46" height="46" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="20" y="4" width="6" height="8" fill="#20241F"/>
+      <rect x="14" y="14" width="18" height="8" fill="#20241F"/>
+      <rect x="8" y="26" width="30" height="8" fill="#20241F"/>
+      <rect x="2" y="38" width="42" height="6" fill="#9E2B3B"/>
+    </svg>
+  </div>
+  <div class="wordmark">
+    <h1>Castellers</h1>
+    <div class="tag">Panell de l'<em>MVP</em> · assaig de prova</div>
+  </div>
+</header>
+
+<main>
+  <section class="panel" aria-labelledby="colla-title">
+    <div class="panel-head">
+      <h2 id="colla-title">La colla</h2>
+      <span class="count" id="member-count">0 castellers</span>
+    </div>
+    <div class="panel-body">
+      <form class="add-member" id="add-form">
+        <div class="full">
+          <label for="nombre">Nom</label>
+          <input id="nombre" name="nombre" type="text" placeholder="Ex. Roger" required>
+        </div>
+        <div>
+          <label for="altura">Alçada espatlles (cm)</label>
+          <input id="altura" name="altura" type="number" min="0" placeholder="168">
+        </div>
+        <div>
+          <label for="peso">Pes (opcional)</label>
+          <input id="peso" name="peso" type="number" min="0" placeholder="—">
+        </div>
+        <div class="full">
+          <label for="rol">Rol habitual</label>
+          <select id="rol" name="rol">
+            <option value="">— sense assignar —</option>
+            <option value="baix">Baix</option>
+            <option value="segon">Segon</option>
+            <option value="terç">Terç</option>
+            <option value="acotxador">Acotxador</option>
+            <option value="enxaneta">Enxaneta</option>
+          </select>
+        </div>
+        <button class="primary" type="submit">Afegir casteller</button>
+      </form>
+      <p class="hint">El pes es demana per si el necessitem més endavant — ara mateix el generador només fa servir alçada i rol.</p>
+
+      <table class="members" id="members-table">
+        <thead>
+          <tr><th>Nom</th><th>Alçada</th><th>Rol</th></tr>
+        </thead>
+        <tbody id="members-body">
+          <tr><td colspan="3" class="empty-note">Carregant…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="gen-title">
+    <div class="panel-head">
+      <h2 id="gen-title">Generador de propostes</h2>
+      <span class="count">2d6 · 3d7 · 4d7 · 5d7</span>
+    </div>
+    <div class="panel-body">
+      <div class="gen-cta">
+        <button class="primary" id="gen-btn" type="button">Generar propostes</button>
+        <span class="note" id="gen-note">Basat en qui tens carregat a la colla ara mateix.</span>
+      </div>
+      <div class="proposals" id="proposals">
+        <p class="empty-note">Encara no s'ha generat cap proposta.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="note-strip">
+  Aquest panell parla directament amb <code>/api/castellers</code> i <code>/api/generar</code>. Import de Spond, assajos i fustes són el següent pas del MVP.
+</footer>
+
+<script>
+const API = '';
+
+async function fetchMembers() {
+  const tbody = document.getElementById('members-body');
+  const countEl = document.getElementById('member-count');
+  try {
+    const res = await fetch(`${API}/api/castellers`);
+    const data = await res.json();
+    const rows = data.data || [];
+    countEl.textContent = `${rows.length} casteller${rows.length === 1 ? '' : 's'}`;
+
+    if (rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" class="empty-note">Encara no hi ha cap casteller carregat.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = rows.map(m => `
+      <tr>
+        <td>${escapeHtml(m.nombre)}</td>
+        <td>${m.altura ? m.altura + ' cm' : '—'}</td>
+        <td>${m.rol ? `<span class="rol-tag">${escapeHtml(m.rol)}</span>` : '<span class="empty-note">sense rol</span>'}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="3" class="empty-note">No s\'ha pogut carregar la llista. Comprova el servidor.</td></tr>';
+    console.error(err);
+  }
+}
+
+document.getElementById('add-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const payload = {
+    nombre: form.nombre.value.trim(),
+    altura: form.altura.value ? Number(form.altura.value) : null,
+    peso: form.peso.value ? Number(form.peso.value) : null,
+    rol: form.rol.value || null
+  };
+  if (!payload.nombre) return;
+
+  const btn = form.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  try {
+    await fetch(`${API}/api/castellers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    form.reset();
+    await fetchMembers();
+  } catch (err) {
+    console.error(err);
+    alert('No s\'ha pogut afegir el casteller.');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function riskClass(nivelText) {
+  if (!nivelText) return 'none';
+  if (nivelText.includes('Seguro') || nivelText.includes('🟢')) return 'ok';
+  if (nivelText.includes('Medio') || nivelText.includes('🟡')) return 'mid';
+  if (nivelText.includes('Alto') || nivelText.includes('🔴')) return 'bad';
+  return 'none';
+}
+
+function stripEmoji(nivelText) {
+  return (nivelText || '').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
+}
+
+function levelRow(label, names, cls) {
+  return `<div class="level ${cls}"><span class="role-label">${label}</span><span class="names">${names}</span></div>`;
+}
+
+function renderProposal(p) {
+  const cls = p.valido ? '' : 'invalid';
+  let towerHtml = '';
+  let riskHtml = `<span class="risk"><span class="dot none"></span>sense dades</span>`;
+
+  if (p.valido && p.estructura) {
+    const e = p.estructura;
+    towerHtml = `
+      <div class="tower">
+        ${levelRow('Pom', `${escapeHtml(e.pom.enxaneta.nombre)} / ${escapeHtml(e.pom.acotxador.nombre)}`, 'pom')}
+        ${levelRow('Terç', e.tersos.map(t => escapeHtml(t.nombre)).join(', '), 'tersos')}
+        ${levelRow('Segon', e.segons.map(s => escapeHtml(s.nombre)).join(', '), 'segons')}
+        ${levelRow('Baix', escapeHtml(e.baix.nombre), 'baix')}
+      </div>`;
+    const rc = riskClass(p.nivel);
+    riskHtml = `<span class="risk"><span class="dot ${rc}"></span>${escapeHtml(stripEmoji(p.nivel))} · ${p.riesgo}</span>`;
+  }
+
+  const messagesHtml = (p.mensajes && p.mensajes.length)
+    ? `<div class="messages">${p.mensajes.map(escapeHtml).join(' · ')}</div>`
+    : '';
+
+  return `
+    <div class="card ${cls}">
+      <div class="card-top">
+        <span class="tipo">${escapeHtml(p.tipo)}</span>
+        ${riskHtml}
+      </div>
+      ${messagesHtml}
+      ${towerHtml}
+    </div>
+  `;
+}
+
+document.getElementById('gen-btn').addEventListener('click', async () => {
+  const container = document.getElementById('proposals');
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  container.innerHTML = '<p class="empty-note">Calculant propostes…</p>';
+  try {
+    const res = await fetch(`${API}/api/generar`);
+    const data = await res.json();
+    const propuestas = data.propuestas || [];
+    if (propuestas.length === 0) {
+      container.innerHTML = '<p class="empty-note">El generador no ha retornat cap proposta.</p>';
+      return;
+    }
+    container.innerHTML = propuestas.map(renderProposal).join('');
+  } catch (err) {
+    container.innerHTML = '<p class="empty-note">No s\'ha pogut generar. Comprova el servidor i la base de dades.</p>';
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+fetchMembers();
+</script>
+
+</body>
+</html>

@@ -173,6 +173,8 @@ app.put('/api/castellers/:id', async (req, res) => {
   }
 });
 
+
+
 //api generar castells
 app.get('/api/generar', async (req, res) => {
   try {
