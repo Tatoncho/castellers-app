@@ -140,6 +140,41 @@ app.get('/api/castellers', async (req, res) => {
   }
 });
 
+//api para editar un miembro existente
+app.put('/api/castellers/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nombre, altura, peso, rol } = req.body;
+
+    if (!nombre) {
+      return res.status(400).json({ error: 'nombre es obligatorio' });
+    }
+
+    const result = await pool.query(
+      `UPDATE castellers
+       SET nombre = $1, altura = $2, peso = $3, rol = $4
+       WHERE id = $5
+       RETURNING *`,
+      [nombre, altura || null, peso || null, rol || null, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Casteller no trobat' });
+    }
+
+    res.json({
+      success: true,
+      casteller: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+
 //api generar castells
 app.get('/api/generar', async (req, res) => {
   try {
