@@ -117,6 +117,8 @@ app.get('/api/generar', async (req, res) => {
       }
     };
 
+const riesgo = calcularRiesgo(estructura);
+
     res.json({
       exit: true,
       estructura
@@ -127,6 +129,34 @@ app.get('/api/generar', async (req, res) => {
     res.status(500).send('Error generando castell');
   }
 });
+
+//evaluación de riesgo
+const calcularRiesgo = ({ baix, segons, tersos, pom }) => {
+  let riesgo = 0;
+
+  // 📏 Diferencia de altura entre niveles
+  const mediaSegons = segons.reduce((acc, s) => acc + s.altura, 0) / segons.length;
+  const mediaTersos = tersos.reduce((acc, t) => acc + t.altura, 0) / tersos.length;
+
+  const diffBaixSegons = Math.abs(baix.altura - mediaSegons);
+  const diffSegonsTersos = Math.abs(mediaSegons - mediaTersos);
+
+  riesgo += diffBaixSegons * 0.3;
+  riesgo += diffSegonsTersos * 0.3;
+
+  // ⚠️ Penalizar si el enxaneta es demasiado alto
+  if (pom.enxaneta.altura > 140) {
+    riesgo += 20;
+  }
+
+  // ⚠️ Penalizar si el acotxador es alto
+  if (pom.acotxador.altura > 150) {
+    riesgo += 15;
+  }
+
+  return Math.round(riesgo);
+};
+
 
 // 🚀 Puerto (Render usa process.env.PORT)
 const PORT = process.env.PORT || 3000;
