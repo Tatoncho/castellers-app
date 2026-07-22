@@ -3,7 +3,6 @@ const { Pool } = require('pg');
 
 const app = express();
 app.use(express.json());
-app.use(express.static('public'));
 
 // 🔑 Conexión a PostgreSQL (Render)
 const pool = new Pool({
@@ -11,6 +10,11 @@ const pool = new Pool({
   ssl: {
     rejectUnauthorized: false
   }
+});
+
+// 🧪 Ruta básica
+app.get('/', (req, res) => {
+  res.send('Castellers API funcionando 🚀');
 });
 
 // 🔥 TEST DB
