@@ -251,13 +251,7 @@ app.get('/api/castellers', async (req, res) => {
 app.put('/api/castellers/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      nombre, altura, peso, rol,
-      external_id, primer_cognom, segon_cognom, alias, posicio_pinya,
-      te_app, email, mobil, data_naixement, data_entrega_samarreta,
-      revisat, estat_acollida, habitual, permisos_app, integrant_colla,
-      lesionat_llarga_durada, formularis
-    } = req.body;
+    const { nombre, altura, peso, rol } = req.body;
 
     if (!nombre) {
       return res.status(400).json({ error: 'nombre es obligatorio' });
@@ -265,37 +259,10 @@ app.put('/api/castellers/:id', async (req, res) => {
 
     const result = await pool.query(
       `UPDATE castellers
-       SET nombre = $1, altura = $2, peso = $3, rol = $4,
-           external_id = $5, primer_cognom = $6, segon_cognom = $7, alias = $8, posicio_pinya = $9,
-           te_app = $10, email = $11, mobil = $12, data_naixement = $13, data_entrega_samarreta = $14,
-           revisat = $15, estat_acollida = $16, habitual = $17, permisos_app = $18, integrant_colla = $19,
-           lesionat_llarga_durada = $20, formularis = $21
-       WHERE id = $22
+       SET nombre = $1, altura = $2, peso = $3, rol = $4
+       WHERE id = $5
        RETURNING *`,
-      [
-        nombre,
-        altura === '' ? null : altura,
-        peso === '' ? null : peso,
-        rol || null,
-        external_id === '' ? null : external_id,
-        primer_cognom || null,
-        segon_cognom || null,
-        alias || null,
-        posicio_pinya || null,
-        te_app === '' ? null : te_app,
-        email || null,
-        mobil || null,
-        data_naixement || null,
-        data_entrega_samarreta || null,
-        revisat === '' ? null : revisat,
-        estat_acollida || null,
-        habitual === '' ? null : habitual,
-        permisos_app || null,
-        integrant_colla || null,
-        lesionat_llarga_durada === '' ? null : lesionat_llarga_durada,
-        formularis === '' ? null : formularis,
-        id
-      ]
+      [nombre, altura || null, peso || null, rol || null, id]
     );
 
     if (result.rows.length === 0) {

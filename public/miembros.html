@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Castellers · Gestió de membres</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EAE6DA;
+    --paper-card: #F1EEE4;
+    --ink: #20241F;
+    --ink-soft: #4B5049;
+    --thread: #9E2B3B;
+    --gold: #B8893D;
+    --line: #C7C2B0;
+    --ok: #3E7A4E;
+    --radius: 3px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: linear-gradient(var(--line) 1px, transparent 1px) 0 0/100% 34px, var(--paper);
+    color: var(--ink);
+    font-family: 'Work Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  ::selection { background: var(--thread); color: var(--paper); }
+  a { color: var(--thread); }
+
+  header.top {
+    padding: 28px 28px 20px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header.top h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 24px;
+    margin: 0;
+    font-variant: small-caps;
+  }
+  header.top .back {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    text-decoration: none;
+    border: 1px solid var(--ink);
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    color: var(--ink);
+  }
+  header.top .back:hover { background: var(--ink); color: var(--paper-card); }
+
+  main { max-width: 1400px; margin: 0 auto; padding: 24px 28px 80px; }
+
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    background: var(--paper-card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+  .toolbar input, .toolbar select {
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: var(--radius);
+    font-family: 'Work Sans', sans-serif;
+    font-size: 13px;
+  }
+  .toolbar input[type="text"] { min-width: 220px; }
+  .toolbar .count {
+    margin-left: auto;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--paper-card);
+  }
+  table.full {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+  table.full th {
+    position: sticky;
+    top: 0;
+    text-align: left;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    padding: 8px 10px;
+    background: var(--paper-card);
+    border-bottom: 1px solid var(--line);
+  }
+  table.full td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  table.full tr:hover td { background: #EFE9DB; }
+  .yes { color: var(--ok); font-weight: 600; }
+  .no { color: var(--ink-soft); }
+  .empty-cell { color: var(--ink-soft); font-style: italic; }
+  .empty-note { padding: 20px; text-align: center; color: var(--ink-soft); font-style: italic; }
+
+  button.edit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--ink);
+    background: var(--paper);
+    border-radius: var(--radius);
+    cursor: pointer;
+    padding: 0;
+  }
+  button.edit-btn:hover { background: var(--ink); }
+  button.edit-btn:hover svg path, button.edit-btn:hover svg polygon { fill: var(--paper-card); }
+
+  /* modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(32,36,31,0.55);
+    align-items: flex-start; justify-content: center; padding: 30px 20px; z-index: 50; overflow-y: auto;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--paper); border-radius: var(--radius); max-width: 640px; width: 100%;
+    padding: 20px 22px 22px; border: 1px solid var(--line);
+  }
+  .modal-box h3 {
+    font-family: 'Fraunces', serif; font-size: 20px; margin: 0 0 16px;
+  }
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 14px;
+  }
+  .field-grid .full { grid-column: 1 / -1; }
+  .field-grid label {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+  .field-grid input[type="text"],
+  .field-grid input[type="number"],
+  .field-grid input[type="date"],
+  .field-grid input[type="email"],
+  .field-grid select {
+    width: 100%;
+    padding: 8px 9px;
+    border: 1px solid var(--line);
+    background: var(--paper-card);
+    color: var(--ink);
+    border-radius: var(--radius);
+    font-family: 'Work Sans', sans-serif;
+    font-size: 13px;
+  }
+  .check-field {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 0 2px;
+  }
+  .check-field label { margin: 0; }
+  .check-field input[type="checkbox"] { width: 16px; height: 16px; }
+
+  .modal-actions {
+    display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;
+  }
+  button.primary, button.ghost {
+    cursor: pointer; border: none; border-radius: var(--radius);
+    font-family: 'IBM Plex Mono', monospace; font-size: 12.5px;
+    letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 16px;
+  }
+  button.primary { background: var(--thread); color: var(--paper-card); }
+  button.primary:hover { background: #862432; }
+  button.ghost { background: transparent; border: 1px solid var(--ink); color: var(--ink); }
+  button.ghost:hover { background: var(--ink); color: var(--paper-card); }
+  button:disabled { opacity: 0.5; cursor: default; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>Gestió de membres</h1>
+  <a class="back" href="/">← Tornar al panell</a>
+</header>
+
+<main>
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="Cerca per nom, àlies o email…">
+    <select id="filter-rol">
+      <option value="">Tots els rols</option>
+      <option value="baix">Baix</option>
+      <option value="segon">Segon</option>
+      <option value="terç">Terç</option>
+      <option value="acotxador">Acotxador</option>
+      <option value="enxaneta">Enxaneta</option>
+      <option value="__none__">— sense rol —</option>
+    </select>
+    <select id="filter-posicio">
+      <option value="">Totes les posicions</option>
+      <option value="MANS">Mans</option>
+      <option value="NOVATOS">Novatos</option>
+      <option value="CROSSES">Crosses</option>
+      <option value="LATERALS">Laterals</option>
+      <option value="CONTRAFORTS">Contraforts</option>
+      <option value="BAIXOS">Baixos</option>
+      <option value="DAUS">Daus</option>
+      <option value="GRALLES I TABALS">Gralles i tabals</option>
+      <option value="ALTRES">Altres</option>
+      <option value="__none__">— sense posició —</option>
+    </select>
+    <span class="count" id="result-count">0 membres</span>
+  </div>
+
+  <div class="table-wrap">
+    <table class="full" id="full-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Nom mostrat</th>
+          <th>Àlies</th>
+          <th>Cognoms</th>
+          <th>Alçada</th>
+          <th>Pes</th>
+          <th>Rol</th>
+          <th>Posició pinya</th>
+          <th>Habitual</th>
+          <th>Té app</th>
+          <th>Email</th>
+          <th>Mòbil</th>
+          <th>Naixement</th>
+          <th>Entrega samarreta</th>
+          <th>Revisat</th>
+          <th>Estat acollida</th>
+          <th>Permisos app</th>
+          <th>Integrant colla</th>
+          <th>Lesionat</th>
+          <th>Formularis</th>
+          <th>ID extern</th>
+        </tr>
+      </thead>
+      <tbody id="table-body">
+        <tr><td colspan="20" class="empty-note">Carregant…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box">
+    <h3 id="modal-title">Editar casteller</h3>
+    <form id="edit-form">
+      <div class="field-grid">
+        <div class="full">
+          <label>Nom mostrat</label>
+          <input type="text" id="f-nombre" required>
+        </div>
+        <div>
+          <label>Àlies</label>
+          <input type="text" id="f-alias">
+        </div>
+        <div>
+          <label>Primer cognom</label>
+          <input type="text" id="f-primer_cognom">
+        </div>
+        <div>
+          <label>Segon cognom</label>
+          <input type="text" id="f-segon_cognom">
+        </div>
+        <div>
+          <label>Alçada espatlles (cm)</label>
+          <input type="number" id="f-altura">
+        </div>
+        <div>
+          <label>Pes</label>
+          <input type="number" id="f-peso">
+        </div>
+        <div>
+          <label>Rol (per generar castells)</label>
+          <select id="f-rol">
+            <option value="">— sense assignar —</option>
+            <option value="baix">Baix</option>
+            <option value="segon">Segon</option>
+            <option value="terç">Terç</option>
+            <option value="acotxador">Acotxador</option>
+            <option value="enxaneta">Enxaneta</option>
+          </select>
+        </div>
+        <div>
+          <label>Posició pinya</label>
+          <select id="f-posicio_pinya">
+            <option value="">— sense assignar —</option>
+            <option value="MANS">Mans</option>
+            <option value="NOVATOS">Novatos</option>
+            <option value="CROSSES">Crosses</option>
+            <option value="LATERALS">Laterals</option>
+            <option value="CONTRAFORTS">Contraforts</option>
+            <option value="BAIXOS">Baixos</option>
+            <option value="DAUS">Daus</option>
+            <option value="GRALLES I TABALS">Gralles i tabals</option>
+            <option value="ALTRES">Altres</option>
+          </select>
+        </div>
+        <div>
+          <label>Email</label>
+          <input type="email" id="f-email">
+        </div>
+        <div>
+          <label>Mòbil</label>
+          <input type="text" id="f-mobil">
+        </div>
+        <div>
+          <label>Data naixement</label>
+          <input type="date" id="f-data_naixement">
+        </div>
+        <div>
+          <label>Data entrega samarreta</label>
+          <input type="date" id="f-data_entrega_samarreta">
+        </div>
+        <div>
+          <label>Estat acollida</label>
+          <select id="f-estat_acollida">
+            <option value="">—</option>
+            <option value="Perdut">Perdut</option>
+            <option value="Finalitzat">Finalitzat</option>
+            <option value="No aplica">No aplica</option>
+          </select>
+        </div>
+        <div>
+          <label>Permisos app</label>
+          <select id="f-permisos_app">
+            <option value="">—</option>
+            <option value="No">No</option>
+            <option value="Tècnica/Junta">Tècnica/Junta</option>
+            <option value="Administrador">Administrador</option>
+          </select>
+        </div>
+        <div>
+          <label>Integrant de la colla</label>
+          <select id="f-integrant_colla">
+            <option value="">—</option>
+            <option value="Sí">Sí</option>
+            <option value="No">No</option>
+            <option value="Altres colles">Altres colles</option>
+          </select>
+        </div>
+        <div>
+          <label>Formularis</label>
+          <input type="number" id="f-formularis">
+        </div>
+        <div>
+          <label>ID extern (altra app)</label>
+          <input type="number" id="f-external_id">
+        </div>
+
+        <div class="full">
+          <div class="check-field"><input type="checkbox" id="f-habitual"><label for="f-habitual">Habitual</label></div>
+          <div class="check-field"><input type="checkbox" id="f-te_app"><label for="f-te_app">Té APP</label></div>
+          <div class="check-field"><input type="checkbox" id="f-revisat"><label for="f-revisat">Revisat</label></div>
+          <div class="check-field"><input type="checkbox" id="f-lesionat_llarga_durada"><label for="f-lesionat_llarga_durada">Lesionat de llarga durada</label></div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="ghost" type="button" id="cancel-edit">Cancel·lar</button>
+        <button class="primary" type="submit" id="save-edit">Desar canvis</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const API = '';
+let allMembers = [];
+let editingId = null;
+
+const PENCIL_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M3 21l3.5-1 11-11-2.5-2.5-11 11L3 21z" fill="#20241F"/>
+  <path d="M16 4l2.5 2.5" stroke="#20241F" stroke-width="1.6"/>
+</svg>`;
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+function yesNo(v) {
+  if (v === true) return '<span class="yes">Sí</span>';
+  if (v === false) return '<span class="no">No</span>';
+  return '<span class="empty-cell">—</span>';
+}
+function cellOr(v) {
+  return (v === null || v === undefined || v === '') ? '<span class="empty-cell">—</span>' : escapeHtml(v);
+}
+function dateOr(v) {
+  if (!v) return '<span class="empty-cell">—</span>';
+  const d = new Date(v);
+  if (isNaN(d)) return escapeHtml(v);
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
+}
+
+async function fetchAll() {
+  const tbody = document.getElementById('table-body');
+  try {
+    const res = await fetch(`${API}/api/castellers`);
+    const data = await res.json();
+    allMembers = data.data || [];
+    applyFilters();
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="20" class="empty-note">No s\'ha pogut carregar la llista.</td></tr>';
+    console.error(err);
+  }
+}
+
+function applyFilters() {
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const rolFilter = document.getElementById('filter-rol').value;
+  const posicioFilter = document.getElementById('filter-posicio').value;
+
+  const filtered = allMembers.filter(m => {
+    if (q) {
+      const haystack = `${m.nombre || ''} ${m.alias || ''} ${m.email || ''}`.toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    if (rolFilter) {
+      if (rolFilter === '__none__' ? m.rol : m.rol !== rolFilter) return false;
+    }
+    if (posicioFilter) {
+      if (posicioFilter === '__none__' ? m.posicio_pinya : m.posicio_pinya !== posicioFilter) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('result-count').textContent = `${filtered.length} membre${filtered.length === 1 ? '' : 's'}`;
+  renderTable(filtered);
+}
+
+function renderTable(rows) {
+  const tbody = document.getElementById('table-body');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="20" class="empty-note">Cap membre coincideix amb el filtre.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map(m => {
+    const cognoms = [m.primer_cognom, m.segon_cognom].filter(Boolean).join(' ');
+    return `
+      <tr>
+        <td><button class="edit-btn" data-id="${m.id}" type="button" title="Editar">${PENCIL_SVG}</button></td>
+        <td>${cellOr(m.nombre)}</td>
+        <td>${cellOr(m.alias)}</td>
+        <td>${cellOr(cognoms)}</td>
+        <td>${m.altura !== null && m.altura !== undefined ? m.altura + ' cm' : '<span class="empty-cell">—</span>'}</td>
+        <td>${cellOr(m.peso)}</td>
+        <td>${cellOr(m.rol)}</td>
+        <td>${cellOr(m.posicio_pinya)}</td>
+        <td>${yesNo(m.habitual)}</td>
+        <td>${yesNo(m.te_app)}</td>
+        <td>${cellOr(m.email)}</td>
+        <td>${cellOr(m.mobil)}</td>
+        <td>${dateOr(m.data_naixement)}</td>
+        <td>${dateOr(m.data_entrega_samarreta)}</td>
+        <td>${yesNo(m.revisat)}</td>
+        <td>${cellOr(m.estat_acollida)}</td>
+        <td>${cellOr(m.permisos_app)}</td>
+        <td>${cellOr(m.integrant_colla)}</td>
+        <td>${yesNo(m.lesionat_llarga_durada)}</td>
+        <td>${m.formularis !== null && m.formularis !== undefined ? m.formularis : '<span class="empty-cell">—</span>'}</td>
+        <td>${cellOr(m.external_id)}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+document.getElementById('search').addEventListener('input', applyFilters);
+document.getElementById('filter-rol').addEventListener('change', applyFilters);
+document.getElementById('filter-posicio').addEventListener('change', applyFilters);
+
+/* ---------------- Edit modal ---------------- */
+
+const overlay = document.getElementById('modal-overlay');
+
+function toDateInputValue(v) {
+  if (!v) return '';
+  const d = new Date(v);
+  if (isNaN(d)) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+}
+
+function openEdit(m) {
+  editingId = m.id;
+  document.getElementById('modal-title').textContent = `Editar · ${m.nombre}`;
+  document.getElementById('f-nombre').value = m.nombre || '';
+  document.getElementById('f-alias').value = m.alias || '';
+  document.getElementById('f-primer_cognom').value = m.primer_cognom || '';
+  document.getElementById('f-segon_cognom').value = m.segon_cognom || '';
+  document.getElementById('f-altura').value = m.altura ?? '';
+  document.getElementById('f-peso').value = m.peso ?? '';
+  document.getElementById('f-rol').value = m.rol || '';
+  document.getElementById('f-posicio_pinya').value = m.posicio_pinya || '';
+  document.getElementById('f-email').value = m.email || '';
+  document.getElementById('f-mobil').value = m.mobil || '';
+  document.getElementById('f-data_naixement').value = toDateInputValue(m.data_naixement);
+  document.getElementById('f-data_entrega_samarreta').value = toDateInputValue(m.data_entrega_samarreta);
+  document.getElementById('f-estat_acollida').value = m.estat_acollida || '';
+  document.getElementById('f-permisos_app').value = m.permisos_app || '';
+  document.getElementById('f-integrant_colla').value = m.integrant_colla || '';
+  document.getElementById('f-formularis').value = m.formularis ?? '';
+  document.getElementById('f-external_id').value = m.external_id ?? '';
+  document.getElementById('f-habitual').checked = !!m.habitual;
+  document.getElementById('f-te_app').checked = !!m.te_app;
+  document.getElementById('f-revisat').checked = !!m.revisat;
+  document.getElementById('f-lesionat_llarga_durada').checked = !!m.lesionat_llarga_durada;
+
+  overlay.classList.add('open');
+}
+
+document.getElementById('table-body').addEventListener('click', (e) => {
+  const btn = e.target.closest('.edit-btn');
+  if (!btn) return;
+  const m = allMembers.find(x => x.id === Number(btn.dataset.id));
+  if (m) openEdit(m);
+});
+
+document.getElementById('cancel-edit').addEventListener('click', () => overlay.classList.remove('open'));
+overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('open'); });
+
+document.getElementById('edit-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!editingId) return;
+
+  const val = id => document.getElementById(id).value;
+  const numOrEmpty = v => (v === '' ? '' : Number(v));
+
+  const payload = {
+    nombre: val('f-nombre').trim(),
+    alias: val('f-alias').trim() || null,
+    primer_cognom: val('f-primer_cognom').trim() || null,
+    segon_cognom: val('f-segon_cognom').trim() || null,
+    altura: numOrEmpty(val('f-altura')),
+    peso: numOrEmpty(val('f-peso')),
+    rol: val('f-rol') || null,
+    posicio_pinya: val('f-posicio_pinya') || null,
+    email: val('f-email').trim() || null,
+    mobil: val('f-mobil').trim() || null,
+    data_naixement: val('f-data_naixement') || null,
+    data_entrega_samarreta: val('f-data_entrega_samarreta') || null,
+    estat_acollida: val('f-estat_acollida') || null,
+    permisos_app: val('f-permisos_app') || null,
+    integrant_colla: val('f-integrant_colla') || null,
+    formularis: numOrEmpty(val('f-formularis')),
+    external_id: numOrEmpty(val('f-external_id')),
+    habitual: document.getElementById('f-habitual').checked,
+    te_app: document.getElementById('f-te_app').checked,
+    revisat: document.getElementById('f-revisat').checked,
+    lesionat_llarga_durada: document.getElementById('f-lesionat_llarga_durada').checked
+  };
+
+  if (!payload.nombre) { alert('El nom no pot quedar buit.'); return; }
+
+  const saveBtn = document.getElementById('save-edit');
+  saveBtn.disabled = true;
+  try {
+    await fetch(`${API}/api/castellers/${editingId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    overlay.classList.remove('open');
+    editingId = null;
+    await fetchAll();
+  } catch (err) {
+    console.error(err);
+    alert('No s\'ha pogut desar el canvi.');
+  } finally {
+    saveBtn.disabled = false;
+  }
+});
+
+fetchAll();
+</script>
+
+</body>
+</html>
