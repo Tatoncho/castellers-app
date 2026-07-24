@@ -58,7 +58,7 @@
   }
   header.top .back:hover { background: var(--ink); color: var(--paper-card); }
 
-  main { max-width: 1400px; margin: 0 auto; padding: 24px 28px 80px; }
+  main { max-width: 1450px; margin: 0 auto; padding: 24px 28px 80px; }
 
   .toolbar {
     display: flex;
@@ -122,8 +122,19 @@
   .no { color: var(--ink-soft); }
   .empty-cell { color: var(--ink-soft); font-style: italic; }
   .empty-note { padding: 20px; text-align: center; color: var(--ink-soft); font-style: italic; }
+  .role-chip {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    padding: 1px 6px;
+    margin: 1px 2px 1px 0;
+    border-radius: 20px;
+    border: 1px solid var(--ink-soft);
+    color: var(--ink-soft);
+  }
+  .role-chip.principal { border-color: var(--thread); color: var(--thread); font-weight: 600; }
 
-  button.edit-btn {
+  button.icon-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -134,9 +145,10 @@
     border-radius: var(--radius);
     cursor: pointer;
     padding: 0;
+    margin-right: 4px;
   }
-  button.edit-btn:hover { background: var(--ink); }
-  button.edit-btn:hover svg path, button.edit-btn:hover svg polygon { fill: var(--paper-card); }
+  button.icon-btn:hover { background: var(--ink); }
+  button.icon-btn:hover svg path { fill: var(--paper-card); stroke: var(--paper-card); }
 
   /* modal */
   .modal-overlay {
@@ -148,8 +160,9 @@
     background: var(--paper); border-radius: var(--radius); max-width: 640px; width: 100%;
     padding: 20px 22px 22px; border: 1px solid var(--line);
   }
+  .modal-box.small { max-width: 420px; }
   .modal-box h3 {
-    font-family: 'Fraunces', serif; font-size: 20px; margin: 0 0 16px;
+    font-family: 'Fraunces', serif; font-size: 20px; margin: 0 0 12px;
   }
   .field-grid {
     display: grid;
@@ -187,6 +200,11 @@
   .check-field label { margin: 0; }
   .check-field input[type="checkbox"] { width: 16px; height: 16px; }
 
+  .role-btn-row { grid-column: 1 / -1; }
+  .role-btn-row button { width: 100%; }
+
+  .hint { font-size: 12px; color: var(--ink-soft); margin: 0 0 12px; }
+
   .modal-actions {
     display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;
   }
@@ -200,6 +218,25 @@
   button.ghost { background: transparent; border: 1px solid var(--ink); color: var(--ink); }
   button.ghost:hover { background: var(--ink); color: var(--paper-card); }
   button:disabled { opacity: 0.5; cursor: default; }
+
+  /* roles sortable list */
+  ul.roles-list { list-style: none; margin: 0 0 4px; padding: 0; }
+  ul.roles-list li {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 10px; margin-bottom: 6px;
+    background: var(--paper-card); border: 1px solid var(--line); border-radius: var(--radius);
+    transition: background 0.1s;
+  }
+  ul.roles-list li.dragging { background: #E2DCC9; border-color: var(--thread); }
+  .drag-handle {
+    cursor: grab; touch-action: none; color: var(--ink-soft);
+    font-size: 16px; line-height: 1; user-select: none; padding: 0 2px;
+  }
+  ul.roles-list li input[type="checkbox"] { width: 16px; height: 16px; flex-shrink: 0; }
+  ul.roles-list li .role-name { flex: 1; font-weight: 500; }
+  ul.roles-list li .order-badge {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--ink-soft);
+  }
 </style>
 </head>
 <body>
@@ -211,28 +248,12 @@
 
 <main>
   <div class="toolbar">
-    <input type="text" id="search" placeholder="Cerca per nom, àlies o email…">
-    <select id="filter-rol">
-      <option value="">Tots els rols</option>
-      <option value="baix">Baix</option>
-      <option value="segon">Segon</option>
-      <option value="terç">Terç</option>
-      <option value="acotxador">Acotxador</option>
-      <option value="enxaneta">Enxaneta</option>
-      <option value="__none__">— sense rol —</option>
-    </select>
+    <input type="text" id="search" placeholder="Cerca per nom, àlies o correu…">
     <select id="filter-posicio">
       <option value="">Totes les posicions</option>
-      <option value="MANS">Mans</option>
-      <option value="NOVATOS">Novatos</option>
-      <option value="CROSSES">Crosses</option>
-      <option value="LATERALS">Laterals</option>
-      <option value="CONTRAFORTS">Contraforts</option>
-      <option value="BAIXOS">Baixos</option>
-      <option value="DAUS">Daus</option>
-      <option value="GRALLES I TABALS">Gralles i tabals</option>
-      <option value="ALTRES">Altres</option>
-      <option value="__none__">— sense posició —</option>
+    </select>
+    <select id="filter-rol">
+      <option value="">Tots els rols de castell</option>
     </select>
     <span class="count" id="result-count">0 membres</span>
   </div>
@@ -242,109 +263,88 @@
       <thead>
         <tr>
           <th></th>
-          <th>Nom mostrat</th>
+          <th>Nom</th>
           <th>Àlies</th>
           <th>Cognoms</th>
           <th>Alçada</th>
-          <th>Pes</th>
-          <th>Rol</th>
           <th>Posició pinya</th>
+          <th>Rols de castell</th>
           <th>Habitual</th>
-          <th>Té app</th>
-          <th>Email</th>
+          <th>Accés APP</th>
+          <th>Correu</th>
           <th>Mòbil</th>
           <th>Naixement</th>
           <th>Entrega samarreta</th>
           <th>Revisat</th>
           <th>Estat acollida</th>
-          <th>Permisos app</th>
+          <th>Permisos APP</th>
           <th>Integrant colla</th>
           <th>Lesionat</th>
           <th>Formularis</th>
-          <th>ID extern</th>
+          <th>ID</th>
         </tr>
       </thead>
       <tbody id="table-body">
-        <tr><td colspan="20" class="empty-note">Carregant…</td></tr>
+        <tr><td colspan="19" class="empty-note">Carregant…</td></tr>
       </tbody>
     </table>
   </div>
 </main>
 
+<!-- Modal d'edició -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal-box">
     <h3 id="modal-title">Editar casteller</h3>
     <form id="edit-form">
       <div class="field-grid">
         <div class="full">
-          <label>Nom mostrat</label>
+          <label>Nom</label>
           <input type="text" id="f-nombre" required>
         </div>
         <div>
           <label>Àlies</label>
-          <input type="text" id="f-alias">
+          <input type="text" id="f-apodo">
         </div>
         <div>
           <label>Primer cognom</label>
-          <input type="text" id="f-primer_cognom">
+          <input type="text" id="f-primerApellido">
         </div>
         <div>
           <label>Segon cognom</label>
-          <input type="text" id="f-segon_cognom">
+          <input type="text" id="f-segundoApellido">
         </div>
         <div>
           <label>Alçada espatlles (cm)</label>
-          <input type="number" id="f-altura">
+          <input type="number" id="f-alturaHombros">
         </div>
         <div>
-          <label>Pes</label>
-          <input type="number" id="f-peso">
-        </div>
-        <div>
-          <label>Rol (per generar castells)</label>
-          <select id="f-rol">
+          <label>Posició de pinya</label>
+          <select id="f-posicionPinyaId">
             <option value="">— sense assignar —</option>
-            <option value="baix">Baix</option>
-            <option value="segon">Segon</option>
-            <option value="terç">Terç</option>
-            <option value="acotxador">Acotxador</option>
-            <option value="enxaneta">Enxaneta</option>
           </select>
         </div>
-        <div>
-          <label>Posició pinya</label>
-          <select id="f-posicio_pinya">
-            <option value="">— sense assignar —</option>
-            <option value="MANS">Mans</option>
-            <option value="NOVATOS">Novatos</option>
-            <option value="CROSSES">Crosses</option>
-            <option value="LATERALS">Laterals</option>
-            <option value="CONTRAFORTS">Contraforts</option>
-            <option value="BAIXOS">Baixos</option>
-            <option value="DAUS">Daus</option>
-            <option value="GRALLES I TABALS">Gralles i tabals</option>
-            <option value="ALTRES">Altres</option>
-          </select>
+        <div class="full role-btn-row">
+          <button class="ghost" type="button" id="open-roles-btn">Gestionar rols de castell →</button>
         </div>
         <div>
-          <label>Email</label>
-          <input type="email" id="f-email">
+          <label>Correu</label>
+          <input type="email" id="f-correo">
         </div>
         <div>
           <label>Mòbil</label>
-          <input type="text" id="f-mobil">
+          <input type="text" id="f-movil">
         </div>
         <div>
           <label>Data naixement</label>
-          <input type="date" id="f-data_naixement">
+          <input type="date" id="f-fNac">
         </div>
         <div>
           <label>Data entrega samarreta</label>
-          <input type="date" id="f-data_entrega_samarreta">
+          <input type="date" id="f-fechaCamisa">
         </div>
         <div>
           <label>Estat acollida</label>
-          <select id="f-estat_acollida">
+          <select id="f-estadoAcogida">
             <option value="">—</option>
             <option value="Perdut">Perdut</option>
             <option value="Finalitzat">Finalitzat</option>
@@ -352,37 +352,30 @@
           </select>
         </div>
         <div>
-          <label>Permisos app</label>
-          <select id="f-permisos_app">
-            <option value="">—</option>
-            <option value="No">No</option>
-            <option value="Tècnica/Junta">Tècnica/Junta</option>
-            <option value="Administrador">Administrador</option>
-          </select>
-        </div>
-        <div>
           <label>Integrant de la colla</label>
-          <select id="f-integrant_colla">
+          <select id="f-integranteColla">
             <option value="">—</option>
-            <option value="Sí">Sí</option>
-            <option value="No">No</option>
-            <option value="Altres colles">Altres colles</option>
+            <option value="true">Sí</option>
+            <option value="false">No</option>
           </select>
         </div>
         <div>
           <label>Formularis</label>
-          <input type="number" id="f-formularis">
+          <input type="number" id="f-formularios">
         </div>
-        <div>
-          <label>ID extern (altra app)</label>
-          <input type="number" id="f-external_id">
+
+        <div class="full">
+          <label>Permisos especials APP</label>
+          <div class="check-field"><input type="checkbox" id="perm-tecnica"><label for="perm-tecnica">Tècnica</label></div>
+          <div class="check-field"><input type="checkbox" id="perm-junta"><label for="perm-junta">Junta</label></div>
+          <div class="check-field"><input type="checkbox" id="perm-admin"><label for="perm-admin">AdminGeneral</label></div>
         </div>
 
         <div class="full">
           <div class="check-field"><input type="checkbox" id="f-habitual"><label for="f-habitual">Habitual</label></div>
-          <div class="check-field"><input type="checkbox" id="f-te_app"><label for="f-te_app">Té APP</label></div>
-          <div class="check-field"><input type="checkbox" id="f-revisat"><label for="f-revisat">Revisat</label></div>
-          <div class="check-field"><input type="checkbox" id="f-lesionat_llarga_durada"><label for="f-lesionat_llarga_durada">Lesionat de llarga durada</label></div>
+          <div class="check-field"><input type="checkbox" id="f-accesoAPP"><label for="f-accesoAPP">Accés APP</label></div>
+          <div class="check-field"><input type="checkbox" id="f-revisado"><label for="f-revisado">Revisat</label></div>
+          <div class="check-field"><input type="checkbox" id="f-lesionLargoPlazo"><label for="f-lesionLargoPlazo">Lesionat de llarga durada</label></div>
         </div>
       </div>
 
@@ -394,15 +387,25 @@
   </div>
 </div>
 
+<!-- Modal de rols de castell (checkbox + drag & drop) -->
+<div class="modal-overlay" id="roles-overlay">
+  <div class="modal-box small">
+    <h3 id="roles-modal-title">Rols de castell</h3>
+    <p class="hint">Marca els rols que sap fer i arrossega'ls per ordenar-los (amb el dit o el ratolí) — el de dalt de tot és el principal.</p>
+    <ul class="roles-list" id="roles-list"></ul>
+    <div class="modal-actions">
+      <button class="ghost" type="button" id="cancel-roles">Cancel·lar</button>
+      <button class="primary" type="button" id="save-roles">Desar rols</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const API = '';
 let allMembers = [];
+let posicionesPinya = [];
+let rolesCastillo = [];
 let editingId = null;
-
-const PENCIL_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M3 21l3.5-1 11-11-2.5-2.5-11 11L3 21z" fill="#20241F"/>
-  <path d="M16 4l2.5 2.5" stroke="#20241F" stroke-width="1.6"/>
-</svg>`;
 
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, (c) => ({
@@ -424,6 +427,40 @@ function dateOr(v) {
   const pad = n => String(n).padStart(2, '0');
   return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
 }
+function rolesChips(rolesCastell) {
+  if (!rolesCastell || !rolesCastell.length) return '<span class="empty-cell">—</span>';
+  return rolesCastell
+    .slice().sort((a, b) => a.orden - b.orden)
+    .map((r, i) => `<span class="role-chip ${i === 0 ? 'principal' : ''}">${escapeHtml(r.nombre)}</span>`)
+    .join('');
+}
+function permisosChips(permisosAPP) {
+  if (!permisosAPP || !permisosAPP.length) return '<span class="empty-cell">—</span>';
+  return permisosAPP.map(p => `<span class="role-chip">${escapeHtml(p)}</span>`).join('');
+}
+
+/* ---------------- Carga inicial: catálogos + miembros ---------------- */
+
+async function loadCatalogs() {
+  const [posRes, rolRes] = await Promise.all([
+    fetch(`${API}/api/posiciones-pinya`).then(r => r.json()),
+    fetch(`${API}/api/roles-castillo`).then(r => r.json())
+  ]);
+  posicionesPinya = posRes.data || [];
+  rolesCastillo = rolRes.data || [];
+
+  const posSelect = document.getElementById('f-posicionPinyaId');
+  const posFilter = document.getElementById('filter-posicio');
+  posicionesPinya.forEach(p => {
+    posSelect.insertAdjacentHTML('beforeend', `<option value="${p.id}">${escapeHtml(p.nombre)}</option>`);
+    posFilter.insertAdjacentHTML('beforeend', `<option value="${p.id}">${escapeHtml(p.nombre)}</option>`);
+  });
+
+  const rolFilter = document.getElementById('filter-rol');
+  rolesCastillo.forEach(r => {
+    rolFilter.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(r.nombre.toLowerCase())}">${escapeHtml(r.nombre)}</option>`);
+  });
+}
 
 async function fetchAll() {
   const tbody = document.getElementById('table-body');
@@ -433,26 +470,25 @@ async function fetchAll() {
     allMembers = data.data || [];
     applyFilters();
   } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="20" class="empty-note">No s\'ha pogut carregar la llista.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="19" class="empty-note">No s\'ha pogut carregar la llista.</td></tr>';
     console.error(err);
   }
 }
 
 function applyFilters() {
   const q = document.getElementById('search').value.trim().toLowerCase();
-  const rolFilter = document.getElementById('filter-rol').value;
   const posicioFilter = document.getElementById('filter-posicio').value;
+  const rolFilter = document.getElementById('filter-rol').value;
 
   const filtered = allMembers.filter(m => {
     if (q) {
-      const haystack = `${m.nombre || ''} ${m.alias || ''} ${m.email || ''}`.toLowerCase();
+      const haystack = `${m.nombre || ''} ${m.apodo || ''} ${m.correo || ''}`.toLowerCase();
       if (!haystack.includes(q)) return false;
     }
+    if (posicioFilter && String(m.posicionPinyaId) !== posicioFilter) return false;
     if (rolFilter) {
-      if (rolFilter === '__none__' ? m.rol : m.rol !== rolFilter) return false;
-    }
-    if (posicioFilter) {
-      if (posicioFilter === '__none__' ? m.posicio_pinya : m.posicio_pinya !== posicioFilter) return false;
+      const nombres = (m.rolesCastell || []).map(r => r.nombre.toLowerCase());
+      if (!nombres.includes(rolFilter)) return false;
     }
     return true;
   });
@@ -464,45 +500,48 @@ function applyFilters() {
 function renderTable(rows) {
   const tbody = document.getElementById('table-body');
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="20" class="empty-note">Cap membre coincideix amb el filtre.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="19" class="empty-note">Cap membre coincideix amb el filtre.</td></tr>';
     return;
   }
 
+  const pencilSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M3 21l3.5-1 11-11-2.5-2.5-11 11L3 21z" fill="#20241F"/>
+    <path d="M16 4l2.5 2.5" stroke="#20241F" stroke-width="1.6"/>
+  </svg>`;
+
   tbody.innerHTML = rows.map(m => {
-    const cognoms = [m.primer_cognom, m.segon_cognom].filter(Boolean).join(' ');
+    const cognoms = [m.primerApellido, m.segundoApellido].filter(Boolean).join(' ');
     return `
       <tr>
-        <td><button class="edit-btn" data-id="${m.id}" type="button" title="Editar">${PENCIL_SVG}</button></td>
+        <td><button class="icon-btn edit-btn" data-id="${m.id}" type="button" title="Editar">${pencilSvg}</button></td>
         <td>${cellOr(m.nombre)}</td>
-        <td>${cellOr(m.alias)}</td>
+        <td>${cellOr(m.apodo)}</td>
         <td>${cellOr(cognoms)}</td>
-        <td>${m.altura !== null && m.altura !== undefined ? m.altura + ' cm' : '<span class="empty-cell">—</span>'}</td>
-        <td>${cellOr(m.peso)}</td>
-        <td>${cellOr(m.rol)}</td>
-        <td>${cellOr(m.posicio_pinya)}</td>
+        <td>${m.alturaHombros !== null && m.alturaHombros !== undefined ? m.alturaHombros + ' cm' : '<span class="empty-cell">—</span>'}</td>
+        <td>${cellOr(m.posicionPinyaNombre)}</td>
+        <td>${rolesChips(m.rolesCastell)}</td>
         <td>${yesNo(m.habitual)}</td>
-        <td>${yesNo(m.te_app)}</td>
-        <td>${cellOr(m.email)}</td>
-        <td>${cellOr(m.mobil)}</td>
-        <td>${dateOr(m.data_naixement)}</td>
-        <td>${dateOr(m.data_entrega_samarreta)}</td>
-        <td>${yesNo(m.revisat)}</td>
-        <td>${cellOr(m.estat_acollida)}</td>
-        <td>${cellOr(m.permisos_app)}</td>
-        <td>${cellOr(m.integrant_colla)}</td>
-        <td>${yesNo(m.lesionat_llarga_durada)}</td>
-        <td>${m.formularis !== null && m.formularis !== undefined ? m.formularis : '<span class="empty-cell">—</span>'}</td>
-        <td>${cellOr(m.external_id)}</td>
+        <td>${yesNo(m.accesoAPP)}</td>
+        <td>${cellOr(m.correo)}</td>
+        <td>${cellOr(m.movil)}</td>
+        <td>${dateOr(m.fNac)}</td>
+        <td>${dateOr(m.fechaCamisa)}</td>
+        <td>${yesNo(m.revisado)}</td>
+        <td>${cellOr(m.estadoAcogida)}</td>
+        <td>${permisosChips(m.permisosAPP)}</td>
+        <td>${yesNo(m.integranteColla)}</td>
+        <td>${yesNo(m.lesionLargoPlazo)}</td>
+        <td>${m.formularios !== null && m.formularios !== undefined ? m.formularios : '<span class="empty-cell">—</span>'}</td>
       </tr>
     `;
   }).join('');
 }
 
 document.getElementById('search').addEventListener('input', applyFilters);
-document.getElementById('filter-rol').addEventListener('change', applyFilters);
 document.getElementById('filter-posicio').addEventListener('change', applyFilters);
+document.getElementById('filter-rol').addEventListener('change', applyFilters);
 
-/* ---------------- Edit modal ---------------- */
+/* ---------------- Modal d'edició ---------------- */
 
 const overlay = document.getElementById('modal-overlay');
 
@@ -518,26 +557,27 @@ function openEdit(m) {
   editingId = m.id;
   document.getElementById('modal-title').textContent = `Editar · ${m.nombre}`;
   document.getElementById('f-nombre').value = m.nombre || '';
-  document.getElementById('f-alias').value = m.alias || '';
-  document.getElementById('f-primer_cognom').value = m.primer_cognom || '';
-  document.getElementById('f-segon_cognom').value = m.segon_cognom || '';
-  document.getElementById('f-altura').value = m.altura ?? '';
-  document.getElementById('f-peso').value = m.peso ?? '';
-  document.getElementById('f-rol').value = m.rol || '';
-  document.getElementById('f-posicio_pinya').value = m.posicio_pinya || '';
-  document.getElementById('f-email').value = m.email || '';
-  document.getElementById('f-mobil').value = m.mobil || '';
-  document.getElementById('f-data_naixement').value = toDateInputValue(m.data_naixement);
-  document.getElementById('f-data_entrega_samarreta').value = toDateInputValue(m.data_entrega_samarreta);
-  document.getElementById('f-estat_acollida').value = m.estat_acollida || '';
-  document.getElementById('f-permisos_app').value = m.permisos_app || '';
-  document.getElementById('f-integrant_colla').value = m.integrant_colla || '';
-  document.getElementById('f-formularis').value = m.formularis ?? '';
-  document.getElementById('f-external_id').value = m.external_id ?? '';
+  document.getElementById('f-apodo').value = m.apodo || '';
+  document.getElementById('f-primerApellido').value = m.primerApellido || '';
+  document.getElementById('f-segundoApellido').value = m.segundoApellido || '';
+  document.getElementById('f-alturaHombros').value = m.alturaHombros ?? '';
+  document.getElementById('f-posicionPinyaId').value = m.posicionPinyaId ?? '';
+  document.getElementById('f-correo').value = m.correo || '';
+  document.getElementById('f-movil').value = m.movil || '';
+  document.getElementById('f-fNac').value = toDateInputValue(m.fNac);
+  document.getElementById('f-fechaCamisa').value = toDateInputValue(m.fechaCamisa);
+  document.getElementById('f-estadoAcogida').value = m.estadoAcogida || '';
+  document.getElementById('f-integranteColla').value = m.integranteColla === true ? 'true' : (m.integranteColla === false ? 'false' : '');
+  document.getElementById('f-formularios').value = m.formularios ?? '';
   document.getElementById('f-habitual').checked = !!m.habitual;
-  document.getElementById('f-te_app').checked = !!m.te_app;
-  document.getElementById('f-revisat').checked = !!m.revisat;
-  document.getElementById('f-lesionat_llarga_durada').checked = !!m.lesionat_llarga_durada;
+  document.getElementById('f-accesoAPP').checked = !!m.accesoAPP;
+  document.getElementById('f-revisado').checked = !!m.revisado;
+  document.getElementById('f-lesionLargoPlazo').checked = !!m.lesionLargoPlazo;
+
+  const permisos = m.permisosAPP || [];
+  document.getElementById('perm-tecnica').checked = permisos.includes('Tècnica');
+  document.getElementById('perm-junta').checked = permisos.includes('Junta');
+  document.getElementById('perm-admin').checked = permisos.includes('AdminGeneral');
 
   overlay.classList.add('open');
 }
@@ -559,28 +599,32 @@ document.getElementById('edit-form').addEventListener('submit', async (e) => {
   const val = id => document.getElementById(id).value;
   const numOrEmpty = v => (v === '' ? '' : Number(v));
 
+  const permisosAPP = [];
+  if (document.getElementById('perm-tecnica').checked) permisosAPP.push('Tècnica');
+  if (document.getElementById('perm-junta').checked) permisosAPP.push('Junta');
+  if (document.getElementById('perm-admin').checked) permisosAPP.push('AdminGeneral');
+
+  const integranteRaw = val('f-integranteColla');
+
   const payload = {
     nombre: val('f-nombre').trim(),
-    alias: val('f-alias').trim() || null,
-    primer_cognom: val('f-primer_cognom').trim() || null,
-    segon_cognom: val('f-segon_cognom').trim() || null,
-    altura: numOrEmpty(val('f-altura')),
-    peso: numOrEmpty(val('f-peso')),
-    rol: val('f-rol') || null,
-    posicio_pinya: val('f-posicio_pinya') || null,
-    email: val('f-email').trim() || null,
-    mobil: val('f-mobil').trim() || null,
-    data_naixement: val('f-data_naixement') || null,
-    data_entrega_samarreta: val('f-data_entrega_samarreta') || null,
-    estat_acollida: val('f-estat_acollida') || null,
-    permisos_app: val('f-permisos_app') || null,
-    integrant_colla: val('f-integrant_colla') || null,
-    formularis: numOrEmpty(val('f-formularis')),
-    external_id: numOrEmpty(val('f-external_id')),
+    apodo: val('f-apodo').trim() || null,
+    primerApellido: val('f-primerApellido').trim() || null,
+    segundoApellido: val('f-segundoApellido').trim() || null,
+    alturaHombros: numOrEmpty(val('f-alturaHombros')),
+    posicionPinyaId: numOrEmpty(val('f-posicionPinyaId')),
+    correo: val('f-correo').trim() || null,
+    movil: val('f-movil').trim() || null,
+    fNac: val('f-fNac') || null,
+    fechaCamisa: val('f-fechaCamisa') || null,
+    estadoAcogida: val('f-estadoAcogida') || null,
+    integranteColla: integranteRaw === '' ? null : integranteRaw === 'true',
+    formularios: numOrEmpty(val('f-formularios')),
+    permisosAPP,
     habitual: document.getElementById('f-habitual').checked,
-    te_app: document.getElementById('f-te_app').checked,
-    revisat: document.getElementById('f-revisat').checked,
-    lesionat_llarga_durada: document.getElementById('f-lesionat_llarga_durada').checked
+    accesoAPP: document.getElementById('f-accesoAPP').checked,
+    revisado: document.getElementById('f-revisado').checked,
+    lesionLargoPlazo: document.getElementById('f-lesionLargoPlazo').checked
   };
 
   if (!payload.nombre) { alert('El nom no pot quedar buit.'); return; }
@@ -604,7 +648,113 @@ document.getElementById('edit-form').addEventListener('submit', async (e) => {
   }
 });
 
-fetchAll();
+/* ---------------- Modal de rols de castell (checkbox + drag & drop) ---------------- */
+
+const rolesOverlay = document.getElementById('roles-overlay');
+const rolesList = document.getElementById('roles-list');
+
+document.getElementById('open-roles-btn').addEventListener('click', () => {
+  const m = allMembers.find(x => x.id === editingId);
+  if (!m) return;
+  document.getElementById('roles-modal-title').textContent = `Rols de castell · ${m.nombre}`;
+  buildRolesList(m.rolesCastell || []);
+  rolesOverlay.classList.add('open');
+});
+
+function buildRolesList(asignados) {
+  const asignadosOrdenados = asignados.slice().sort((a, b) => a.orden - b.orden);
+  const idsAsignados = asignadosOrdenados.map(r => r.id);
+  const noAsignados = rolesCastillo.filter(r => !idsAsignados.includes(r.id));
+
+  const items = [
+    ...asignadosOrdenados.map(r => ({ id: r.id, nombre: r.nombre, checked: true })),
+    ...noAsignados.map(r => ({ id: r.id, nombre: r.nombre, checked: false }))
+  ];
+
+  rolesList.innerHTML = items.map(item => `
+    <li data-role-id="${item.id}">
+      <span class="drag-handle">☰</span>
+      <input type="checkbox" class="role-check" ${item.checked ? 'checked' : ''}>
+      <span class="role-name">${escapeHtml(item.nombre)}</span>
+    </li>
+  `).join('');
+
+  setupSortable(rolesList);
+}
+
+function setupSortable(listEl) {
+  let dragEl = null;
+
+  listEl.querySelectorAll('.drag-handle').forEach(handle => {
+    handle.addEventListener('pointerdown', (e) => {
+      dragEl = handle.closest('li');
+      dragEl.setPointerCapture(e.pointerId);
+      dragEl.classList.add('dragging');
+      e.preventDefault();
+    });
+  });
+
+  listEl.onpointermove = (e) => {
+    if (!dragEl) return;
+    const after = getDragAfterElement(listEl, e.clientY);
+    if (after == null) {
+      listEl.appendChild(dragEl);
+    } else if (after !== dragEl) {
+      listEl.insertBefore(dragEl, after);
+    }
+  };
+
+  const endDrag = () => {
+    if (dragEl) dragEl.classList.remove('dragging');
+    dragEl = null;
+  };
+  listEl.onpointerup = endDrag;
+  listEl.onpointercancel = endDrag;
+}
+
+function getDragAfterElement(container, y) {
+  const els = [...container.querySelectorAll('li:not(.dragging)')];
+  return els.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      return { offset, element: child };
+    }
+    return closest;
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+document.getElementById('cancel-roles').addEventListener('click', () => rolesOverlay.classList.remove('open'));
+rolesOverlay.addEventListener('click', (e) => { if (e.target === rolesOverlay) rolesOverlay.classList.remove('open'); });
+
+document.getElementById('save-roles').addEventListener('click', async () => {
+  if (!editingId) return;
+  const rolIds = [...rolesList.querySelectorAll('li')]
+    .filter(li => li.querySelector('.role-check').checked)
+    .map(li => Number(li.dataset.roleId));
+
+  const btn = document.getElementById('save-roles');
+  btn.disabled = true;
+  try {
+    await fetch(`${API}/api/castellers/${editingId}/roles`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rolIds })
+    });
+    rolesOverlay.classList.remove('open');
+    await fetchAll();
+  } catch (err) {
+    console.error(err);
+    alert('No s\'han pogut desar els rols.');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+(async function init() {
+  await loadCatalogs();
+  await fetchAll();
+})();
 </script>
 
 </body>
