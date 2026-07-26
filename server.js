@@ -1,9 +1,35 @@
 const express = require('express');
 const { Pool } = require('pg');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
-app.use(express.json());
-app.use(express.static('public'));
+
+// 🛡️ Seguridad base
+// - helmet añade cabeceras seguras por defecto (oculta X-Powered-By, evita
+//   sniffing de tipo MIME, fija Content-Security-Policy básica, etc.)
+app.disable('x-powered-by');
+app.use(helmet());
+
+// - límite de peticiones por IP: mitiga fuerza bruta / scraping masivo
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 300,                 // peticiones por IP en esa ventana
+  standardHeaders: true,
+  legacyHeaders: false
+});
+app.use('/api/', limiter);
+
+app.use(express.json({ limit: '1mb' })); // límite de tamaño de body, evita payloads gigantes
+app.use(express.static('public', {
+  dotfiles: 'deny', // nunca sirvas .env, .git, etc.
+  index: ['index.html']
+}));
+
+// Nota sobre inyección SQL: todas las consultas de este archivo usan
+// parámetros ($1, $2...) de node-postgres en vez de concatenar texto, que
+// es la defensa real contra SQL injection. Nunca metas variables directamente
+// dentro de un template string SQL (`... WHERE x = ${valor}`), siempre $n.
 
 // 🔑 Conexión a PostgreSQL (Render)
 const pool = new Pool({
@@ -12,6 +38,15 @@ const pool = new Pool({
     rejectUnauthorized: false
   }
 });
+
+// Respuesta de error genérica: registra el detalle real en el log del
+// servidor (Render lo verás en tus logs), pero nunca lo devuelve tal cual
+// al cliente — un mensaje de error de Postgres puede revelar nombres de
+// tabla/columna útiles para un atacante.
+function errorHandler(res, error, mensajePublico = 'Error del servidor') {
+  console.error(error);
+  res.status(500).json({ success: false, error: mensajePublico });
+}
 
 // 🔥 TEST DB
 app.get('/api/test-db', async (req, res) => {
@@ -22,11 +57,7 @@ app.get('/api/test-db', async (req, res) => {
       time: result.rows[0],
     });
   } catch (error) {
-    console.error('Error DB:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
+    errorHandler(res, error, 'No se pudo conectar a la base de datos');
   }
 });
 
@@ -188,8 +219,7 @@ app.get('/api/fix-id-sequence', async (req, res) => {
     );
     res.json({ success: true, mensaje: 'Seqüència d\'id ajustada correctament.' });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, error: error.message });
+    errorHandler(res, error);
   }
 });
 
@@ -255,8 +285,7 @@ app.post('/api/castellers', async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    errorHandler(res, error);
   }
 });
 
@@ -283,8 +312,7 @@ app.get('/api/castellers', async (req, res) => {
       data: result.rows
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    errorHandler(res, error);
   }
 });
 
@@ -294,8 +322,7 @@ app.get('/api/posiciones-pinya', async (req, res) => {
     const result = await pool.query('SELECT * FROM posiciones_pinya ORDER BY "id"');
     res.json({ success: true, data: result.rows });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    errorHandler(res, error);
   }
 });
 
@@ -305,8 +332,7 @@ app.get('/api/roles-castillo', async (req, res) => {
     const result = await pool.query('SELECT * FROM roles_castillo ORDER BY "id"');
     res.json({ success: true, data: result.rows });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    errorHandler(res, error);
   }
 });
 
@@ -324,8 +350,7 @@ app.get('/api/castellers/:id/roles', async (req, res) => {
     );
     res.json({ success: true, data: result.rows });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    errorHandler(res, error);
   }
 });
 
@@ -354,8 +379,7 @@ app.put('/api/castellers/:id/roles', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    errorHandler(res, error);
   } finally {
     client.release();
   }
@@ -417,8 +441,7 @@ app.put('/api/castellers/:id', async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    errorHandler(res, error);
   }
 });
 
@@ -550,7 +573,206 @@ app.get('/api/generar', async (req, res) => {
   }
 });
 
-// 🚀 Puerto (Render usa process.env.PORT)
+/* =========================================================
+   MÒDUL ENSAJOS
+   ========================================================= */
+
+// ⚠️ TEMPORAL: crea les taules d'ensayos i assistència. Sense ?confirm=si
+// només avisa. BÓRRALA del server.js en cuanto la hayas ejecutado.
+app.get('/api/migrate-ensayos', async (req, res) => {
+  if (req.query.confirm !== 'si') {
+    return res.json({
+      success: false,
+      aviso: 'Esto crea las tablas ensayos y ensayo_asistentes. Añade ?confirm=si para confirmar.'
+    });
+  }
+
+  const statements = [
+    `CREATE TABLE IF NOT EXISTS ensayos (
+       "id" SERIAL PRIMARY KEY,
+       "fecha" DATE NOT NULL,
+       "horaInicio" TIME,
+       "horaFin" TIME,
+       "notas" TEXT,
+       "publicado" BOOLEAN NOT NULL DEFAULT FALSE,
+       "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+     )`,
+    `CREATE TABLE IF NOT EXISTS ensayo_asistentes (
+       "ensayoId" INTEGER NOT NULL REFERENCES ensayos("id") ON DELETE CASCADE,
+       "castellerId" INTEGER NOT NULL REFERENCES castellers("id") ON DELETE CASCADE,
+       PRIMARY KEY ("ensayoId", "castellerId")
+     )`
+  ];
+
+  const resultados = [];
+  for (const sql of statements) {
+    try {
+      await pool.query(sql);
+      resultados.push({ sql, ok: true });
+    } catch (err) {
+      resultados.push({ sql, ok: false, error: err.message });
+    }
+  }
+
+  res.json({
+    success: resultados.every(r => r.ok),
+    detalle: resultados,
+    aviso: 'Borra /api/migrate-ensayos del server.js ahora que ya la has ejecutado.'
+  });
+});
+
+// Llistar tots els ensayos (esborranys inclosos — encara no hi ha usuaris
+// per restringir la visibilitat dels privats; això arribarà amb el login)
+app.get('/api/ensayos', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT e.*, COUNT(ea."castellerId")::int AS "numAsistentes"
+      FROM ensayos e
+      LEFT JOIN ensayo_asistentes ea ON ea."ensayoId" = e."id"
+      GROUP BY e."id"
+      ORDER BY e."fecha" DESC, e."id" DESC
+    `);
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Crear un ensayo nou
+app.post('/api/ensayos', async (req, res) => {
+  try {
+    const { fecha, horaInicio, horaFin, notas } = req.body;
+    if (!fecha) return res.status(400).json({ error: 'fecha es obligatoria' });
+
+    const result = await pool.query(
+      `INSERT INTO ensayos ("fecha", "horaInicio", "horaFin", "notas")
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [fecha, horaInicio || null, horaFin || null, notas || null]
+    );
+    res.json({ success: true, ensayo: result.rows[0] });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Detall d'un ensayo + llista d'ids de castellers presents
+app.get('/api/ensayos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const ensayo = await pool.query('SELECT * FROM ensayos WHERE "id" = $1', [id]);
+    if (ensayo.rows.length === 0) return res.status(404).json({ error: 'Ensayo no trobat' });
+
+    const asistentes = await pool.query(
+      'SELECT "castellerId" FROM ensayo_asistentes WHERE "ensayoId" = $1',
+      [id]
+    );
+    res.json({
+      success: true,
+      ensayo: ensayo.rows[0],
+      asistentesIds: asistentes.rows.map(r => r.castellerId)
+    });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Marcar/desmarcar l'assistència d'un casteller a un ensayo
+app.put('/api/ensayos/:id/asistencia', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { castellerId, asiste } = req.body;
+    if (!castellerId) return res.status(400).json({ error: 'castellerId es obligatorio' });
+
+    if (asiste) {
+      await pool.query(
+        `INSERT INTO ensayo_asistentes ("ensayoId", "castellerId") VALUES ($1, $2)
+         ON CONFLICT DO NOTHING`,
+        [id, castellerId]
+      );
+    } else {
+      await pool.query(
+        `DELETE FROM ensayo_asistentes WHERE "ensayoId" = $1 AND "castellerId" = $2`,
+        [id, castellerId]
+      );
+    }
+    res.json({ success: true });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Publicar un ensayo (deixa de ser esborrany privat)
+app.put('/api/ensayos/:id/publicar', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      `UPDATE ensayos SET "publicado" = TRUE WHERE "id" = $1 RETURNING *`,
+      [id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Ensayo no trobat' });
+    res.json({ success: true, ensayo: result.rows[0] });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Propostes de castells PER A UN ENSAYO CONCRET, basades només en els
+// presents (encara no tenim rols de castell assignats de forma fiable a
+// totes les collas que faran servir això, així que aquí NO exigim rols:
+// només comptem caps i, opcionalment, ordenem per alçada).
+// ?criterio=altura -> suggereix qui podria anar de pom (més baixos) i de
+// base (més alts). ?criterio=ninguno (o sense el paràmetre) -> només
+// comprova viabilitat per nombre de gent.
+app.get('/api/ensayos/:id/propuestas', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const criterio = req.query.criterio === 'altura' ? 'altura' : 'ninguno';
+
+    const result = await pool.query(
+      `SELECT c."id", c."nombre", c."alturaHombros"
+       FROM ensayo_asistentes ea
+       JOIN castellers c ON c."id" = ea."castellerId"
+       WHERE ea."ensayoId" = $1`,
+      [id]
+    );
+    const presentes = result.rows;
+
+    // Estructures simplificades: nombre mínim de persones al tronc + pom
+    // (1 baix + segons + tersos + acotxador + enxaneta). No modelem encara
+    // la pinya de suport.
+    const estructuras = [
+      { tipo: '2d6', segons: 2, tersos: 2 },
+      { tipo: '3d7', segons: 3, tersos: 3 },
+      { tipo: '4d7', segons: 4, tersos: 4 },
+      { tipo: '5d7', segons: 5, tersos: 5 }
+    ];
+
+    const propuestas = estructuras.map(e => {
+      const requerido = 1 + e.segons + e.tersos + 1 + 1; // baix + segons + tersos + acotxador + enxaneta
+      const viable = presentes.length >= requerido;
+
+      const propuesta = { tipo: e.tipo, requerido, presentes: presentes.length, viable };
+
+      if (viable && criterio === 'altura') {
+        const conAltura = presentes.filter(p => p.alturaHombros !== null && p.alturaHombros !== undefined);
+        const ordenados = [...conAltura].sort((a, b) => a.alturaHombros - b.alturaHombros);
+        propuesta.sugerencia = {
+          pom_mas_bajos: ordenados.slice(0, 2).map(p => ({ id: p.id, nombre: p.nombre, alturaHombros: p.alturaHombros })),
+          base_mas_altos: ordenados.slice(-2).reverse().map(p => ({ id: p.id, nombre: p.nombre, alturaHombros: p.alturaHombros })),
+          sinAlturaRegistrada: presentes.length - conAltura.length
+        };
+      }
+
+      return propuesta;
+    });
+
+    res.json({ success: true, criterio, propuestas });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
