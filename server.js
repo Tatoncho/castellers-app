@@ -9,7 +9,21 @@ const app = express();
 // - helmet añade cabeceras seguras por defecto (oculta X-Powered-By, evita
 //   sniffing de tipo MIME, fija Content-Security-Policy básica, etc.)
 app.disable('x-powered-by');
-app.use(helmet());
+// La app sirve HTML estático con <script> y <style> inline (sin build
+// step ni archivos .js/.css separados), así que el CSP por defecto de
+// helmet (que bloquea todo lo inline) rompería el JavaScript de cada
+// página. Lo abrimos explícitamente para inline + Google Fonts, y
+// dejamos el resto de protecciones de helmet como están.
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      "script-src": ["'self'", "'unsafe-inline'"],
+      "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      "font-src": ["'self'", "https://fonts.gstatic.com", "data:"]
+    }
+  }
+}));
 
 // - límite de peticiones por IP: mitiga fuerza bruta / scraping masivo
 const limiter = rateLimit({
