@@ -621,6 +621,203 @@ app.get('/api/migrate-ensayos', async (req, res) => {
   });
 });
 
+// ⚠️ TEMPORAL: crea las tablas de estructuras guardadas por assaig
+// (el castell/pinya que se decide conservar) y sus posiciones. Sin
+// ?confirm=si solo avisa. BÓRRALA del server.js en cuanto la hayas ejecutado.
+app.get('/api/migrate-estructuras', async (req, res) => {
+  if (req.query.confirm !== 'si') {
+    return res.json({
+      success: false,
+      aviso: 'Esto crea las tablas estructuras_ensayo y estructura_posiciones. Añade ?confirm=si para confirmar.'
+    });
+  }
+
+  const statements = [
+    `CREATE TABLE IF NOT EXISTS estructuras_ensayo (
+       "id" SERIAL PRIMARY KEY,
+       "ensayoId" INTEGER NOT NULL REFERENCES ensayos("id") ON DELETE CASCADE,
+       "tipo" TEXT NOT NULL,
+       "notas" TEXT,
+       "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+     )`,
+    // "slot" = nombre de la posición (Baix, Crossa, Soca, Rengle...) tal
+    // como aparece en las plantillas; "slotIndex" distingue repeticiones
+    // (Crossa-1, Crossa-2...). castellerId nulo = posición vacía todavía.
+    `CREATE TABLE IF NOT EXISTS estructura_posiciones (
+       "id" SERIAL PRIMARY KEY,
+       "estructuraEnsayoId" INTEGER NOT NULL REFERENCES estructuras_ensayo("id") ON DELETE CASCADE,
+       "slot" TEXT NOT NULL,
+       "slotIndex" INTEGER NOT NULL DEFAULT 1,
+       "castellerId" INTEGER REFERENCES castellers("id") ON DELETE SET NULL,
+       UNIQUE ("estructuraEnsayoId", "slot", "slotIndex")
+     )`
+  ];
+
+  const resultados = [];
+  for (const sql of statements) {
+    try {
+      await pool.query(sql);
+      resultados.push({ sql, ok: true });
+    } catch (err) {
+      resultados.push({ sql, ok: false, error: err.message });
+    }
+  }
+
+  res.json({
+    success: resultados.every(r => r.ok),
+    detalle: resultados,
+    aviso: 'Borra /api/migrate-estructuras del server.js ahora que ya la has ejecutado.'
+  });
+});
+
+// Crear una estructura guardada dentro de un assaig (p.ex. al pulsar
+// "Desar aquesta proposta" en el modal de propostes de castells)
+app.post('/api/ensayos/:id/estructuras', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tipo, notas } = req.body;
+    if (!tipo) return res.status(400).json({ error: 'tipo es obligatorio' });
+
+    const result = await pool.query(
+      `INSERT INTO estructuras_ensayo ("ensayoId", "tipo", "notas") VALUES ($1, $2, $3) RETURNING *`,
+      [id, tipo, notas || null]
+    );
+    res.json({ success: true, estructura: result.rows[0] });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Listar las estructuras guardadas de un assaig, con cuántas posiciones
+// tienen ya asignadas
+app.get('/api/ensayos/:id/estructuras', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(`
+      SELECT ee.*,
+        COUNT(ep."id")::int AS "totalPosiciones",
+        COUNT(ep."castellerId")::int AS "posicionesAsignadas"
+      FROM estructuras_ensayo ee
+      LEFT JOIN estructura_posiciones ep ON ep."estructuraEnsayoId" = ee."id"
+      WHERE ee."ensayoId" = $1
+      GROUP BY ee."id"
+      ORDER BY ee."created_at" ASC
+    `, [id]);
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Detalle de una estructura guardada: cabecera + todas sus posiciones
+// (con el nombre del casteller asignado, si lo hay)
+app.get('/api/estructuras/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const estructura = await pool.query('SELECT * FROM estructuras_ensayo WHERE "id" = $1', [id]);
+    if (estructura.rows.length === 0) return res.status(404).json({ error: 'Estructura no trobada' });
+
+    const posiciones = await pool.query(`
+      SELECT ep."slot", ep."slotIndex", ep."castellerId", c."nombre" AS "castellerNombre"
+      FROM estructura_posiciones ep
+      LEFT JOIN castellers c ON c."id" = ep."castellerId"
+      WHERE ep."estructuraEnsayoId" = $1
+      ORDER BY ep."slot", ep."slotIndex"
+    `, [id]);
+
+    res.json({ success: true, estructura: estructura.rows[0], posiciones: posiciones.rows });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Asignar (o vaciar, con castellerId null) un casteller a una posición
+// concreta. Sirve tanto para el "arrastrar y soltar" como para colocar
+// manualmente en una pinya en blanco.
+app.put('/api/estructuras/:id/posiciones', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { slot, slotIndex, castellerId } = req.body;
+    if (!slot) return res.status(400).json({ error: 'slot es obligatorio' });
+
+    const result = await pool.query(
+      `INSERT INTO estructura_posiciones ("estructuraEnsayoId", "slot", "slotIndex", "castellerId")
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT ("estructuraEnsayoId", "slot", "slotIndex")
+       DO UPDATE SET "castellerId" = EXCLUDED."castellerId"
+       RETURNING *`,
+      [id, slot, slotIndex || 1, castellerId || null]
+    );
+    res.json({ success: true, posicion: result.rows[0] });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Intercambiar quién ocupa dos posiciones (drag&drop de sujeto sobre
+// sujeto, o el "clic en B, clic en A" que también queréis soportar).
+// Crea las filas si alguna posición todavía no existía (pinya en blanco).
+app.put('/api/estructuras/:id/swap', async (req, res) => {
+  const { id } = req.params;
+  const { a, b } = req.body; // { slot, slotIndex } cada una
+  if (!a || !b || !a.slot || !b.slot) {
+    return res.status(400).json({ error: 'a y b (con slot) son obligatorios' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const upsertVacio = async (pos) => {
+      await client.query(
+        `INSERT INTO estructura_posiciones ("estructuraEnsayoId", "slot", "slotIndex")
+         VALUES ($1, $2, $3)
+         ON CONFLICT ("estructuraEnsayoId", "slot", "slotIndex") DO NOTHING`,
+        [id, pos.slot, pos.slotIndex || 1]
+      );
+      const r = await client.query(
+        `SELECT "castellerId" FROM estructura_posiciones
+         WHERE "estructuraEnsayoId" = $1 AND "slot" = $2 AND "slotIndex" = $3`,
+        [id, pos.slot, pos.slotIndex || 1]
+      );
+      return r.rows[0].castellerId;
+    };
+
+    const castellerA = await upsertVacio(a);
+    const castellerB = await upsertVacio(b);
+
+    await client.query(
+      `UPDATE estructura_posiciones SET "castellerId" = $1
+       WHERE "estructuraEnsayoId" = $2 AND "slot" = $3 AND "slotIndex" = $4`,
+      [castellerB, id, a.slot, a.slotIndex || 1]
+    );
+    await client.query(
+      `UPDATE estructura_posiciones SET "castellerId" = $1
+       WHERE "estructuraEnsayoId" = $2 AND "slot" = $3 AND "slotIndex" = $4`,
+      [castellerA, id, b.slot, b.slotIndex || 1]
+    );
+
+    await client.query('COMMIT');
+    res.json({ success: true });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    errorHandler(res, error);
+  } finally {
+    client.release();
+  }
+});
+
+// Descartar una estructura guardada (p.ex. una prova que no ha quedat bé)
+app.delete('/api/estructuras/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM estructuras_ensayo WHERE "id" = $1', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
 // Llistar tots els ensayos (esborranys inclosos — encara no hi ha usuaris
 // per restringir la visibilitat dels privats; això arribarà amb el login)
 app.get('/api/ensayos', async (req, res) => {

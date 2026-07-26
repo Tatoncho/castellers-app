@@ -185,6 +185,15 @@
         <button class="ghost" id="open-propuestas-btn" type="button">Generar propostes de castells</button>
         <button class="ghost" id="open-pinya-btn" type="button">Generar pinya</button>
       </div>
+
+      <div style="margin-top:20px;">
+        <div class="panel-head" style="padding:0 0 10px; border-bottom:1px solid var(--line); margin-bottom:10px;">
+          <h2 style="font-size:15px;">Estructures guardades d'aquest assaig</h2>
+        </div>
+        <ul class="assajos-list" id="estructuras-list">
+          <li class="empty-note" style="border:none;">Encara no s'ha desat cap estructura.</li>
+        </ul>
+      </div>
     </div>
   </section>
 </main>
@@ -339,6 +348,7 @@ async function openEnsayo(id) {
     document.getElementById('attendance-search').value = '';
     renderAttendanceList();
     renderEnsayosList();
+    await fetchEstructuras();
   } catch (err) {
     console.error(err);
     alert('No s\'ha pogut obrir l\'assaig.');
@@ -451,14 +461,87 @@ function renderPropuestaCard(p) {
       </div>
     `;
   }
+  const desarBtn = p.viable
+    ? `<button class="ghost small guardar-estructura-btn" data-tipo="${escapeHtml(p.tipo)}" type="button" style="margin-top:10px;">Desar aquesta proposta</button>`
+    : '';
   return `
     <div class="prop-card ${p.viable ? '' : 'no-viable'}">
       <div class="tipo">${escapeHtml(p.tipo)}</div>
       <div class="viab ${p.viable ? 'si' : 'no'}">${p.viable ? '🟢 Viable' : '🔴 No viable'} · ${p.presentes}/${p.requerido}</div>
       ${sugerenciaHtml}
+      ${desarBtn}
     </div>
   `;
 }
+
+document.getElementById('propuestas-grid').addEventListener('click', async (e) => {
+  const btn = e.target.closest('.guardar-estructura-btn');
+  if (!btn || !currentEnsayoId) return;
+  btn.disabled = true;
+  btn.textContent = 'Desant…';
+  try {
+    await fetch(`${API}/api/ensayos/${currentEnsayoId}/estructuras`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tipo: btn.dataset.tipo })
+    });
+    await fetchEstructuras();
+    btn.textContent = 'Desada ✓';
+  } catch (err) {
+    console.error(err);
+    btn.disabled = false;
+    btn.textContent = 'Desar aquesta proposta';
+    alert('No s\'ha pogut desar.');
+  }
+});
+
+/* ---------------- Estructures guardades de l'assaig ---------------- */
+
+async function fetchEstructuras() {
+  if (!currentEnsayoId) return;
+  const list = document.getElementById('estructuras-list');
+  try {
+    const res = await fetch(`${API}/api/ensayos/${currentEnsayoId}/estructuras`);
+    const data = await res.json();
+    const estructuras = data.data || [];
+    if (!estructuras.length) {
+      list.innerHTML = '<li class="empty-note" style="border:none;">Encara no s\'ha desat cap estructura.</li>';
+      return;
+    }
+    list.innerHTML = estructuras.map(e => `
+      <li data-id="${e.id}">
+        <span class="fecha-box">${escapeHtml(e.tipo)}</span>
+        <span class="meta">${e.posicionesAsignadas}/${e.totalPosiciones || '?'} posicions assignades</span>
+        <button class="ghost small abrir-constructor-btn" data-id="${e.id}" type="button">Obrir constructor</button>
+        <button class="ghost small eliminar-estructura-btn" data-id="${e.id}" type="button">Eliminar</button>
+      </li>
+    `).join('');
+  } catch (err) {
+    console.error(err);
+    list.innerHTML = '<li class="empty-note" style="border:none;">No s\'han pogut carregar les estructures.</li>';
+  }
+}
+
+document.getElementById('estructuras-list').addEventListener('click', async (e) => {
+  const abrirBtn = e.target.closest('.abrir-constructor-btn');
+  const eliminarBtn = e.target.closest('.eliminar-estructura-btn');
+
+  if (abrirBtn) {
+    alert('El constructor de pinya (drag & drop) encara no està construït — és el següent pas. Aquesta estructura ja queda desada amb el tipus triat.');
+    return;
+  }
+
+  if (eliminarBtn) {
+    if (!confirm('Vols eliminar aquesta estructura desada?')) return;
+    try {
+      await fetch(`${API}/api/estructuras/${eliminarBtn.dataset.id}`, { method: 'DELETE' });
+      await fetchEstructuras();
+    } catch (err) {
+      console.error(err);
+      alert('No s\'ha pogut eliminar.');
+    }
+  }
+});
 
 /* ---------------- Modal: generar pinya (properament) ---------------- */
 
