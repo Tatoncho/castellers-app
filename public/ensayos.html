@@ -219,17 +219,22 @@
   </div>
 </div>
 
-<!-- Modal: generar pinya (properament) -->
+<!-- Modal: generar pinya en blanco -->
 <div class="modal-overlay" id="pinya-overlay">
   <div class="modal-box">
     <h3>Generar pinya</h3>
-    <div class="pinya-placeholder">
-      <span class="badge">Pròxim pas</span>
-      <p>
-        Aquí podràs muntar la pinya arrossegant els membres presents des d'una llista filtrada per posició,
-        intercanviant-los entre caselles amb el dit o el ratolí, o generar-la automàticament segons alçada i
-        posició habitual. De moment és només l'espai reservat.
-      </p>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 14px;">
+      Crea una pinya en blanc per a aquest assaig i col·loca-hi la gent al constructor (arrossegant o a cops de clic).
+    </p>
+    <div class="criterio-row">
+      <label for="pinya-tipo-select" style="margin:0;">Tipus de castell</label>
+      <select id="pinya-tipo-select">
+        <option value="2d6">2d6</option>
+        <option value="3d7">3d7</option>
+        <option value="4d7">4d7</option>
+        <option value="5d7">5d7</option>
+      </select>
+      <button class="ghost small" id="crear-pinya-btn" type="button">Crear i obrir constructor</button>
     </div>
     <div class="modal-actions">
       <button class="ghost" id="close-pinya" type="button">Tancar</button>
@@ -552,12 +557,33 @@ document.getElementById('estructuras-list').addEventListener('click', async (e) 
   }
 });
 
-/* ---------------- Modal: generar pinya (properament) ---------------- */
+/* ---------------- Modal: generar pinya en blanco ---------------- */
 
 const pinyaOverlay = document.getElementById('pinya-overlay');
 document.getElementById('open-pinya-btn').addEventListener('click', () => pinyaOverlay.classList.add('open'));
 document.getElementById('close-pinya').addEventListener('click', () => pinyaOverlay.classList.remove('open'));
 pinyaOverlay.addEventListener('click', (e) => { if (e.target === pinyaOverlay) pinyaOverlay.classList.remove('open'); });
+
+document.getElementById('crear-pinya-btn').addEventListener('click', async () => {
+  if (!currentEnsayoId) return;
+  const tipo = document.getElementById('pinya-tipo-select').value;
+  const btn = document.getElementById('crear-pinya-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/api/ensayos/${currentEnsayoId}/estructuras`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tipo, notas: 'Pinya en blanc' })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Error creant la pinya');
+    location.href = `/pinya.html?id=${data.estructura.id}`;
+  } catch (err) {
+    console.error(err);
+    alert('No s\'ha pogut crear la pinya: ' + err.message);
+    btn.disabled = false;
+  }
+});
 
 (async function init() {
   await fetchMembers();
