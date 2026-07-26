@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Castellers · Constructor de pinya</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EAE6DA; --paper-card: #F1EEE4; --ink: #20241F; --ink-soft: #4B5049;
+    --thread: #9E2B3B; --gold: #B8893D; --line: #C7C2B0; --ok:#3E7A4E; --radius: 3px;
+  }
+  * { box-sizing: border-box; touch-action: manipulation; }
+  body { margin:0; background: linear-gradient(var(--line) 1px, transparent 1px) 0 0/100% 34px, var(--paper); color:var(--ink); font-family:'Work Sans',sans-serif; font-size:14.5px; line-height:1.5; }
+  a { color: var(--thread); }
+  ::selection { background: var(--thread); color: var(--paper); }
+
+  nav.topnav { display:flex; align-items:center; gap:22px; padding:18px 28px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  nav.topnav .brand { display:flex; align-items:center; gap:10px; font-family:'Fraunces',serif; font-weight:700; font-size:18px; text-decoration:none; color:var(--ink); font-variant:small-caps; }
+  nav.topnav .links { display:flex; gap:4px; flex-wrap:wrap; }
+  nav.topnav .links a { font-family:'IBM Plex Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; padding:8px 12px; border-radius:var(--radius); text-decoration:none; color:var(--ink-soft); border:1px solid transparent; }
+  nav.topnav .links a:hover { border-color:var(--line); color:var(--ink); }
+  nav.topnav .links a.active { color:var(--ink); border-color:var(--ink); }
+  nav.topnav .spacer { margin-left:auto; }
+
+  header.ctx { padding: 16px 28px; border-bottom: 1px solid var(--line); display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  header.ctx h1 { font-family:'Fraunces',serif; font-weight:700; font-size:22px; margin:0; }
+  header.ctx .meta { font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--ink-soft); }
+  header.ctx .back { margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:12px; border:1px solid var(--ink); padding:7px 12px; border-radius:var(--radius); text-decoration:none; color:var(--ink); }
+  header.ctx .back:hover { background:var(--ink); color:var(--paper-card); }
+  .approx-note { font-size: 11.5px; color: var(--gold); border:1px solid var(--gold); padding: 3px 10px; border-radius: 20px; font-family:'IBM Plex Mono',monospace; }
+
+  main { max-width: 1500px; margin: 0 auto; padding: 22px 28px 80px; display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 980px) { main { grid-template-columns: 1fr; } }
+
+  section.panel { background: var(--paper-card); border: 1px solid var(--line); border-radius: var(--radius); }
+  .panel-head { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+  .panel-head h2 { font-family:'Fraunces',serif; font-weight:600; font-size:15px; margin:0; }
+  .panel-body { padding: 12px 14px 14px; }
+
+  input[type="text"], select {
+    width:100%; padding:8px 9px; border:1px solid var(--line); background:var(--paper); color:var(--ink);
+    border-radius:var(--radius); font-family:'Work Sans',sans-serif; font-size:13px; margin-bottom:8px;
+  }
+
+  #pool-list { list-style:none; margin:0; padding:0; max-height: 620px; overflow-y:auto; }
+  #pool-list li.pool-chip {
+    display:flex; align-items:center; gap:8px; padding:8px 9px; margin-bottom:6px;
+    background:var(--paper); border:1px solid var(--line); border-radius:var(--radius);
+    cursor: grab; user-select:none; font-size:13px;
+  }
+  #pool-list li.pool-chip.selected { border-color: var(--thread); background:#F3E7E5; }
+  #pool-list li.pool-chip .pos-tag { margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--ink-soft); }
+  .empty-note { padding: 12px 0; text-align:center; color: var(--ink-soft); font-style: italic; font-size: 12.5px; }
+
+  #canvas-wrap { position: relative; overflow: auto; background: #FDFCF8; border: 1px solid var(--line); border-radius: var(--radius); }
+  #canvas { position: relative; width: 960px; height: 760px; margin: 0 auto; }
+
+  .slot-box {
+    position: absolute; transform: translate(-50%, -50%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    border: 1.6px solid var(--ink); background: var(--paper-card); border-radius: 4px;
+    cursor: grab; user-select:none; padding: 2px 4px; font-size: 11px; line-height:1.25;
+  }
+  .slot-box.empty { background: var(--paper); border-style: dashed; color: var(--ink-soft); }
+  .slot-box.selected { border-color: var(--thread); box-shadow: 0 0 0 2px rgba(158,43,59,0.25); }
+  .slot-box .slot-label { font-family:'IBM Plex Mono',monospace; font-size:8.5px; text-transform:uppercase; letter-spacing:0.03em; color:var(--ink-soft); }
+  .slot-box.diamond { border-radius: 6px; }
+  .slot-box .slot-name { font-weight: 600; }
+  .slot-box.dragging-ghost { opacity: 0.85; z-index: 100; pointer-events: none; }
+
+  #pool-list.drop-target-highlight { outline: 2px dashed var(--thread); outline-offset: 4px; }
+
+  .actions-row { display:flex; gap:8px; margin-top: 12px; flex-wrap: wrap; }
+  button { cursor:pointer; border:none; border-radius:var(--radius); font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.03em; text-transform:uppercase; padding:8px 12px; }
+  button.ghost { background: transparent; border:1px solid var(--ink); color: var(--ink); }
+  button.ghost:hover { background: var(--ink); color: var(--paper-card); }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="/">
+    <svg width="26" height="26" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="20" y="4" width="6" height="8" fill="#20241F"/><rect x="14" y="14" width="18" height="8" fill="#20241F"/>
+      <rect x="8" y="26" width="30" height="8" fill="#20241F"/><rect x="2" y="38" width="42" height="6" fill="#9E2B3B"/>
+    </svg>
+    Castellers
+  </a>
+  <div class="links">
+    <a href="/">Inici</a>
+    <a href="/ensayos.html" class="active">Assajos</a>
+    <a href="/actuaciones.html">Actuacions</a>
+    <a href="/miembros.html">Membres</a>
+    <a href="/usuarios.html">Usuaris</a>
+  </div>
+  <div class="spacer"></div>
+</nav>
+
+<header class="ctx">
+  <h1 id="titulo">Constructor de pinya</h1>
+  <span class="meta" id="meta"></span>
+  <span class="approx-note">Plantilla aproximada — ajustem-la junts</span>
+  <a class="back" id="back-link" href="/ensayos.html">← Tornar a l'assaig</a>
+</header>
+
+<main>
+  <section class="panel">
+    <div class="panel-head"><h2>Presents sense posició</h2></div>
+    <div class="panel-body">
+      <input type="text" id="pool-search" placeholder="Cerca per nom o àlies…">
+      <select id="pool-filter-posicio">
+        <option value="">Totes les posicions habituals</option>
+      </select>
+      <ul id="pool-list"></ul>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Planta de la pinya</h2></div>
+    <div class="panel-body">
+      <p style="font-size:12px;color:var(--ink-soft);margin:0 0 10px;">
+        Arrossega algú de la llista fins a una posició, o arrossega dues posicions entre elles per intercanviar-les.
+        També pots fer-ho a cops de clic: clica un origen i després un destí.
+      </p>
+      <div id="canvas-wrap">
+        <div id="canvas"></div>
+      </div>
+      <div class="actions-row">
+        <button class="ghost" id="reset-selection-btn" type="button">Cancel·lar selecció</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const API = '';
+const params = new URLSearchParams(location.search);
+const estructuraId = params.get('id');
+
+let estructura = null;
+let ensayo = null;
+let allMembers = [];
+let asistentesIds = new Set();
+let slots = []; // plantilla + asignaciones fusionadas
+let selected = null; // { type:'slot', slot, slotIndex } | { type:'pool', id }
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+/* ---------------- Plantilla (aproximada) per tipus ---------------- */
+
+function generarPlantilla(tipo) {
+  const amples = { '2d6': 2, '3d7': 3, '4d7': 4, '5d7': 5 }[tipo] || 3;
+  const out = [];
+  const cx = 480, cy = 420;
+  const colGap = 110;
+  const startX = cx - ((amples - 1) * colGap) / 2;
+  const totalWidth = (amples - 1) * colGap + 74;
+
+  out.push({ slot: 'Agulla', slotIndex: 1, x: cx, y: cy + 130, w: 100, h: 34, shape: 'rect' });
+
+  for (let i = 0; i < amples; i++) {
+    const x = startX + i * colGap;
+    out.push({ slot: 'Baix', slotIndex: i + 1, x, y: cy, w: 74, h: 32, shape: 'rect' });
+    out.push({ slot: 'Contrafort', slotIndex: i + 1, x, y: cy - 48, w: 74, h: 28, shape: 'rect' });
+    out.push({ slot: 'Crossa', slotIndex: i * 2 + 1, x: x - 48, y: cy - 8, w: 32, h: 58, shape: 'rect' });
+    out.push({ slot: 'Crossa', slotIndex: i * 2 + 2, x: x + 48, y: cy - 8, w: 32, h: 58, shape: 'rect' });
+  }
+
+  const lateralPerSide = amples + 1;
+  for (let f = 0; f < lateralPerSide; f++) {
+    out.push({ slot: 'Lateral', slotIndex: f + 1, x: cx - totalWidth / 2 - 55 - f * 40, y: cy - 10, w: 34, h: 60, shape: 'rect' });
+    out.push({ slot: 'Lateral', slotIndex: lateralPerSide + f + 1, x: cx + totalWidth / 2 + 55 + f * 40, y: cy - 10, w: 34, h: 60, shape: 'rect' });
+  }
+
+  const clustersArriba = ['3eres mans', '2nes mans', '1eres mans'];
+  clustersArriba.forEach((label, idx) => {
+    out.push({ slot: label, slotIndex: 1, x: cx - totalWidth / 2 - 30, y: cy - 105 - idx * 8, w: 66, h: 32, shape: 'diamond' });
+    out.push({ slot: label, slotIndex: 2, x: cx + totalWidth / 2 + 30, y: cy - 105 - idx * 8, w: 66, h: 32, shape: 'diamond' });
+  });
+  const clustersAbaix = ['1er vent', '2n vent', '3er vent'];
+  clustersAbaix.forEach((label, idx) => {
+    out.push({ slot: label, slotIndex: 1, x: cx - totalWidth / 2 - 30, y: cy + 105 + idx * 8, w: 66, h: 32, shape: 'diamond' });
+    out.push({ slot: label, slotIndex: 2, x: cx + totalWidth / 2 + 30, y: cy + 105 + idx * 8, w: 66, h: 32, shape: 'diamond' });
+  });
+
+  return out;
+}
+
+/* ---------------- Carga inicial ---------------- */
+
+async function init() {
+  if (!estructuraId) {
+    document.getElementById('titulo').textContent = 'Falta indicar quina estructura';
+    return;
+  }
+
+  const res = await fetch(`${API}/api/estructuras/${estructuraId}`);
+  const data = await res.json();
+  if (!data.success) {
+    document.getElementById('titulo').textContent = 'No s\'ha trobat aquesta estructura';
+    return;
+  }
+  estructura = data.estructura;
+  const posicionesGuardadas = data.posiciones || [];
+
+  const ensayoRes = await fetch(`${API}/api/ensayos/${estructura.ensayoId}`);
+  const ensayoData = await ensayoRes.json();
+  ensayo = ensayoData.ensayo;
+  asistentesIds = new Set(ensayoData.asistentesIds || []);
+
+  const membersRes = await fetch(`${API}/api/castellers`);
+  const membersData = await membersRes.json();
+  allMembers = membersData.data || [];
+
+  document.getElementById('titulo').textContent = `Pinya · ${estructura.tipo}`;
+  const d = new Date(ensayo.fecha);
+  const pad = n => String(n).padStart(2, '0');
+  document.getElementById('meta').textContent = isNaN(d) ? '' : `Assaig del ${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
+  document.getElementById('back-link').href = '/ensayos.html';
+
+  const plantilla = generarPlantilla(estructura.tipo);
+  slots = plantilla.map(p => {
+    const guardada = posicionesGuardadas.find(g => g.slot === p.slot && g.slotIndex === p.slotIndex);
+    return { ...p, castellerId: guardada ? guardada.castellerId : null, nombre: guardada ? guardada.castellerNombre : null };
+  });
+
+  populatePosicionFilter();
+  renderCanvas();
+  renderPool();
+}
+
+function populatePosicionFilter() {
+  const sel = document.getElementById('pool-filter-posicio');
+  const nombres = [...new Set(allMembers.map(m => m.posicionPinyaNombre).filter(Boolean))].sort();
+  nombres.forEach(n => sel.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`));
+}
+
+function getAssignedIds() {
+  return new Set(slots.filter(s => s.castellerId).map(s => s.castellerId));
+}
+
+function getPoolMembers() {
+  const assigned = getAssignedIds();
+  const q = document.getElementById('pool-search').value.trim().toLowerCase();
+  const posFiltro = document.getElementById('pool-filter-posicio').value;
+
+  return allMembers
+    .filter(m => asistentesIds.has(m.id) && !assigned.has(m.id))
+    .filter(m => {
+      if (posFiltro && m.posicionPinyaNombre !== posFiltro) return false;
+      if (q) {
+        const haystack = `${m.nombre || ''} ${m.apodo || ''}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+}
+
+/* ---------------- Render ---------------- */
+
+function renderCanvas() {
+  const canvas = document.getElementById('canvas');
+  canvas.innerHTML = slots.map(s => {
+    const isSel = selected && selected.type === 'slot' && selected.slot === s.slot && selected.slotIndex === s.slotIndex;
+    const shapeStyle = s.shape === 'diamond' ? `transform: translate(-50%,-50%) rotate(45deg);` : '';
+    return `
+      <div class="slot-box ${s.castellerId ? '' : 'empty'} ${s.shape === 'diamond' ? 'diamond' : ''} ${isSel ? 'selected' : ''}"
+           data-slot="${escapeHtml(s.slot)}" data-slot-index="${s.slotIndex}"
+           style="left:${s.x}px; top:${s.y}px; width:${s.w}px; height:${s.h}px; ${shapeStyle}">
+        <span class="slot-label" style="${s.shape === 'diamond' ? 'transform:rotate(-45deg);' : ''}">${escapeHtml(s.slot)}</span>
+        <span class="slot-name" style="${s.shape === 'diamond' ? 'transform:rotate(-45deg);' : ''}">${s.nombre ? escapeHtml(s.nombre) : '—'}</span>
+      </div>
+    `;
+  }).join('');
+
+  canvas.querySelectorAll('.slot-box').forEach(el => {
+    el.addEventListener('pointerdown', onPointerDown);
+  });
+}
+
+function renderPool() {
+  const list = document.getElementById('pool-list');
+  const pool = getPoolMembers();
+  if (!pool.length) {
+    list.innerHTML = '<li class="empty-note">Ningú disponible amb aquest filtre.</li>';
+    return;
+  }
+  list.innerHTML = pool.map(m => {
+    const isSel = selected && selected.type === 'pool' && selected.id === m.id;
+    return `
+      <li class="pool-chip ${isSel ? 'selected' : ''}" data-id="${m.id}">
+        ${escapeHtml(m.nombre)}${m.apodo ? ' · ' + escapeHtml(m.apodo) : ''}
+        <span class="pos-tag">${escapeHtml(m.posicionPinyaNombre || '')}</span>
+      </li>
+    `;
+  }).join('');
+
+  list.querySelectorAll('.pool-chip').forEach(el => {
+    el.addEventListener('pointerdown', onPointerDown);
+  });
+}
+
+document.getElementById('pool-search').addEventListener('input', renderPool);
+document.getElementById('pool-filter-posicio').addEventListener('change', renderPool);
+
+/* ---------------- Interacció: clic-clic i arrossegar, unificats ---------------- */
+
+let dragState = null;
+let ghostEl = null;
+
+function sourceFromEl(el) {
+  const slotBox = el.closest('.slot-box');
+  if (slotBox) return { type: 'slot', slot: slotBox.dataset.slot, slotIndex: Number(slotBox.dataset.slotIndex) };
+  const poolChip = el.closest('.pool-chip');
+  if (poolChip) return { type: 'pool', id: Number(poolChip.dataset.id) };
+  return null;
+}
+
+function isSame(a, b) {
+  if (!a || !b || a.type !== b.type) return false;
+  if (a.type === 'slot') return a.slot === b.slot && a.slotIndex === b.slotIndex;
+  return a.id === b.id;
+}
+
+function onPointerDown(e) {
+  const source = sourceFromEl(e.currentTarget);
+  if (!source) return;
+  dragState = { source, startX: e.clientX, startY: e.clientY, moved: false, el: e.currentTarget };
+  try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* no soportado, seguimos igualmente */ }
+  document.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerup', onPointerUp);
+  document.addEventListener('pointercancel', onPointerCancel);
+}
+
+function onPointerMove(e) {
+  if (!dragState) return;
+  const dx = e.clientX - dragState.startX, dy = e.clientY - dragState.startY;
+  if (!dragState.moved && Math.hypot(dx, dy) > 6) {
+    dragState.moved = true;
+    ghostEl = dragState.el.cloneNode(true);
+    ghostEl.classList.add('dragging-ghost');
+    ghostEl.style.position = 'fixed';
+    ghostEl.style.left = e.clientX + 'px';
+    ghostEl.style.top = e.clientY + 'px';
+    ghostEl.style.margin = '0';
+    ghostEl.style.width = dragState.el.offsetWidth + 'px';
+    document.body.appendChild(ghostEl);
+  }
+  if (dragState.moved && ghostEl) {
+    ghostEl.style.left = e.clientX + 'px';
+    ghostEl.style.top = e.clientY + 'px';
+  }
+}
+
+function cleanupDrag(el) {
+  document.removeEventListener('pointermove', onPointerMove);
+  document.removeEventListener('pointerup', onPointerUp);
+  document.removeEventListener('pointercancel', onPointerCancel);
+  if (ghostEl) { ghostEl.remove(); ghostEl = null; }
+}
+
+function onPointerCancel(e) {
+  if (dragState) cleanupDrag(dragState.el);
+  dragState = null;
+}
+
+async function onPointerUp(e) {
+  if (!dragState) return;
+  const source = dragState.source;
+  const moved = dragState.moved;
+  cleanupDrag(dragState.el);
+  dragState = null;
+
+  if (moved) {
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    if (!under) return;
+    const target = sourceFromEl(under) || (under.closest('#pool-list') ? { type: 'poolzone' } : null);
+    if (target && !isSame(source, target)) {
+      await resolveMove(source, target);
+    }
+  } else {
+    handleClick(source);
+  }
+}
+
+function handleClick(source) {
+  if (!selected) {
+    selected = source;
+  } else if (isSame(selected, source)) {
+    selected = null;
+  } else {
+    const prev = selected;
+    selected = null;
+    resolveMove(prev, source);
+    return;
+  }
+  renderCanvas();
+  renderPool();
+}
+
+document.getElementById('reset-selection-btn').addEventListener('click', () => {
+  selected = null;
+  renderCanvas();
+  renderPool();
+});
+
+async function resolveMove(a, b) {
+  try {
+    if (a.type === 'slot' && b.type === 'slot') {
+      await fetch(`${API}/api/estructuras/${estructuraId}/swap`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ a: { slot: a.slot, slotIndex: a.slotIndex }, b: { slot: b.slot, slotIndex: b.slotIndex } })
+      });
+    } else if (a.type === 'pool' && b.type === 'slot') {
+      await fetch(`${API}/api/estructuras/${estructuraId}/posiciones`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slot: b.slot, slotIndex: b.slotIndex, castellerId: a.id })
+      });
+    } else if (a.type === 'slot' && (b.type === 'pool' || b.type === 'poolzone')) {
+      await fetch(`${API}/api/estructuras/${estructuraId}/posiciones`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slot: a.slot, slotIndex: a.slotIndex, castellerId: null })
+      });
+    } else {
+      return; // pool -> pool, no-op
+    }
+    await reloadPosiciones();
+  } catch (err) {
+    console.error(err);
+    alert('No s\'ha pogut desar el canvi.');
+  }
+}
+
+async function reloadPosiciones() {
+  const res = await fetch(`${API}/api/estructuras/${estructuraId}`);
+  const data = await res.json();
+  const posicionesGuardadas = data.posiciones || [];
+  slots = slots.map(s => {
+    const guardada = posicionesGuardadas.find(g => g.slot === s.slot && g.slotIndex === s.slotIndex);
+    return { ...s, castellerId: guardada ? guardada.castellerId : null, nombre: guardada ? guardada.castellerNombre : null };
+  });
+  renderCanvas();
+  renderPool();
+}
+
+init();
+</script>
+
+</body>
+</html>

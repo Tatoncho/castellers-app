@@ -259,9 +259,14 @@ function formatFecha(iso) {
 /* ---------------- Carga inicial ---------------- */
 
 async function fetchMembers() {
-  const res = await fetch(`${API}/api/castellers`);
-  const data = await res.json();
-  allMembers = data.data || [];
+  try {
+    const res = await fetch(`${API}/api/castellers`);
+    const data = await res.json();
+    allMembers = data.data || [];
+  } catch (err) {
+    console.error('No se pudieron cargar los miembros:', err);
+    allMembers = [];
+  }
 }
 
 async function fetchEnsayos() {
@@ -307,16 +312,20 @@ document.getElementById('crear-form').addEventListener('submit', async (e) => {
   const btn = e.target.querySelector('button[type="submit"]');
   btn.disabled = true;
   try {
-    await fetch(`${API}/api/ensayos`, {
+    const res = await fetch(`${API}/api/ensayos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fecha, horaInicio, horaFin, notas })
     });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || `El servidor ha respost amb estat ${res.status}`);
+    }
     e.target.reset();
     await fetchEnsayos();
   } catch (err) {
     console.error(err);
-    alert('No s\'ha pogut crear l\'assaig.');
+    alert('No s\'ha pogut crear l\'assaig: ' + err.message);
   } finally {
     btn.disabled = false;
   }
@@ -527,7 +536,7 @@ document.getElementById('estructuras-list').addEventListener('click', async (e) 
   const eliminarBtn = e.target.closest('.eliminar-estructura-btn');
 
   if (abrirBtn) {
-    alert('El constructor de pinya (drag & drop) encara no està construït — és el següent pas. Aquesta estructura ja queda desada amb el tipus triat.');
+    location.href = `/pinya.html?id=${abrirBtn.dataset.id}`;
     return;
   }
 
