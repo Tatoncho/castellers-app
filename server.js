@@ -1042,6 +1042,24 @@ app.get('/api/ensayos/:id/propuestas', async (req, res) => {
 
 // ⚠️ TEMPORAL: crea la taula de plantilles. Sense ?confirm=si només avisa.
 // BÓRRALA del server.js en cuanto la hayas ejecutado.
+// ⚠️ TEMPORAL: solo para depurar — muestra las columnas reales que Postgres
+// tiene guardadas para plantillas_posicion, directamente desde el catálogo
+// del sistema (sin pasar por SELECT * ni por ninguna suposición del código).
+// Bórrala del server.js en cuanto hayamos resuelto esto.
+app.get('/api/debug-columnas', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT column_name, data_type, column_default, is_nullable
+      FROM information_schema.columns
+      WHERE table_name = 'plantillas_posicion'
+      ORDER BY ordinal_position
+    `);
+    res.json({ success: true, columnas: result.rows });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
 app.get('/api/migrate-plantillas', async (req, res) => {
   if (req.query.confirm !== 'si') {
     return res.json({
@@ -1064,6 +1082,8 @@ app.get('/api/migrate-plantillas', async (req, res) => {
         UNIQUE ("tipo", "slot", "slotIndex")
       )
     `);
+    // idempotent: si la tabla ya existía de antes, añade la columna nueva
+    await pool.query(`ALTER TABLE plantillas_posicion ADD COLUMN IF NOT EXISTS "rotacion" NUMERIC NOT NULL DEFAULT 0`);
     res.json({ success: true, aviso: 'Borra /api/migrate-plantillas del server.js ahora que ya la has ejecutado.' });
   } catch (error) {
     errorHandler(res, error);
@@ -1096,9 +1116,9 @@ app.put('/api/plantillas/:tipo', async (req, res) => {
     await client.query('DELETE FROM plantillas_posicion WHERE "tipo" = $1', [tipo]);
     for (const p of posiciones) {
       await client.query(
-        `INSERT INTO plantillas_posicion ("tipo", "slot", "slotIndex", "x", "y", "w", "h", "shape")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [tipo, p.slot, p.slotIndex || 1, p.x, p.y, p.w || 70, p.h || 32, p.shape || 'rect']
+        `INSERT INTO plantillas_posicion ("tipo", "slot", "slotIndex", "x", "y", "w", "h", "shape", "rotacion")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [tipo, p.slot, p.slotIndex || 1, p.x, p.y, p.w || 70, p.h || 32, p.shape || 'rect', p.rotacion || 0]
       );
     }
     await client.query('COMMIT');
