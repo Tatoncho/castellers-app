@@ -44,8 +44,12 @@
   button.ghost:hover { background: var(--ink); color: var(--paper-card); }
   .hint { font-size: 11.5px; color: var(--ink-soft); margin-top: 12px; }
 
-  #canvas-wrap { position: relative; overflow: auto; background: #FDFCF8; border: 1px solid var(--line); border-radius: var(--radius); }
-  #canvas { position: relative; width: 960px; height: 760px; margin: 0 auto; background-size: contain; background-repeat: no-repeat; background-position: center; }
+  #canvas-wrap { position: relative; overflow: auto; background: #FDFCF8; border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+  #canvas-stage { position: relative; width: 960px; height: 760px; margin: 0 auto; }
+  #canvas { position: absolute; inset: 0; overflow: hidden; background: #FDFCF8; }
+  #image-handles { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+  #zoom-row { max-width: 500px; margin: 0 auto; }
+  #zoom-row input[type="range"] { width: 100%; }
 
   .pos-box {
     position: absolute; transform: translate(-50%, -50%);
@@ -111,7 +115,6 @@
   }
   .tab-btn.active { background: var(--ink); color: var(--paper-card); border-color: var(--ink); }
 
-  #image-handles { position:absolute; inset:0; pointer-events:none; }
   .img-resize-handle {
     position:absolute; width: 13px; height: 13px; background: var(--thread); border: 1.6px solid var(--paper-card);
     border-radius: 2px; pointer-events:auto; z-index: 10; cursor: nwse-resize;
@@ -207,13 +210,19 @@
       </div>
     </div>
     <div class="panel-body">
-      <p class="hint" id="tab-hint">Arrossega la imatge per moure-la, i les cantonades per ajustar-ne la mida i l'enquadrament. Quan estigui ben col·locada, passa a la pestanya 2.</p>
+      <p class="hint" id="tab-hint">Arrossega la imatge per moure-la, i les cantonades per ajustar-ne la mida (sense deformar-la). Quan estigui ben col·locada, passa a la pestanya 2.</p>
       <div id="canvas-wrap">
-        <div id="canvas">
-          <img id="bg-image" alt="" style="position:absolute; pointer-events:none; opacity:0.6; display:none;">
+        <div id="canvas-stage">
+          <div id="canvas">
+            <img id="bg-image" alt="" style="position:absolute; pointer-events:none; opacity:0.6; display:none;">
+            <div id="boxes-layer" style="position:absolute; inset:0;"></div>
+          </div>
           <div id="image-handles"></div>
-          <div id="boxes-layer" style="position:absolute; inset:0;"></div>
         </div>
+      </div>
+      <div id="zoom-row">
+        <label for="zoom-range" style="margin:10px 0 4px;">Zoom de la imatge</label>
+        <input type="range" id="zoom-range" min="0.1" max="3" step="0.02" value="1">
       </div>
     </div>
   </section>
@@ -233,11 +242,20 @@ const tipoSelect = document.getElementById('tipo-select');
 
 let activeTab = 'imagen';
 let imgState = { x: 480, y: 380, w: 880, h: 680 };
+let imgFit = { w: 880, h: 680 }; // mida "zoom = 1" (ajustada al carregar la imatge)
+let imgZoom = 1;
 
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
+}
+
+function aplicarZoom(z) {
+  imgZoom = Math.max(0.1, Math.min(3, z));
+  imgState.w = Math.round(imgFit.w * imgZoom);
+  imgState.h = Math.round(imgFit.h * imgZoom);
+  document.getElementById('zoom-range').value = imgZoom.toFixed(2);
 }
 
 function renderImageLayer() {
@@ -272,6 +290,7 @@ function setActiveTab(tab) {
 
   document.getElementById('sidebar-imagen').style.display = tab === 'imagen' ? 'block' : 'none';
   document.getElementById('sidebar-posicions').style.display = tab === 'posicions' ? 'block' : 'none';
+  document.getElementById('zoom-row').style.display = tab === 'imagen' ? 'block' : 'none';
 
   bgImage.style.pointerEvents = tab === 'imagen' ? 'auto' : 'none';
   boxesLayer.style.pointerEvents = tab === 'posicions' ? 'auto' : 'none';
@@ -288,15 +307,31 @@ document.getElementById('imagen-input').addEventListener('change', (e) => {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = (ev) => {
+    bgImage.onload = () => {
+      const natW = bgImage.naturalWidth || 960;
+      const natH = bgImage.naturalHeight || 760;
+      // ajusta la imatge sencera dins del llenç (com un "contain"), i això
+      // serà el zoom = 1 de referència
+      const escala = Math.min(920 / natW, 720 / natH);
+      imgFit = { w: Math.round(natW * escala), h: Math.round(natH * escala) };
+      imgState.x = 480;
+      imgState.y = 380;
+      aplicarZoom(1);
+      renderImageLayer();
+    };
     bgImage.src = ev.target.result;
     bgImage.style.display = 'block';
-    renderImageLayer();
   };
   reader.readAsDataURL(file);
 });
 
 document.getElementById('opacidad-range').addEventListener('input', (e) => {
   bgImage.style.opacity = e.target.value;
+});
+
+document.getElementById('zoom-range').addEventListener('input', (e) => {
+  aplicarZoom(Number(e.target.value));
+  renderImageLayer();
 });
 
 /* ---------------- Moure i redimensionar la imatge (pestanya 1) ---------------- */
@@ -329,8 +364,11 @@ function onImageDragMove(e) {
     imgState.x = Math.round(pt.x);
     imgState.y = Math.round(pt.y);
   } else if (imgDragState.mode === 'resize') {
-    imgState.w = Math.max(40, Math.round(Math.abs(pt.x - imgState.x) * 2));
-    imgState.h = Math.max(40, Math.round(Math.abs(pt.y - imgState.y) * 2));
+    // calculem un factor de zoom a partir de la distància arrossegada,
+    // i apliquem la MATEIXA escala a ample i alt (no es pot deformar)
+    const distActual = Math.hypot(pt.x - imgState.x, pt.y - imgState.y);
+    const distBase = Math.hypot(imgFit.w / 2, imgFit.h / 2) || 1;
+    aplicarZoom(distActual / distBase);
   }
   renderImageLayer();
 }
