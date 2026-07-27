@@ -825,15 +825,19 @@ document.getElementById('save-btn').addEventListener('click', async () => {
   const btn = document.getElementById('save-btn');
   btn.disabled = true;
   try {
-    await fetch(`${API}/api/plantillas/${tipo}`, {
+    const res = await fetch(`${API}/api/plantillas/${tipo}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ posiciones })
     });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || `El servidor ha respost amb estat ${res.status}`);
+    }
     alert('Plantilla desada.');
   } catch (err) {
     console.error(err);
-    alert('No s\'ha pogut desar.');
+    alert('No s\'ha pogut desar: ' + err.message);
   } finally {
     btn.disabled = false;
   }
