@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Castellers · Editor de plantilles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EAE6DA; --paper-card: #F1EEE4; --ink: #20241F; --ink-soft: #4B5049;
+    --thread: #9E2B3B; --gold: #B8893D; --line: #C7C2B0; --radius: 3px;
+  }
+  * { box-sizing: border-box; touch-action: manipulation; }
+  body { margin:0; background: linear-gradient(var(--line) 1px, transparent 1px) 0 0/100% 34px, var(--paper); color:var(--ink); font-family:'Work Sans',sans-serif; font-size:14.5px; line-height:1.5; }
+  a { color: var(--thread); }
+
+  nav.topnav { display:flex; align-items:center; gap:22px; padding:18px 28px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  nav.topnav .brand { display:flex; align-items:center; gap:10px; font-family:'Fraunces',serif; font-weight:700; font-size:18px; text-decoration:none; color:var(--ink); font-variant:small-caps; }
+  nav.topnav .links { display:flex; gap:4px; flex-wrap:wrap; }
+  nav.topnav .links a { font-family:'IBM Plex Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; padding:8px 12px; border-radius:var(--radius); text-decoration:none; color:var(--ink-soft); border:1px solid transparent; }
+  nav.topnav .links a:hover { border-color:var(--line); color:var(--ink); }
+  nav.topnav .spacer { margin-left:auto; }
+
+  main { max-width: 1400px; margin: 0 auto; padding: 22px 28px 80px; display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 980px) { main { grid-template-columns: 1fr; } }
+
+  section.panel { background: var(--paper-card); border: 1px solid var(--line); border-radius: var(--radius); }
+  .panel-head { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+  .panel-head h2 { font-family:'Fraunces',serif; font-weight:600; font-size:15px; margin:0; }
+  .panel-body { padding: 12px 14px 14px; }
+
+  label { display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); margin-bottom:4px; margin-top:12px; }
+  label:first-child { margin-top: 0; }
+  input, select { width:100%; padding:8px 9px; border:1px solid var(--line); background:var(--paper); color:var(--ink); border-radius:var(--radius); font-family:'Work Sans',sans-serif; font-size:13px; }
+  input[type="range"] { padding: 0; }
+  input[type="file"] { font-size: 12px; }
+
+  button { cursor:pointer; border:none; border-radius:var(--radius); font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.03em; text-transform:uppercase; padding:9px 14px; width:100%; margin-top: 10px; }
+  button.primary { background: var(--thread); color: var(--paper-card); }
+  button.primary:hover { background:#862432; }
+  button.ghost { background: transparent; border:1px solid var(--ink); color: var(--ink); }
+  button.ghost:hover { background: var(--ink); color: var(--paper-card); }
+  .hint { font-size: 11.5px; color: var(--ink-soft); margin-top: 12px; }
+
+  #canvas-wrap { position: relative; overflow: auto; background: #FDFCF8; border: 1px solid var(--line); border-radius: var(--radius); }
+  #canvas { position: relative; width: 960px; height: 760px; margin: 0 auto; background-size: contain; background-repeat: no-repeat; background-position: center; }
+
+  .pos-box {
+    position: absolute; transform: translate(-50%, -50%);
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    border: 1.6px solid var(--thread); background: rgba(241,238,228,0.9); border-radius: 4px;
+    cursor: grab; user-select:none; padding: 2px 4px; font-size: 10.5px; font-family:'IBM Plex Mono',monospace;
+  }
+  .pos-box.diamond { border-radius: 6px; }
+  .pos-box .del-btn {
+    position: absolute; top:-9px; right:-9px; width:16px; height:16px; border-radius:50%;
+    background: var(--thread); color: var(--paper-card); font-size: 10px; line-height:16px; text-align:center;
+    cursor:pointer;
+  }
+
+  .add-form { display:flex; gap:6px; align-items:flex-end; margin-top: 10px; flex-wrap:wrap; }
+  .add-form > div { flex: 1; min-width: 90px; }
+  .add-form button { width:auto; margin-top:0; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="/">
+    <svg width="26" height="26" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="20" y="4" width="6" height="8" fill="#20241F"/><rect x="14" y="14" width="18" height="8" fill="#20241F"/>
+      <rect x="8" y="26" width="30" height="8" fill="#20241F"/><rect x="2" y="38" width="42" height="6" fill="#9E2B3B"/>
+    </svg>
+    Castellers
+  </a>
+  <div class="links">
+    <a href="/">Inici</a>
+    <a href="/ensayos.html">Assajos</a>
+  </div>
+  <div class="spacer"></div>
+</nav>
+
+<main>
+  <section class="panel">
+    <div class="panel-head"><h2>Editor de plantilla</h2></div>
+    <div class="panel-body">
+      <label for="tipo-select">Tipus de castell</label>
+      <select id="tipo-select">
+        <option value="2d6">2d6</option>
+        <option value="3d7">3d7</option>
+        <option value="4d7">4d7</option>
+        <option value="5d7">5d7</option>
+      </select>
+
+      <label for="imagen-input">Imatge de referència (només visual, no es desa)</label>
+      <input type="file" id="imagen-input" accept="image/*">
+
+      <label for="opacidad-range">Opacitat de la imatge</label>
+      <input type="range" id="opacidad-range" min="0.1" max="1" step="0.05" value="0.6">
+
+      <div class="add-form">
+        <div>
+          <label for="nuevo-slot">Nom posició</label>
+          <input type="text" id="nuevo-slot" placeholder="Ex. Lateral">
+        </div>
+        <div>
+          <label for="nuevo-index">Índex</label>
+          <input type="number" id="nuevo-index" value="1" min="1">
+        </div>
+        <div>
+          <label for="nuevo-shape">Forma</label>
+          <select id="nuevo-shape">
+            <option value="rect">Rectangle</option>
+            <option value="diamond">Rombe</option>
+          </select>
+        </div>
+      </div>
+      <button class="ghost" id="add-mode-btn" type="button">Activar "clica per afegir"</button>
+      <p class="hint" id="add-mode-hint">Omple el nom, activa el mode, i clica al llenç on vulguis col·locar-la. Després arrossega-la per afinar.</p>
+
+      <button class="primary" id="save-btn" type="button">Desar plantilla</button>
+      <button class="ghost" id="reload-btn" type="button">Recarregar la desada</button>
+      <p class="hint">Mida del llenç: 960×760 — és exactament la mateixa que fa servir el constructor de pinya, així que el que dissenyis aquí es veurà igual allà.</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Llenç (960 × 760)</h2></div>
+    <div class="panel-body">
+      <div id="canvas-wrap">
+        <div id="canvas">
+          <img id="bg-image" alt="" style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none; opacity:0.6; display:none;">
+          <div id="boxes-layer" style="position:absolute; inset:0;"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const API = '';
+let posiciones = [];
+let addMode = false;
+
+const canvas = document.getElementById('canvas');
+const boxesLayer = document.getElementById('boxes-layer');
+const bgImage = document.getElementById('bg-image');
+const tipoSelect = document.getElementById('tipo-select');
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+document.getElementById('imagen-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    bgImage.src = ev.target.result;
+    bgImage.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('opacidad-range').addEventListener('input', (e) => {
+  bgImage.style.opacity = e.target.value;
+});
+
+async function cargarPlantilla() {
+  const tipo = tipoSelect.value;
+  const res = await fetch(`${API}/api/plantillas/${tipo}`);
+  const data = await res.json();
+  posiciones = (data.data || []).map(p => ({ ...p, x: Number(p.x), y: Number(p.y), w: Number(p.w), h: Number(p.h) }));
+  render();
+}
+
+function render() {
+  boxesLayer.innerHTML = posiciones.map((p, i) => `
+    <div class="pos-box ${p.shape === 'diamond' ? 'diamond' : ''}" data-idx="${i}"
+         style="left:${p.x}px; top:${p.y}px; width:${p.w}px; height:${p.h}px; ${p.shape === 'diamond' ? 'transform:translate(-50%,-50%) rotate(45deg);' : ''}">
+      <span style="${p.shape === 'diamond' ? 'transform:rotate(-45deg);' : ''}">${escapeHtml(p.slot)}-${p.slotIndex}</span>
+      <span class="del-btn" data-idx="${i}">×</span>
+    </div>
+  `).join('');
+
+  boxesLayer.querySelectorAll('.pos-box').forEach(el => {
+    el.addEventListener('pointerdown', onBoxPointerDown);
+  });
+  boxesLayer.querySelectorAll('.del-btn').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      posiciones.splice(Number(el.dataset.idx), 1);
+      render();
+    });
+  });
+}
+
+/* ---------------- Afegir posicions ---------------- */
+
+document.getElementById('add-mode-btn').addEventListener('click', () => {
+  addMode = !addMode;
+  document.getElementById('add-mode-btn').textContent = addMode ? 'Mode actiu — clica al llenç' : 'Activar "clica per afegir"';
+});
+
+canvas.addEventListener('click', (e) => {
+  if (!addMode) return;
+  if (e.target.closest('.pos-box')) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.round(e.clientX - rect.left);
+  const y = Math.round(e.clientY - rect.top);
+  const slot = document.getElementById('nuevo-slot').value.trim();
+  if (!slot) { alert('Escriu primer el nom de la posició.'); return; }
+  const slotIndex = Number(document.getElementById('nuevo-index').value) || 1;
+  const shape = document.getElementById('nuevo-shape').value;
+
+  posiciones.push({ slot, slotIndex, x, y, w: shape === 'diamond' ? 60 : 70, h: shape === 'diamond' ? 30 : 32, shape });
+  render();
+});
+
+/* ---------------- Arrossegar per afinar posició ---------------- */
+
+let dragState = null;
+
+function onBoxPointerDown(e) {
+  if (e.target.closest('.del-btn')) return;
+  const idx = Number(e.currentTarget.dataset.idx);
+  dragState = { idx, offsetX: 0, offsetY: 0 };
+  const rect = canvas.getBoundingClientRect();
+  dragState.startX = e.clientX - rect.left;
+  dragState.startY = e.clientY - rect.top;
+  document.addEventListener('pointermove', onDragMove);
+  document.addEventListener('pointerup', onDragEnd);
+}
+
+function onDragMove(e) {
+  if (!dragState) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.round(e.clientX - rect.left);
+  const y = Math.round(e.clientY - rect.top);
+  posiciones[dragState.idx].x = x;
+  posiciones[dragState.idx].y = y;
+  render();
+}
+
+function onDragEnd() {
+  dragState = null;
+  document.removeEventListener('pointermove', onDragMove);
+  document.removeEventListener('pointerup', onDragEnd);
+}
+
+/* ---------------- Desar / recarregar / canviar tipus ---------------- */
+
+document.getElementById('save-btn').addEventListener('click', async () => {
+  const tipo = tipoSelect.value;
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  try {
+    await fetch(`${API}/api/plantillas/${tipo}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ posiciones })
+    });
+    alert('Plantilla desada.');
+  } catch (err) {
+    console.error(err);
+    alert('No s\'ha pogut desar.');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('reload-btn').addEventListener('click', cargarPlantilla);
+tipoSelect.addEventListener('change', cargarPlantilla);
+
+const tipoParam = new URLSearchParams(location.search).get('tipo');
+if (tipoParam) tipoSelect.value = tipoParam;
+
+cargarPlantilla();
+</script>
+
+</body>
+</html>

@@ -120,7 +120,7 @@
 <header class="ctx">
   <h1 id="titulo">Constructor de pinya</h1>
   <span class="meta" id="meta"></span>
-  <span class="approx-note">Plantilla aproximada — ajustem-la junts</span>
+  <a class="approx-note" id="plantilla-aviso" href="#" style="text-decoration:none; display:none;">Plantilla aproximada — dissenya-la a l'editor →</a>
   <a class="back" id="back-link" href="/ensayos.html">← Tornar a l'assaig</a>
 </header>
 
@@ -271,7 +271,16 @@ async function init() {
   document.getElementById('meta').textContent = isNaN(d) ? '' : `Assaig del ${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
   document.getElementById('back-link').href = '/ensayos.html';
 
-  const plantilla = generarPlantilla(estructura.tipo);
+  const plantillaRes = await fetch(`${API}/api/plantillas/${estructura.tipo}`);
+  const plantillaData = await plantillaRes.json();
+  const plantillaGuardada = (plantillaData.data || []).map(p => ({
+    slot: p.slot, slotIndex: p.slotIndex, x: Number(p.x), y: Number(p.y), w: Number(p.w), h: Number(p.h), shape: p.shape
+  }));
+  const usandoAproximacion = plantillaGuardada.length === 0;
+  const plantilla = usandoAproximacion ? generarPlantilla(estructura.tipo) : plantillaGuardada;
+  const avisoEl = document.getElementById('plantilla-aviso');
+  avisoEl.style.display = usandoAproximacion ? 'inline-block' : 'none';
+  avisoEl.href = `/plantilla-editor.html?tipo=${estructura.tipo}`;
   slots = plantilla.map(p => {
     const guardada = posicionesGuardadas.find(g => g.slot === p.slot && g.slotIndex === p.slotIndex);
     return { ...p, castellerId: guardada ? guardada.castellerId : null, nombre: guardada ? guardada.castellerNombre : null };

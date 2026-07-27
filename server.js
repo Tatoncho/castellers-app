@@ -1036,6 +1036,81 @@ app.get('/api/ensayos/:id/propuestas', async (req, res) => {
   }
 });
 
+/* =========================================================
+   MÒDUL PLANTILLES DE PINYA (editables des de l'editor visual)
+   ========================================================= */
+
+// ⚠️ TEMPORAL: crea la taula de plantilles. Sense ?confirm=si només avisa.
+// BÓRRALA del server.js en cuanto la hayas ejecutado.
+app.get('/api/migrate-plantillas', async (req, res) => {
+  if (req.query.confirm !== 'si') {
+    return res.json({
+      success: false,
+      aviso: 'Esto crea la tabla plantillas_posicion. Añade ?confirm=si para confirmar.'
+    });
+  }
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS plantillas_posicion (
+        "id" SERIAL PRIMARY KEY,
+        "tipo" TEXT NOT NULL,
+        "slot" TEXT NOT NULL,
+        "slotIndex" INTEGER NOT NULL DEFAULT 1,
+        "x" NUMERIC NOT NULL,
+        "y" NUMERIC NOT NULL,
+        "w" NUMERIC NOT NULL DEFAULT 70,
+        "h" NUMERIC NOT NULL DEFAULT 32,
+        "shape" TEXT NOT NULL DEFAULT 'rect',
+        UNIQUE ("tipo", "slot", "slotIndex")
+      )
+    `);
+    res.json({ success: true, aviso: 'Borra /api/migrate-plantillas del server.js ahora que ya la has ejecutado.' });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Llegir la plantilla desada d'un tipus de castell
+app.get('/api/plantillas/:tipo', async (req, res) => {
+  try {
+    const { tipo } = req.params;
+    const result = await pool.query('SELECT * FROM plantillas_posicion WHERE "tipo" = $1 ORDER BY "id"', [tipo]);
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Desar (reemplaçant) tota la plantilla d'un tipus, tal com l'ha deixat
+// l'editor visual
+app.put('/api/plantillas/:tipo', async (req, res) => {
+  const { tipo } = req.params;
+  const { posiciones } = req.body; // array de { slot, slotIndex, x, y, w, h, shape }
+  if (!Array.isArray(posiciones)) {
+    return res.status(400).json({ error: 'posiciones ha de ser un array' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('DELETE FROM plantillas_posicion WHERE "tipo" = $1', [tipo]);
+    for (const p of posiciones) {
+      await client.query(
+        `INSERT INTO plantillas_posicion ("tipo", "slot", "slotIndex", "x", "y", "w", "h", "shape")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [tipo, p.slot, p.slotIndex || 1, p.x, p.y, p.w || 70, p.h || 32, p.shape || 'rect']
+      );
+    }
+    await client.query('COMMIT');
+    res.json({ success: true });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    errorHandler(res, error);
+  } finally {
+    client.release();
+  }
+});
+
 
 const PORT = process.env.PORT || 3000;
 
