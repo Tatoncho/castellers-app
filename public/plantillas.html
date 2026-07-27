@@ -117,6 +117,18 @@ function escapeHtml(str) {
   }[c]));
 }
 
+// Normalitza un nom de posició per agrupar-lo pel seu rol base: treu
+// direccions (izq/der/esquerra/dreta) i ordinals (1r, 2n, 3r, 1eres, etc.)
+// perquè "Crossa izq", "Crossa Der", "Crossa der" comptin totes com "Crossa".
+function normalizarRol(slot) {
+  let s = slot.toLowerCase();
+  s = s.replace(/\b(izq|izquierda|esquerra|esquerre|der|dcha|derecha|dreta)\b/g, '');
+  s = s.replace(/\b(\d+r|\d+n|\d+a|\d+er|\d+on|\d+eres|\d+eras|\d+nes|\d+es|\d+)\b/g, '');
+  s = s.replace(/\s+/g, ' ').trim();
+  if (!s) return slot;
+  return s.replace(/\b\w/g, c => c.toUpperCase());
+}
+
 async function cargarCastell(tipo) {
   const body = document.getElementById('castell-body');
   body.innerHTML = 'Carregant…';
@@ -130,9 +142,12 @@ async function cargarCastell(tipo) {
         <div class="empty-state">
           <span class="badge">Sense plantilla</span>
           <p>Encara no hi ha una estructura definida per al castell ${escapeHtml(tipo)}.</p>
-          <button class="primary" onclick="location.href='/castell-editor.html?tipo=${tipo}'">Crear l'estructura del castell</button>
+          <button class="primary" id="crear-castell-btn" type="button">Crear l'estructura del castell</button>
         </div>
       `;
+      document.getElementById('crear-castell-btn').addEventListener('click', () => {
+        location.href = `/castell-editor.html?tipo=${tipo}`;
+      });
       return;
     }
 
@@ -142,8 +157,11 @@ async function cargarCastell(tipo) {
       <ul class="niveles-list">
         ${niveles.map(n => `<li><span class="n-nombre">${escapeHtml(n.nombre)}</span><span class="n-cant">${n.cantidad}</span></li>`).join('')}
       </ul>
-      <button class="ghost" onclick="location.href='/castell-editor.html?tipo=${tipo}'">Editar l'estructura</button>
+      <button class="ghost" id="editar-castell-btn" type="button">Editar l'estructura</button>
     `;
+    document.getElementById('editar-castell-btn').addEventListener('click', () => {
+      location.href = `/castell-editor.html?tipo=${tipo}`;
+    });
   } catch (err) {
     console.error(err);
     body.innerHTML = '<p>No s\'ha pogut carregar.</p>';
@@ -163,20 +181,34 @@ async function cargarPinya(tipo) {
         <div class="empty-state">
           <span class="badge">Sense plantilla</span>
           <p>Encara no hi ha una planta de pinya dissenyada per al castell ${escapeHtml(tipo)}.</p>
-          <button class="primary" onclick="location.href='/plantilla-editor.html?tipo=${tipo}'">Crear la planta de pinya</button>
+          <button class="primary" id="crear-pinya-btn" type="button">Crear la planta de pinya</button>
         </div>
       `;
+      document.getElementById('crear-pinya-btn').addEventListener('click', () => {
+        location.href = `/plantilla-editor.html?tipo=${tipo}`;
+      });
       return;
     }
 
-    const slots = [...new Set(posiciones.map(p => p.slot))];
+    // agrupem per rol base (sense direcció ni ordinal) i sumem quants
+    // llocs hi ha en total per a cada rol
+    const recuentos = {};
+    posiciones.forEach(p => {
+      const base = normalizarRol(p.slot);
+      recuentos[base] = (recuentos[base] || 0) + 1;
+    });
+    const roles = Object.keys(recuentos).sort();
+
     body.innerHTML = `
-      <div class="status-line"><span class="dot"></span> Planta definida — ${posiciones.length} posicions (${slots.length} tipus)</div>
+      <div class="status-line"><span class="dot"></span> Planta definida — ${posiciones.length} posicions (${roles.length} rols)</div>
       <ul class="niveles-list">
-        ${slots.map(s => `<li><span class="n-nombre">${escapeHtml(s)}</span><span class="n-cant">${posiciones.filter(p => p.slot === s).length}</span></li>`).join('')}
+        ${roles.map(r => `<li><span class="n-nombre">${escapeHtml(r)}</span><span class="n-cant">${recuentos[r]}</span></li>`).join('')}
       </ul>
-      <button class="ghost" onclick="location.href='/plantilla-editor.html?tipo=${tipo}'">Editar la planta</button>
+      <button class="ghost" id="editar-pinya-btn" type="button">Editar la planta</button>
     `;
+    document.getElementById('editar-pinya-btn').addEventListener('click', () => {
+      location.href = `/plantilla-editor.html?tipo=${tipo}`;
+    });
   } catch (err) {
     console.error(err);
     body.innerHTML = '<p>No s\'ha pogut carregar.</p>';
