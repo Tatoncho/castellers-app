@@ -128,6 +128,18 @@
   }
   .tab-btn.active { background: var(--ink); color: var(--paper-card); border-color: var(--ink); }
 
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(32,36,31,0.55); align-items:flex-start; justify-content:center; padding:30px 20px; z-index:80; overflow-y:auto; }
+  .modal-overlay.open { display:flex; }
+  .modal-box { background: var(--paper); border-radius: var(--radius); max-width: 640px; width:100%; padding: 20px 22px 22px; border:1px solid var(--line); }
+  .modal-box h3 { font-family:'Fraunces',serif; font-size:19px; margin:0 0 14px; }
+  .modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top: 16px; }
+  .lib-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(110px,1fr)); gap: 10px; max-height: 420px; overflow-y:auto; }
+  .lib-item { position:relative; border:1px solid var(--line); border-radius: var(--radius); background: var(--paper-card); padding: 6px; cursor:pointer; text-align:center; }
+  .lib-item img { width:100%; height:80px; object-fit:cover; border-radius: 2px; display:block; }
+  .lib-item span { display:block; font-size:10px; color: var(--ink-soft); margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lib-item:hover { border-color: var(--thread); }
+  .lib-del { position:absolute; top:-7px; right:-7px; width:18px; height:18px; border-radius:50%; background:var(--thread); color:var(--paper-card); border:none; font-size:11px; cursor:pointer; }
+
   .img-resize-handle {
     position:absolute; width: 13px; height: 13px; background: var(--thread); border: 1.6px solid var(--paper-card);
     border-radius: 2px; pointer-events:auto; z-index: 10; cursor: nwse-resize;
@@ -164,8 +176,9 @@
       </select>
 
       <div id="sidebar-imagen">
-        <label for="imagen-input">Imatge de referència (només visual, no es desa)</label>
-        <input type="file" id="imagen-input" accept="image/*">
+        <label>Imatge de referència</label>
+        <button class="ghost" id="open-picker-btn" type="button" style="width:100%; margin-bottom:8px;">Triar imatge de fons</button>
+        <p class="hint" style="margin-top:0;">De la biblioteca, d'una URL, o del teu dispositiu. Es guarda per poder-la reutilitzar.</p>
 
         <label for="opacidad-range">Opacitat de la imatge</label>
         <input type="range" id="opacidad-range" min="0.1" max="1" step="0.05" value="0.6">
@@ -245,6 +258,35 @@
     </div>
   </section>
 </main>
+
+<div class="modal-overlay" id="imgpicker-overlay">
+  <div class="modal-box">
+    <h3>Imatge de fons</h3>
+    <div class="tabs" style="margin-bottom:14px;">
+      <button class="tab-btn active" data-tab="biblioteca" type="button">Biblioteca</button>
+      <button class="tab-btn" data-tab="url" type="button">Des d'una URL</button>
+      <button class="tab-btn" data-tab="dispositiu" type="button">Des del dispositiu</button>
+    </div>
+
+    <div id="imgpicker-biblioteca">
+      <div class="lib-grid" id="lib-grid"></div>
+    </div>
+    <div id="imgpicker-url" style="display:none;">
+      <label for="url-input">Enllaç de la imatge</label>
+      <input type="text" id="url-input" placeholder="https://...">
+      <p class="hint">Cerca-la tu mateix (Google Imatges, etc.) i enganxa aquí l'enllaç directe a la imatge (acabat en .jpg, .png…).</p>
+      <button class="primary" id="url-use-btn" type="button">Fer servir aquesta URL</button>
+    </div>
+    <div id="imgpicker-dispositiu" style="display:none;">
+      <label for="device-input">Fitxer del dispositiu</label>
+      <input type="file" id="device-input" accept="image/*">
+    </div>
+
+    <div class="modal-actions">
+      <button class="ghost" id="imgpicker-close" type="button">Tancar</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const API = '';
@@ -384,28 +426,22 @@ function setActiveTab(tab) {
 document.getElementById('tab-imagen-btn').addEventListener('click', () => setActiveTab('imagen'));
 document.getElementById('tab-posicions-btn').addEventListener('click', () => setActiveTab('posicions'));
 
-document.getElementById('imagen-input').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    bgImage.onload = () => {
-      const natW = bgImage.naturalWidth || 960;
-      const natH = bgImage.naturalHeight || 760;
-      // ajusta la imatge sencera dins del llenç (com un "contain"), i això
-      // serà el zoom = 1 de referència
-      const escala = Math.min(920 / natW, 720 / natH);
-      imgFit = { w: Math.round(natW * escala), h: Math.round(natH * escala) };
-      imgState.x = 480;
-      imgState.y = 380;
-      aplicarZoom(1);
-      renderImageLayer();
-    };
-    bgImage.src = ev.target.result;
-    bgImage.style.display = 'block';
+function aplicarImagen(dataUrl) {
+  bgImage.onload = () => {
+    const natW = bgImage.naturalWidth || 960;
+    const natH = bgImage.naturalHeight || 760;
+    // ajusta la imatge sencera dins del llenç (com un "contain"), i això
+    // serà el zoom = 1 de referència
+    const escala = Math.min(920 / natW, 720 / natH);
+    imgFit = { w: Math.round(natW * escala), h: Math.round(natH * escala) };
+    imgState.x = 480;
+    imgState.y = 380;
+    aplicarZoom(1);
+    renderImageLayer();
   };
-  reader.readAsDataURL(file);
-});
+  bgImage.src = dataUrl;
+  bgImage.style.display = 'block';
+}
 
 document.getElementById('opacidad-range').addEventListener('input', (e) => {
   bgImage.style.opacity = e.target.value;
@@ -414,6 +450,98 @@ document.getElementById('opacidad-range').addEventListener('input', (e) => {
 document.getElementById('zoom-range').addEventListener('input', (e) => {
   aplicarZoom(Number(e.target.value));
   renderImageLayer();
+});
+
+/* ---------------- Selector d'imatges (biblioteca / URL / dispositiu) ---------------- */
+
+const IMG_CATEGORIA = 'pinya'; // aquest editor guarda/llegeix imatges d'aquesta categoria
+const imgpickerOverlay = document.getElementById('imgpicker-overlay');
+
+document.getElementById('open-picker-btn').addEventListener('click', () => {
+  cargarBiblioteca();
+  imgpickerOverlay.classList.add('open');
+});
+document.getElementById('imgpicker-close').addEventListener('click', () => imgpickerOverlay.classList.remove('open'));
+imgpickerOverlay.addEventListener('click', (e) => { if (e.target === imgpickerOverlay) imgpickerOverlay.classList.remove('open'); });
+
+document.querySelectorAll('#imgpicker-overlay .tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#imgpicker-overlay .tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['biblioteca', 'url', 'dispositiu'].forEach(t => {
+      document.getElementById(`imgpicker-${t}`).style.display = t === btn.dataset.tab ? 'block' : 'none';
+    });
+  });
+});
+
+async function cargarBiblioteca() {
+  const grid = document.getElementById('lib-grid');
+  grid.innerHTML = '<p class="hint">Carregant…</p>';
+  try {
+    const res = await fetch(`${API}/api/imagenes?categoria=${IMG_CATEGORIA}`);
+    const data = await res.json();
+    const imgs = data.data || [];
+    if (!imgs.length) {
+      grid.innerHTML = '<p class="hint">Encara no hi ha imatges guardades en aquesta biblioteca.</p>';
+      return;
+    }
+    grid.innerHTML = imgs.map(img => `
+      <div class="lib-item" data-id="${img.id}">
+        <img src="${img.dataUrl}" alt="">
+        <span>${escapeHtml(img.nombre || 'Sense nom')}</span>
+        <button class="lib-del" data-id="${img.id}" type="button">×</button>
+      </div>
+    `).join('');
+    grid.querySelectorAll('.lib-item img').forEach((el, i) => {
+      el.addEventListener('click', () => {
+        aplicarImagen(imgs[i].dataUrl);
+        imgpickerOverlay.classList.remove('open');
+      });
+    });
+    grid.querySelectorAll('.lib-del').forEach(el => {
+      el.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await fetch(`${API}/api/imagenes/${el.dataset.id}`, { method: 'DELETE' });
+        cargarBiblioteca();
+      });
+    });
+  } catch (err) {
+    console.error(err);
+    grid.innerHTML = '<p class="hint">No s\'ha pogut carregar la biblioteca.</p>';
+  }
+}
+
+document.getElementById('url-use-btn').addEventListener('click', async () => {
+  const url = document.getElementById('url-input').value.trim();
+  if (!url) return;
+  try {
+    await fetch(`${API}/api/imagenes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre: 'Des d\'URL', categoria: IMG_CATEGORIA, dataUrl: url })
+    });
+  } catch (err) { console.error(err); }
+  aplicarImagen(url);
+  imgpickerOverlay.classList.remove('open');
+});
+
+document.getElementById('device-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    const dataUrl = ev.target.result;
+    try {
+      await fetch(`${API}/api/imagenes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre: file.name, categoria: IMG_CATEGORIA, dataUrl })
+      });
+    } catch (err) { console.error(err); }
+    aplicarImagen(dataUrl);
+    imgpickerOverlay.classList.remove('open');
+  };
+  reader.readAsDataURL(file);
 });
 
 /* ---------------- Moure i redimensionar la imatge (pestanya 1) ---------------- */

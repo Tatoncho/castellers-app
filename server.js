@@ -1132,6 +1132,125 @@ app.put('/api/plantillas/:tipo', async (req, res) => {
 });
 
 
+/* =========================================================
+   MÒDUL IMATGES DE REFERÈNCIA (biblioteca compartida pels editors)
+   ========================================================= */
+
+// ⚠️ TEMPORAL: crea la taula d'imatges. Sense ?confirm=si només avisa.
+app.get('/api/migrate-imagenes', async (req, res) => {
+  if (req.query.confirm !== 'si') {
+    return res.json({ success: false, aviso: 'Esto crea la tabla imagenes_referencia. Añade ?confirm=si para confirmar.' });
+  }
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS imagenes_referencia (
+        "id" SERIAL PRIMARY KEY,
+        "nombre" TEXT,
+        "categoria" TEXT,
+        "dataUrl" TEXT NOT NULL,
+        "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    res.json({ success: true, aviso: 'Borra /api/migrate-imagenes del server.js ahora que ya la has ejecutado.' });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Nota: guardem la imatge com a text (base64 o URL externa) directament a
+// Postgres. És senzill i persisteix bé entre desplegaments (el disc local de
+// Render s'esborra a cada deploy), però per a una biblioteca molt gran
+// d'imatges pesades caldria un servei d'emmagatzematge real més endavant.
+app.get('/api/imagenes', async (req, res) => {
+  try {
+    const { categoria } = req.query;
+    const result = categoria
+      ? await pool.query('SELECT * FROM imagenes_referencia WHERE "categoria" = $1 ORDER BY "id" DESC', [categoria])
+      : await pool.query('SELECT * FROM imagenes_referencia ORDER BY "id" DESC');
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+app.post('/api/imagenes', async (req, res) => {
+  try {
+    const { nombre, categoria, dataUrl } = req.body;
+    if (!dataUrl) return res.status(400).json({ error: 'dataUrl es obligatorio' });
+    const result = await pool.query(
+      `INSERT INTO imagenes_referencia ("nombre","categoria","dataUrl") VALUES ($1,$2,$3) RETURNING "id","nombre","categoria","created_at"`,
+      [nombre || null, categoria || null, dataUrl]
+    );
+    res.json({ success: true, imagen: result.rows[0] });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+app.delete('/api/imagenes/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM imagenes_referencia WHERE "id" = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+/* =========================================================
+   MÒDUL ESTRUCTURA DE CASTELLS (el tronc: nivells i quantitats)
+   ========================================================= */
+
+// ⚠️ TEMPORAL: crea la taula d'estructures de castell. Sense ?confirm=si
+// només avisa.
+app.get('/api/migrate-castells-estructura', async (req, res) => {
+  if (req.query.confirm !== 'si') {
+    return res.json({ success: false, aviso: 'Esto crea la tabla castells_estructura. Añade ?confirm=si para confirmar.' });
+  }
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS castells_estructura (
+        "id" SERIAL PRIMARY KEY,
+        "tipo" TEXT UNIQUE NOT NULL,
+        "niveles" JSONB NOT NULL,
+        "imagenId" INTEGER REFERENCES imagenes_referencia("id") ON DELETE SET NULL,
+        "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    res.json({ success: true, aviso: 'Borra /api/migrate-castells-estructura del server.js ahora que ya la has ejecutado.' });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+app.get('/api/castells-estructura/:tipo', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM castells_estructura WHERE "tipo" = $1', [req.params.tipo]);
+    if (result.rows.length === 0) return res.json({ success: true, estructura: null });
+    res.json({ success: true, estructura: result.rows[0] });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+app.put('/api/castells-estructura/:tipo', async (req, res) => {
+  try {
+    const { tipo } = req.params;
+    const { niveles, imagenId } = req.body;
+    if (!Array.isArray(niveles)) return res.status(400).json({ error: 'niveles ha de ser un array' });
+
+    const result = await pool.query(
+      `INSERT INTO castells_estructura ("tipo","niveles","imagenId")
+       VALUES ($1,$2,$3)
+       ON CONFLICT ("tipo") DO UPDATE SET "niveles" = EXCLUDED."niveles", "imagenId" = EXCLUDED."imagenId"
+       RETURNING *`,
+      [tipo, JSON.stringify(niveles), imagenId || null]
+    );
+    res.json({ success: true, estructura: result.rows[0] });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {

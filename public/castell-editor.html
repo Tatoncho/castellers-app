@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Castellers · Editor de castells</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EAE6DA; --paper-card: #F1EEE4; --ink: #20241F; --ink-soft: #4B5049;
+    --thread: #9E2B3B; --gold: #B8893D; --line: #C7C2B0; --radius: 3px;
+  }
+  * { box-sizing: border-box; touch-action: manipulation; }
+  body { margin:0; background: linear-gradient(var(--line) 1px, transparent 1px) 0 0/100% 34px, var(--paper); color:var(--ink); font-family:'Work Sans',sans-serif; font-size:14.5px; line-height:1.5; }
+  a { color: var(--thread); }
+
+  nav.topnav { display:flex; align-items:center; gap:22px; padding:18px 28px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  nav.topnav .brand { display:flex; align-items:center; gap:10px; font-family:'Fraunces',serif; font-weight:700; font-size:18px; text-decoration:none; color:var(--ink); font-variant:small-caps; }
+  nav.topnav .links { display:flex; gap:4px; flex-wrap:wrap; }
+  nav.topnav .links a { font-family:'IBM Plex Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; padding:8px 12px; border-radius:var(--radius); text-decoration:none; color:var(--ink-soft); border:1px solid transparent; }
+  nav.topnav .links a:hover { border-color:var(--line); color:var(--ink); }
+  nav.topnav .spacer { margin-left:auto; }
+
+  header.ctx { padding: 16px 28px; border-bottom: 1px solid var(--line); display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  header.ctx h1 { font-family:'Fraunces',serif; font-weight:700; font-size:22px; margin:0; }
+  select { padding:8px 10px; border:1px solid var(--line); background:var(--paper-card); color:var(--ink); border-radius:var(--radius); font-family:'Fraunces',serif; font-size:16px; font-weight:600; }
+  header.ctx .back { margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:12px; border:1px solid var(--ink); padding:7px 12px; border-radius:var(--radius); text-decoration:none; color:var(--ink); }
+  header.ctx .back:hover { background:var(--ink); color:var(--paper-card); }
+
+  main { max-width: 1200px; margin: 0 auto; padding: 24px 28px 80px; display:grid; grid-template-columns: 1fr 340px; gap: 22px; align-items:start; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+
+  section.panel { background: var(--paper-card); border: 1px solid var(--line); border-radius: var(--radius); }
+  .panel-head { padding: 14px 18px 10px; border-bottom: 1px solid var(--line); }
+  .panel-head h2 { font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0; }
+  .panel-body { padding: 16px 18px; }
+
+  ul.niveles-editor { list-style:none; margin:0 0 14px; padding:0; }
+  ul.niveles-editor li {
+    display:flex; align-items:center; gap:10px; padding: 10px 12px; margin-bottom:8px;
+    background: var(--paper); border:1px solid var(--line); border-radius: var(--radius);
+  }
+  .drag-handle { cursor:grab; color: var(--ink-soft); font-size:16px; touch-action:none; }
+  ul.niveles-editor input[type="text"] { flex:2; padding:7px 9px; border:1px solid var(--line); background:var(--paper-card); border-radius: var(--radius); font-family:'Fraunces',serif; font-weight:600; }
+  ul.niveles-editor input[type="number"] { width: 70px; padding:7px 9px; border:1px solid var(--line); background:var(--paper-card); border-radius: var(--radius); }
+  ul.niveles-editor .del-nivel { background:transparent; border:none; color:var(--thread); font-size:18px; cursor:pointer; width:auto; padding:0 4px; }
+  li.dragging { background:#E2DCC9; border-color: var(--thread); }
+
+  button { cursor:pointer; border:none; border-radius:var(--radius); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.04em; text-transform:uppercase; padding:10px 16px; }
+  button.primary { background: var(--thread); color: var(--paper-card); width:100%; }
+  button.primary:hover { background:#862432; }
+  button.ghost { background: transparent; border:1px solid var(--ink); color: var(--ink); width:100%; margin-top:8px; }
+  button.ghost:hover { background: var(--ink); color: var(--paper-card); }
+
+  #ref-image-wrap { width:100%; aspect-ratio: 4/3; background:#FDFCF8; border:1px solid var(--line); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom: 10px; }
+  #ref-image-wrap img { max-width:100%; max-height:100%; object-fit:contain; }
+  #ref-image-wrap .placeholder { color: var(--ink-soft); font-size:12.5px; text-align:center; padding: 20px; }
+
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(32,36,31,0.55); align-items:flex-start; justify-content:center; padding:30px 20px; z-index:80; overflow-y:auto; }
+  .modal-overlay.open { display:flex; }
+  .modal-box { background: var(--paper); border-radius: var(--radius); max-width: 640px; width:100%; padding: 20px 22px 22px; border:1px solid var(--line); }
+  .modal-box h3 { font-family:'Fraunces',serif; font-size:19px; margin:0 0 14px; }
+  .modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top: 16px; }
+  .tabs { display:flex; gap:6px; margin-bottom:14px; }
+  .tab-btn { width:auto; background: transparent; border: 1px solid var(--line); color: var(--ink-soft); padding: 9px 14px; border-radius: var(--radius); }
+  .tab-btn.active { background: var(--ink); color: var(--paper-card); border-color: var(--ink); }
+  .lib-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(110px,1fr)); gap: 10px; max-height: 420px; overflow-y:auto; }
+  .lib-item { position:relative; border:1px solid var(--line); border-radius: var(--radius); background: var(--paper-card); padding: 6px; cursor:pointer; text-align:center; }
+  .lib-item img { width:100%; height:80px; object-fit:cover; border-radius: 2px; display:block; }
+  .lib-item span { display:block; font-size:10px; color: var(--ink-soft); margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lib-item:hover { border-color: var(--thread); }
+  .lib-del { position:absolute; top:-7px; right:-7px; width:18px; height:18px; border-radius:50%; background:var(--thread); color:var(--paper-card); border:none; font-size:11px; cursor:pointer; }
+  label { display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); margin-bottom:4px; }
+  input[type="text"], input[type="number"] { width:100%; padding:8px 9px; border:1px solid var(--line); background:var(--paper); border-radius:var(--radius); }
+  .hint { font-size: 12px; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="/">
+    <svg width="26" height="26" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="20" y="4" width="6" height="8" fill="#20241F"/><rect x="14" y="14" width="18" height="8" fill="#20241F"/>
+      <rect x="8" y="26" width="30" height="8" fill="#20241F"/><rect x="2" y="38" width="42" height="6" fill="#9E2B3B"/>
+    </svg>
+    Castellers
+  </a>
+  <div class="links">
+    <a href="/">Inici</a>
+    <a href="/plantillas.html">Plantilles</a>
+  </div>
+  <div class="spacer"></div>
+</nav>
+
+<header class="ctx">
+  <h1>Editor de castells</h1>
+  <select id="tipo-select">
+    <option value="2d6">2d6</option>
+    <option value="3d7">3d7</option>
+    <option value="4d7">4d7</option>
+    <option value="5d7">5d7</option>
+  </select>
+  <a class="back" href="/plantillas.html">← Tornar a plantilles</a>
+</header>
+
+<main>
+  <section class="panel">
+    <div class="panel-head"><h2>Nivells del tronc (de baix a dalt)</h2></div>
+    <div class="panel-body">
+      <p class="hint" style="margin:0 0 12px;">Arrossega pel ganxo per reordenar. La quantitat és quantes persones ocupen aquest nivell.</p>
+      <ul class="niveles-editor" id="niveles-list"></ul>
+      <button class="ghost" id="add-nivel-btn" type="button" style="margin-top:0;">+ Afegir nivell</button>
+      <button class="primary" id="save-btn" type="button" style="margin-top:16px;">Desar estructura</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Imatge de referència</h2></div>
+    <div class="panel-body">
+      <div id="ref-image-wrap"><span class="placeholder">Cap imatge triada</span></div>
+      <button class="ghost" id="open-picker-btn" type="button">Triar imatge</button>
+    </div>
+  </section>
+</main>
+
+<div class="modal-overlay" id="imgpicker-overlay">
+  <div class="modal-box">
+    <h3>Imatge de referència</h3>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="biblioteca" type="button">Biblioteca</button>
+      <button class="tab-btn" data-tab="url" type="button">Des d'una URL</button>
+      <button class="tab-btn" data-tab="dispositiu" type="button">Des del dispositiu</button>
+    </div>
+    <div id="imgpicker-biblioteca"><div class="lib-grid" id="lib-grid"></div></div>
+    <div id="imgpicker-url" style="display:none;">
+      <label for="url-input">Enllaç de la imatge</label>
+      <input type="text" id="url-input" placeholder="https://...">
+      <p class="hint">Cerca-la tu mateix i enganxa aquí l'enllaç directe a la imatge.</p>
+      <button class="primary" id="url-use-btn" type="button">Fer servir aquesta URL</button>
+    </div>
+    <div id="imgpicker-dispositiu" style="display:none;">
+      <label for="device-input">Fitxer del dispositiu</label>
+      <input type="file" id="device-input" accept="image/*">
+    </div>
+    <div class="modal-actions">
+      <button class="ghost" id="imgpicker-close" type="button">Tancar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+const IMG_CATEGORIA = 'castell';
+let niveles = [];
+let imagenActualId = null;
+const tipoSelect = document.getElementById('tipo-select');
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function renderNiveles() {
+  const list = document.getElementById('niveles-list');
+  list.innerHTML = niveles.map((n, i) => `
+    <li data-idx="${i}">
+      <span class="drag-handle">☰</span>
+      <input type="text" class="n-nombre" value="${escapeHtml(n.nombre)}" placeholder="Ex. Segon">
+      <input type="number" class="n-cantidad" value="${n.cantidad}" min="1">
+      <button class="del-nivel" data-idx="${i}" type="button">×</button>
+    </li>
+  `).join('');
+
+  list.querySelectorAll('.n-nombre').forEach((el, i) => el.addEventListener('input', () => { niveles[i].nombre = el.value; }));
+  list.querySelectorAll('.n-cantidad').forEach((el, i) => el.addEventListener('input', () => { niveles[i].cantidad = Number(el.value) || 1; }));
+  list.querySelectorAll('.del-nivel').forEach(el => el.addEventListener('click', () => {
+    niveles.splice(Number(el.dataset.idx), 1);
+    renderNiveles();
+  }));
+  setupSortable(list);
+}
+
+document.getElementById('add-nivel-btn').addEventListener('click', () => {
+  niveles.push({ nombre: '', cantidad: 1 });
+  renderNiveles();
+});
+
+/* drag & drop per reordenar (Pointer Events, funciona amb dit i ratolí) */
+function setupSortable(listEl) {
+  let dragEl = null;
+  listEl.querySelectorAll('.drag-handle').forEach(handle => {
+    handle.addEventListener('pointerdown', (e) => {
+      dragEl = handle.closest('li');
+      try { dragEl.setPointerCapture(e.pointerId); } catch (err) {}
+      dragEl.classList.add('dragging');
+    });
+  });
+  listEl.onpointermove = (e) => {
+    if (!dragEl) return;
+    const after = getDragAfterElement(listEl, e.clientY);
+    if (after == null) listEl.appendChild(dragEl);
+    else if (after !== dragEl) listEl.insertBefore(dragEl, after);
+  };
+  const endDrag = () => {
+    if (dragEl) {
+      dragEl.classList.remove('dragging');
+      // reconstruir l'array `niveles` segons el nou ordre del DOM
+      const nuevoOrden = [...listEl.querySelectorAll('li')].map(li => {
+        const nombre = li.querySelector('.n-nombre').value;
+        const cantidad = Number(li.querySelector('.n-cantidad').value) || 1;
+        return { nombre, cantidad };
+      });
+      niveles = nuevoOrden;
+    }
+    dragEl = null;
+  };
+  listEl.onpointerup = endDrag;
+  listEl.onpointercancel = endDrag;
+}
+
+function getDragAfterElement(container, y) {
+  const els = [...container.querySelectorAll('li:not(.dragging)')];
+  return els.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) return { offset, element: child };
+    return closest;
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+/* ---------------- Carregar / desar l'estructura ---------------- */
+
+async function cargarEstructura() {
+  const tipo = tipoSelect.value;
+  imagenActualId = null;
+  document.getElementById('ref-image-wrap').innerHTML = '<span class="placeholder">Cap imatge triada</span>';
+  try {
+    const res = await fetch(`${API}/api/castells-estructura/${tipo}`);
+    const data = await res.json();
+    if (data.estructura) {
+      niveles = data.estructura.niveles || [];
+      imagenActualId = data.estructura.imagenId || null;
+      if (imagenActualId) cargarImagenActual(imagenActualId);
+    } else {
+      niveles = [];
+    }
+  } catch (err) {
+    console.error(err);
+    niveles = [];
+  }
+  renderNiveles();
+}
+
+async function cargarImagenActual(id) {
+  try {
+    const res = await fetch(`${API}/api/imagenes?categoria=${IMG_CATEGORIA}`);
+    const data = await res.json();
+    const img = (data.data || []).find(i => i.id === id);
+    if (img) {
+      document.getElementById('ref-image-wrap').innerHTML = `<img src="${img.dataUrl}" alt="">`;
+    }
+  } catch (err) { console.error(err); }
+}
+
+document.getElementById('save-btn').addEventListener('click', async () => {
+  const tipo = tipoSelect.value;
+  const validos = niveles.filter(n => n.nombre.trim());
+  if (!validos.length) { alert('Afegeix almenys un nivell amb nom.'); return; }
+
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/api/castells-estructura/${tipo}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ niveles: validos, imagenId: imagenActualId })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || `Estat ${res.status}`);
+    alert('Estructura desada.');
+  } catch (err) {
+    console.error(err);
+    alert('No s\'ha pogut desar: ' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+tipoSelect.addEventListener('change', cargarEstructura);
+
+/* ---------------- Selector d'imatges ---------------- */
+
+const imgpickerOverlay = document.getElementById('imgpicker-overlay');
+document.getElementById('open-picker-btn').addEventListener('click', () => {
+  cargarBiblioteca();
+  imgpickerOverlay.classList.add('open');
+});
+document.getElementById('imgpicker-close').addEventListener('click', () => imgpickerOverlay.classList.remove('open'));
+imgpickerOverlay.addEventListener('click', (e) => { if (e.target === imgpickerOverlay) imgpickerOverlay.classList.remove('open'); });
+
+document.querySelectorAll('#imgpicker-overlay .tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#imgpicker-overlay .tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['biblioteca', 'url', 'dispositiu'].forEach(t => {
+      document.getElementById(`imgpicker-${t}`).style.display = t === btn.dataset.tab ? 'block' : 'none';
+    });
+  });
+});
+
+async function cargarBiblioteca() {
+  const grid = document.getElementById('lib-grid');
+  grid.innerHTML = '<p class="hint">Carregant…</p>';
+  try {
+    const res = await fetch(`${API}/api/imagenes?categoria=${IMG_CATEGORIA}`);
+    const data = await res.json();
+    const imgs = data.data || [];
+    if (!imgs.length) { grid.innerHTML = '<p class="hint">Encara no hi ha imatges guardades.</p>'; return; }
+    grid.innerHTML = imgs.map(img => `
+      <div class="lib-item" data-id="${img.id}">
+        <img src="${img.dataUrl}" alt="">
+        <span>${escapeHtml(img.nombre || 'Sense nom')}</span>
+        <button class="lib-del" data-id="${img.id}" type="button">×</button>
+      </div>
+    `).join('');
+    grid.querySelectorAll('.lib-item img').forEach((el, i) => {
+      el.addEventListener('click', () => seleccionarImagen(imgs[i]));
+    });
+    grid.querySelectorAll('.lib-del').forEach(el => {
+      el.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await fetch(`${API}/api/imagenes/${el.dataset.id}`, { method: 'DELETE' });
+        cargarBiblioteca();
+      });
+    });
+  } catch (err) {
+    console.error(err);
+    grid.innerHTML = '<p class="hint">No s\'ha pogut carregar la biblioteca.</p>';
+  }
+}
+
+function seleccionarImagen(img) {
+  imagenActualId = img.id;
+  document.getElementById('ref-image-wrap').innerHTML = `<img src="${img.dataUrl}" alt="">`;
+  imgpickerOverlay.classList.remove('open');
+}
+
+document.getElementById('url-use-btn').addEventListener('click', async () => {
+  const url = document.getElementById('url-input').value.trim();
+  if (!url) return;
+  try {
+    const res = await fetch(`${API}/api/imagenes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre: 'Des d\'URL', categoria: IMG_CATEGORIA, dataUrl: url })
+    });
+    const data = await res.json();
+    seleccionarImagen(data.imagen ? { ...data.imagen, dataUrl: url } : { id: null, dataUrl: url });
+  } catch (err) { console.error(err); }
+});
+
+document.getElementById('device-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    const dataUrl = ev.target.result;
+    try {
+      const res = await fetch(`${API}/api/imagenes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre: file.name, categoria: IMG_CATEGORIA, dataUrl })
+      });
+      const data = await res.json();
+      seleccionarImagen(data.imagen ? { ...data.imagen, dataUrl } : { id: null, dataUrl });
+    } catch (err) { console.error(err); }
+  };
+  reader.readAsDataURL(file);
+});
+
+const tipoParam = new URLSearchParams(location.search).get('tipo');
+if (tipoParam) tipoSelect.value = tipoParam;
+
+cargarEstructura();
+</script>
+
+</body>
+</html>

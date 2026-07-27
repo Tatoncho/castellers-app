@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Castellers · Plantilles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EAE6DA; --paper-card: #F1EEE4; --ink: #20241F; --ink-soft: #4B5049;
+    --thread: #9E2B3B; --gold: #B8893D; --line: #C7C2B0; --ok:#3E7A4E; --radius: 3px;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background: linear-gradient(var(--line) 1px, transparent 1px) 0 0/100% 34px, var(--paper); color:var(--ink); font-family:'Work Sans',sans-serif; font-size:15px; line-height:1.5; }
+  a { color: var(--thread); }
+
+  nav.topnav { display:flex; align-items:center; gap:22px; padding:18px 28px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  nav.topnav .brand { display:flex; align-items:center; gap:10px; font-family:'Fraunces',serif; font-weight:700; font-size:18px; text-decoration:none; color:var(--ink); font-variant:small-caps; }
+  nav.topnav .links { display:flex; gap:4px; flex-wrap:wrap; }
+  nav.topnav .links a { font-family:'IBM Plex Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; padding:8px 12px; border-radius:var(--radius); text-decoration:none; color:var(--ink-soft); border:1px solid transparent; }
+  nav.topnav .links a:hover { border-color:var(--line); color:var(--ink); }
+  nav.topnav .links a.active { color:var(--ink); border-color:var(--ink); }
+  nav.topnav .spacer { margin-left:auto; }
+  nav.topnav .user-chip { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); border:1px solid var(--line); padding:7px 11px; border-radius:var(--radius); }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 34px 28px 80px; }
+  .selector-row { display:flex; align-items:center; gap:12px; margin-bottom: 26px; }
+  .selector-row label { font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); }
+  select {
+    padding:10px 12px; border:1px solid var(--line); background:var(--paper-card); color:var(--ink);
+    border-radius:var(--radius); font-family:'Fraunces',serif; font-size: 17px; font-weight:600; min-width: 140px;
+  }
+
+  .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+
+  section.panel { background: var(--paper-card); border: 1px solid var(--line); border-radius: var(--radius); }
+  .panel-head { padding: 15px 18px 12px; border-bottom: 1px solid var(--line); }
+  .panel-head h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 17px; margin: 0; }
+  .panel-body { padding: 18px; }
+
+  .empty-state { text-align:center; padding: 24px 10px; }
+  .empty-state .badge { display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--gold); border:1px solid var(--gold); padding:3px 10px; border-radius:20px; margin-bottom:12px; }
+  .empty-state p { color: var(--ink-soft); font-size: 13.5px; margin: 0 0 16px; }
+
+  .niveles-list { list-style:none; margin:0 0 16px; padding:0; }
+  .niveles-list li { display:flex; justify-content:space-between; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .niveles-list li:last-child { border-bottom: none; }
+  .niveles-list .n-nombre { font-family:'Fraunces',serif; font-weight:600; }
+  .niveles-list .n-cant { font-family:'IBM Plex Mono',monospace; color: var(--ink-soft); }
+
+  .status-line { display:flex; align-items:center; gap:8px; margin-bottom: 14px; font-size: 13px; color: var(--ink-soft); }
+  .status-line .dot { width:8px; height:8px; border-radius:50%; background: var(--ok); }
+
+  button { cursor:pointer; border:none; border-radius:var(--radius); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.04em; text-transform:uppercase; padding:10px 16px; width:100%; }
+  button.primary { background: var(--thread); color: var(--paper-card); }
+  button.primary:hover { background:#862432; }
+  button.ghost { background: transparent; border:1px solid var(--ink); color: var(--ink); }
+  button.ghost:hover { background: var(--ink); color: var(--paper-card); }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="/">
+    <svg width="26" height="26" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="20" y="4" width="6" height="8" fill="#20241F"/><rect x="14" y="14" width="18" height="8" fill="#20241F"/>
+      <rect x="8" y="26" width="30" height="8" fill="#20241F"/><rect x="2" y="38" width="42" height="6" fill="#9E2B3B"/>
+    </svg>
+    Castellers
+  </a>
+  <div class="links">
+    <a href="/">Inici</a>
+    <a href="/ensayos.html">Assajos</a>
+    <a href="/actuaciones.html">Actuacions</a>
+    <a href="/plantillas.html" class="active">Plantilles</a>
+    <a href="/miembros.html">Membres</a>
+    <a href="/usuarios.html">Usuaris</a>
+  </div>
+  <div class="spacer"></div>
+  <span class="user-chip">sense sessió — properament</span>
+</nav>
+
+<main>
+  <div class="selector-row">
+    <label for="tipo-select">Castell</label>
+    <select id="tipo-select">
+      <option value="2d6">2d6</option>
+      <option value="3d7" selected>3d7</option>
+      <option value="4d7">4d7</option>
+      <option value="5d7">5d7</option>
+    </select>
+  </div>
+
+  <div class="grid">
+    <section class="panel">
+      <div class="panel-head"><h2>Estructura del castell (tronc)</h2></div>
+      <div class="panel-body" id="castell-body">Carregant…</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Planta de la pinya</h2></div>
+      <div class="panel-body" id="pinya-body">Carregant…</div>
+    </section>
+  </div>
+</main>
+
+<script>
+const API = '';
+const tipoSelect = document.getElementById('tipo-select');
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+async function cargarCastell(tipo) {
+  const body = document.getElementById('castell-body');
+  body.innerHTML = 'Carregant…';
+  try {
+    const res = await fetch(`${API}/api/castells-estructura/${tipo}`);
+    const data = await res.json();
+    const estructura = data.estructura;
+
+    if (!estructura) {
+      body.innerHTML = `
+        <div class="empty-state">
+          <span class="badge">Sense plantilla</span>
+          <p>Encara no hi ha una estructura definida per al castell ${escapeHtml(tipo)}.</p>
+          <button class="primary" onclick="location.href='/castell-editor.html?tipo=${tipo}'">Crear l'estructura del castell</button>
+        </div>
+      `;
+      return;
+    }
+
+    const niveles = estructura.niveles || [];
+    body.innerHTML = `
+      <div class="status-line"><span class="dot"></span> Estructura definida — ${niveles.length} nivell${niveles.length === 1 ? '' : 's'}</div>
+      <ul class="niveles-list">
+        ${niveles.map(n => `<li><span class="n-nombre">${escapeHtml(n.nombre)}</span><span class="n-cant">${n.cantidad}</span></li>`).join('')}
+      </ul>
+      <button class="ghost" onclick="location.href='/castell-editor.html?tipo=${tipo}'">Editar l'estructura</button>
+    `;
+  } catch (err) {
+    console.error(err);
+    body.innerHTML = '<p>No s\'ha pogut carregar.</p>';
+  }
+}
+
+async function cargarPinya(tipo) {
+  const body = document.getElementById('pinya-body');
+  body.innerHTML = 'Carregant…';
+  try {
+    const res = await fetch(`${API}/api/plantillas/${tipo}`);
+    const data = await res.json();
+    const posiciones = data.data || [];
+
+    if (!posiciones.length) {
+      body.innerHTML = `
+        <div class="empty-state">
+          <span class="badge">Sense plantilla</span>
+          <p>Encara no hi ha una planta de pinya dissenyada per al castell ${escapeHtml(tipo)}.</p>
+          <button class="primary" onclick="location.href='/plantilla-editor.html?tipo=${tipo}'">Crear la planta de pinya</button>
+        </div>
+      `;
+      return;
+    }
+
+    const slots = [...new Set(posiciones.map(p => p.slot))];
+    body.innerHTML = `
+      <div class="status-line"><span class="dot"></span> Planta definida — ${posiciones.length} posicions (${slots.length} tipus)</div>
+      <ul class="niveles-list">
+        ${slots.map(s => `<li><span class="n-nombre">${escapeHtml(s)}</span><span class="n-cant">${posiciones.filter(p => p.slot === s).length}</span></li>`).join('')}
+      </ul>
+      <button class="ghost" onclick="location.href='/plantilla-editor.html?tipo=${tipo}'">Editar la planta</button>
+    `;
+  } catch (err) {
+    console.error(err);
+    body.innerHTML = '<p>No s\'ha pogut carregar.</p>';
+  }
+}
+
+function cargarTodo() {
+  const tipo = tipoSelect.value;
+  cargarCastell(tipo);
+  cargarPinya(tipo);
+}
+
+tipoSelect.addEventListener('change', cargarTodo);
+
+const tipoParam = new URLSearchParams(location.search).get('tipo');
+if (tipoParam) tipoSelect.value = tipoParam;
+
+cargarTodo();
+</script>
+
+</body>
+</html>
