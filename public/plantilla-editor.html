@@ -102,6 +102,20 @@
     position:absolute; width: 11px; height: 11px; background: var(--gold); border: 1.4px solid var(--paper-card);
     border-radius: 2px; pointer-events:auto; z-index: 6; cursor: nwse-resize;
   }
+
+  .tabs { display:flex; gap:6px; }
+  .tab-btn {
+    width:auto; margin:0; background: transparent; border: 1px solid var(--line); color: var(--ink-soft);
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; text-transform:uppercase; letter-spacing:0.03em;
+    padding: 9px 14px; border-radius: var(--radius); cursor:pointer;
+  }
+  .tab-btn.active { background: var(--ink); color: var(--paper-card); border-color: var(--ink); }
+
+  #image-handles { position:absolute; inset:0; pointer-events:none; }
+  .img-resize-handle {
+    position:absolute; width: 13px; height: 13px; background: var(--thread); border: 1.6px solid var(--paper-card);
+    border-radius: 2px; pointer-events:auto; z-index: 10; cursor: nwse-resize;
+  }
 </style>
 </head>
 <body>
@@ -133,45 +147,51 @@
         <option value="5d7">5d7</option>
       </select>
 
-      <label for="imagen-input">Imatge de referència (només visual, no es desa)</label>
-      <input type="file" id="imagen-input" accept="image/*">
+      <div id="sidebar-imagen">
+        <label for="imagen-input">Imatge de referència (només visual, no es desa)</label>
+        <input type="file" id="imagen-input" accept="image/*">
 
-      <label for="opacidad-range">Opacitat de la imatge</label>
-      <input type="range" id="opacidad-range" min="0.1" max="1" step="0.05" value="0.6">
+        <label for="opacidad-range">Opacitat de la imatge</label>
+        <input type="range" id="opacidad-range" min="0.1" max="1" step="0.05" value="0.6">
 
-      <div class="add-form">
-        <div>
-          <label for="nuevo-slot">Nom posició</label>
-          <input type="text" id="nuevo-slot" placeholder="Ex. Lateral">
-        </div>
-        <div>
-          <label for="nuevo-index">Índex</label>
-          <input type="number" id="nuevo-index" value="1" min="1">
-        </div>
+        <p class="hint">Arrossega la imatge pel mig per moure-la, i pels quadrats de les cantonades per ajustar-ne la mida — així pots enquadrar només la part de l'esquema que et interessa.</p>
       </div>
 
-      <label>Blocs — arrossega'ls al llenç</label>
-      <div class="blocks-palette">
-        <div class="block-sample" data-shape="rect">
-          <div class="sample-box rect"></div>
-          <span>Rectangle</span>
+      <div id="sidebar-posicions" style="display:none;">
+        <div class="add-form">
+          <div>
+            <label for="nuevo-slot">Nom posició</label>
+            <input type="text" id="nuevo-slot" placeholder="Ex. Lateral">
+          </div>
+          <div>
+            <label for="nuevo-index">Índex</label>
+            <input type="number" id="nuevo-index" value="1" min="1">
+          </div>
         </div>
-        <div class="block-sample" data-shape="round">
-          <div class="sample-box round"></div>
-          <span>Cantons rodons</span>
-        </div>
-        <div class="block-sample" data-shape="diamond">
-          <div class="sample-box diamond"></div>
-          <span>Cantons en diagonal</span>
-        </div>
-      </div>
-      <p class="hint">Omple el nom (opcional) i arrossega el bloc que necessitis fins al llenç.</p>
 
-      <p class="hint">
-        <strong>Selecció múltiple:</strong> arrossega sobre el fons del llenç per seleccionar diversos blocs — després
-        pots moure'ls o redimensionar-los junts. <strong>Ctrl+C / Ctrl+V</strong> per copiar i enganxar la selecció,
-        <strong>Supr</strong> per eliminar-la.
-      </p>
+        <label>Blocs — arrossega'ls al llenç</label>
+        <div class="blocks-palette">
+          <div class="block-sample" data-shape="rect">
+            <div class="sample-box rect"></div>
+            <span>Rectangle</span>
+          </div>
+          <div class="block-sample" data-shape="round">
+            <div class="sample-box round"></div>
+            <span>Cantons rodons</span>
+          </div>
+          <div class="block-sample" data-shape="diamond">
+            <div class="sample-box diamond"></div>
+            <span>Cantons en diagonal</span>
+          </div>
+        </div>
+        <p class="hint">Omple el nom (opcional) i arrossega el bloc que necessitis fins al llenç.</p>
+
+        <p class="hint">
+          <strong>Selecció múltiple:</strong> arrossega sobre el fons del llenç per seleccionar diversos blocs — després
+          pots moure'ls o redimensionar-los junts. <strong>Ctrl+C / Ctrl+V</strong> per copiar i enganxar la selecció,
+          <strong>Supr</strong> per eliminar-la.
+        </p>
+      </div>
 
       <button class="primary" id="save-btn" type="button">Desar plantilla</button>
       <button class="ghost" id="reload-btn" type="button">Recarregar la desada</button>
@@ -180,11 +200,18 @@
   </section>
 
   <section class="panel">
-    <div class="panel-head"><h2>Llenç (960 × 760)</h2></div>
+    <div class="panel-head">
+      <div class="tabs">
+        <button class="tab-btn active" id="tab-imagen-btn" type="button">1. Imatge de referència</button>
+        <button class="tab-btn" id="tab-posicions-btn" type="button">2. Posicions</button>
+      </div>
+    </div>
     <div class="panel-body">
+      <p class="hint" id="tab-hint">Arrossega la imatge per moure-la, i les cantonades per ajustar-ne la mida i l'enquadrament. Quan estigui ben col·locada, passa a la pestanya 2.</p>
       <div id="canvas-wrap">
         <div id="canvas">
-          <img id="bg-image" alt="" style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none; opacity:0.6; display:none;">
+          <img id="bg-image" alt="" style="position:absolute; pointer-events:none; opacity:0.6; display:none;">
+          <div id="image-handles"></div>
           <div id="boxes-layer" style="position:absolute; inset:0;"></div>
         </div>
       </div>
@@ -200,14 +227,61 @@ let clipboard = [];
 
 const canvas = document.getElementById('canvas');
 const boxesLayer = document.getElementById('boxes-layer');
+const imageHandles = document.getElementById('image-handles');
 const bgImage = document.getElementById('bg-image');
 const tipoSelect = document.getElementById('tipo-select');
+
+let activeTab = 'imagen';
+let imgState = { x: 480, y: 380, w: 880, h: 680 };
 
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
 }
+
+function renderImageLayer() {
+  bgImage.style.left = imgState.x + 'px';
+  bgImage.style.top = imgState.y + 'px';
+  bgImage.style.width = imgState.w + 'px';
+  bgImage.style.height = imgState.h + 'px';
+  bgImage.style.transform = 'translate(-50%,-50%)';
+
+  if (activeTab !== 'imagen') { imageHandles.innerHTML = ''; return; }
+  const corners = [
+    { c: 0, dx: -imgState.w / 2, dy: -imgState.h / 2 },
+    { c: 1, dx: imgState.w / 2, dy: -imgState.h / 2 },
+    { c: 2, dx: imgState.w / 2, dy: imgState.h / 2 },
+    { c: 3, dx: -imgState.w / 2, dy: imgState.h / 2 }
+  ];
+  imageHandles.innerHTML = corners.map(p => `
+    <span class="img-resize-handle" data-corner="${p.c}" style="left:${imgState.x + p.dx - 6}px; top:${imgState.y + p.dy - 6}px;"></span>
+  `).join('');
+  imageHandles.querySelectorAll('.img-resize-handle').forEach(el => {
+    el.addEventListener('pointerdown', onImageResizePointerDown);
+  });
+}
+
+function setActiveTab(tab) {
+  activeTab = tab;
+  document.getElementById('tab-imagen-btn').classList.toggle('active', tab === 'imagen');
+  document.getElementById('tab-posicions-btn').classList.toggle('active', tab === 'posicions');
+  document.getElementById('tab-hint').textContent = tab === 'imagen'
+    ? 'Arrossega la imatge per moure-la, i les cantonades per ajustar-ne la mida i l\'enquadrament. Quan estigui ben col·locada, passa a la pestanya 2.'
+    : 'La imatge ha quedat fixada com a base per calcar-hi les posicions. Arrossega blocs des de la paleta, i mou/redimensiona/gira les caselles com necessitis.';
+
+  document.getElementById('sidebar-imagen').style.display = tab === 'imagen' ? 'block' : 'none';
+  document.getElementById('sidebar-posicions').style.display = tab === 'posicions' ? 'block' : 'none';
+
+  bgImage.style.pointerEvents = tab === 'imagen' ? 'auto' : 'none';
+  boxesLayer.style.pointerEvents = tab === 'posicions' ? 'auto' : 'none';
+
+  renderImageLayer();
+  render();
+}
+
+document.getElementById('tab-imagen-btn').addEventListener('click', () => setActiveTab('imagen'));
+document.getElementById('tab-posicions-btn').addEventListener('click', () => setActiveTab('posicions'));
 
 document.getElementById('imagen-input').addEventListener('change', (e) => {
   const file = e.target.files[0];
@@ -216,6 +290,7 @@ document.getElementById('imagen-input').addEventListener('change', (e) => {
   reader.onload = (ev) => {
     bgImage.src = ev.target.result;
     bgImage.style.display = 'block';
+    renderImageLayer();
   };
   reader.readAsDataURL(file);
 });
@@ -223,6 +298,48 @@ document.getElementById('imagen-input').addEventListener('change', (e) => {
 document.getElementById('opacidad-range').addEventListener('input', (e) => {
   bgImage.style.opacity = e.target.value;
 });
+
+/* ---------------- Moure i redimensionar la imatge (pestanya 1) ---------------- */
+
+let imgDragState = null;
+
+function canvasPointRaw(e) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+bgImage.addEventListener('pointerdown', (e) => {
+  if (activeTab !== 'imagen') return;
+  imgDragState = { mode: 'move' };
+  document.addEventListener('pointermove', onImageDragMove);
+  document.addEventListener('pointerup', onImageDragEnd);
+});
+
+function onImageResizePointerDown(e) {
+  e.stopPropagation();
+  imgDragState = { mode: 'resize' };
+  document.addEventListener('pointermove', onImageDragMove);
+  document.addEventListener('pointerup', onImageDragEnd);
+}
+
+function onImageDragMove(e) {
+  if (!imgDragState) return;
+  const pt = canvasPointRaw(e);
+  if (imgDragState.mode === 'move') {
+    imgState.x = Math.round(pt.x);
+    imgState.y = Math.round(pt.y);
+  } else if (imgDragState.mode === 'resize') {
+    imgState.w = Math.max(40, Math.round(Math.abs(pt.x - imgState.x) * 2));
+    imgState.h = Math.max(40, Math.round(Math.abs(pt.y - imgState.y) * 2));
+  }
+  renderImageLayer();
+}
+
+function onImageDragEnd() {
+  imgDragState = null;
+  document.removeEventListener('pointermove', onImageDragMove);
+  document.removeEventListener('pointerup', onImageDragEnd);
+}
 
 async function cargarPlantilla() {
   const tipo = tipoSelect.value;
@@ -585,6 +702,7 @@ tipoSelect.addEventListener('change', cargarPlantilla);
 const tipoParam = new URLSearchParams(location.search).get('tipo');
 if (tipoParam) tipoSelect.value = tipoParam;
 
+setActiveTab('imagen');
 cargarPlantilla();
 </script>
 
