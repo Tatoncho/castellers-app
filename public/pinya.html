@@ -226,13 +226,13 @@ function generarPlantilla(tipo) {
 
   const clustersArriba = ['3eres mans', '2nes mans', '1eres mans'];
   clustersArriba.forEach((label, idx) => {
-    out.push({ slot: label, slotIndex: 1, x: cx - halfW / 2 - 30, y: cy - halfH / 2 - 55 - idx * 8, w: 64, h: 30, shape: 'diamond' });
-    out.push({ slot: label, slotIndex: 2, x: cx + halfW / 2 + 30, y: cy - halfH / 2 - 55 - idx * 8, w: 64, h: 30, shape: 'diamond' });
+    out.push({ slot: label, slotIndex: 1, x: cx - halfW / 2 - 30, y: cy - halfH / 2 - 55 - idx * 8, w: 64, h: 30, shape: 'diamond', rotacion: 45 });
+    out.push({ slot: label, slotIndex: 2, x: cx + halfW / 2 + 30, y: cy - halfH / 2 - 55 - idx * 8, w: 64, h: 30, shape: 'diamond', rotacion: 45 });
   });
   const clustersAbaix = ['1er vent', '2n vent', '3er vent'];
   clustersAbaix.forEach((label, idx) => {
-    out.push({ slot: label, slotIndex: 1, x: cx - halfW / 2 - 30, y: cy + halfH / 2 + 55 + idx * 8, w: 64, h: 30, shape: 'diamond' });
-    out.push({ slot: label, slotIndex: 2, x: cx + halfW / 2 + 30, y: cy + halfH / 2 + 55 + idx * 8, w: 64, h: 30, shape: 'diamond' });
+    out.push({ slot: label, slotIndex: 1, x: cx - halfW / 2 - 30, y: cy + halfH / 2 + 55 + idx * 8, w: 64, h: 30, shape: 'diamond', rotacion: 45 });
+    out.push({ slot: label, slotIndex: 2, x: cx + halfW / 2 + 30, y: cy + halfH / 2 + 55 + idx * 8, w: 64, h: 30, shape: 'diamond', rotacion: 45 });
   });
   out.push({ slot: 'vent', slotIndex: 1, x: cx, y: cy - halfH / 2 - 90, w: 64, h: 30, shape: 'rect' });
 
@@ -274,7 +274,7 @@ async function init() {
   const plantillaRes = await fetch(`${API}/api/plantillas/${estructura.tipo}`);
   const plantillaData = await plantillaRes.json();
   const plantillaGuardada = (plantillaData.data || []).map(p => ({
-    slot: p.slot, slotIndex: p.slotIndex, x: Number(p.x), y: Number(p.y), w: Number(p.w), h: Number(p.h), shape: p.shape
+    slot: p.slot, slotIndex: p.slotIndex, x: Number(p.x), y: Number(p.y), w: Number(p.w), h: Number(p.h), shape: p.shape, rotacion: Number(p.rotacion) || 0
   }));
   const usandoAproximacion = plantillaGuardada.length === 0;
   const plantilla = usandoAproximacion ? generarPlantilla(estructura.tipo) : plantillaGuardada;
@@ -358,13 +358,12 @@ function renderCanvas() {
   const canvas = document.getElementById('canvas');
   canvas.innerHTML = slots.map(s => {
     const isSel = selected && selected.type === 'slot' && selected.slot === s.slot && selected.slotIndex === s.slotIndex;
-    const shapeStyle = s.shape === 'diamond' ? `transform: translate(-50%,-50%) rotate(45deg);` : '';
     return `
       <div class="slot-box ${s.castellerId ? '' : 'empty'} ${s.shape === 'diamond' ? 'diamond' : ''} ${isSel ? 'selected' : ''}"
            data-slot="${escapeHtml(s.slot)}" data-slot-index="${s.slotIndex}"
-           style="left:${s.x}px; top:${s.y}px; width:${s.w}px; height:${s.h}px; ${shapeStyle}">
-        <span class="slot-label" style="${s.shape === 'diamond' ? 'transform:rotate(-45deg);' : ''}">${escapeHtml(s.slot)}</span>
-        <span class="slot-name" style="${s.shape === 'diamond' ? 'transform:rotate(-45deg);' : ''}">${s.nombre ? escapeHtml(s.nombre) : '—'}</span>
+           style="left:${s.x}px; top:${s.y}px; width:${s.w}px; height:${s.h}px; transform:translate(-50%,-50%) rotate(${s.rotacion || 0}deg);">
+        <span class="slot-label">${escapeHtml(s.slot)}</span>
+        <span class="slot-name">${s.nombre ? escapeHtml(s.nombre) : '—'}</span>
       </div>
     `;
   }).join('');
