@@ -44,11 +44,13 @@
   button.ghost:hover { background: var(--ink); color: var(--paper-card); }
   .hint { font-size: 11.5px; color: var(--ink-soft); margin-top: 12px; }
 
-  #canvas-wrap { position: relative; overflow: auto; background: #FDFCF8; border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
-  #canvas-stage { position: relative; width: 960px; height: 760px; margin: 0 auto; }
-  #canvas { position: absolute; inset: 0; overflow: hidden; background: #FDFCF8; }
-  #image-handles { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
-  #zoom-row { max-width: 500px; margin: 0 auto; }
+  #canvas-wrap { position: relative; overflow: hidden; background: #E4DFCF; border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; display:flex; justify-content:center; }
+  #canvas-viewport { position: relative; overflow: hidden; background: #FDFCF8; }
+  #workspace { position: absolute; transform-origin: top left; }
+  #frame-border { position: absolute; border: 2px solid var(--ink); pointer-events: none; }
+  #canvas { position: absolute; background: #FDFCF8; }
+  #image-handles { position: absolute; pointer-events: none; }
+  #zoom-row { max-width: 500px; margin: 14px auto 0; }
   #zoom-row input[type="range"] { width: 100%; }
 
   .pos-box {
@@ -210,19 +212,24 @@
       </div>
     </div>
     <div class="panel-body">
-      <p class="hint" id="tab-hint">Arrossega la imatge per moure-la, i les cantonades per ajustar-ne la mida (sense deformar-la). Quan estigui ben col·locada, passa a la pestanya 2.</p>
+      <p class="hint" id="tab-hint">El requadre amb vora és el llenç real (960×760) — tot el que quedi fora, en gris, es descartarà. Arrossega la imatge per moure-la i les cantonades per ajustar-ne la mida (sense deformar-la).</p>
       <div id="canvas-wrap">
-        <div id="canvas-stage">
-          <div id="canvas">
-            <img id="bg-image" alt="" style="position:absolute; pointer-events:none; opacity:0.6; display:none;">
-            <div id="boxes-layer" style="position:absolute; inset:0;"></div>
+        <div id="canvas-viewport">
+          <div id="workspace">
+            <div id="frame-border"></div>
+            <div id="canvas">
+              <img id="bg-image" alt="" style="position:absolute; pointer-events:none; opacity:0.85; display:none;">
+              <div id="boxes-layer" style="position:absolute; left:0; top:0; width:960px; height:760px;"></div>
+            </div>
+            <div id="image-handles"></div>
           </div>
-          <div id="image-handles"></div>
         </div>
       </div>
       <div id="zoom-row">
         <label for="zoom-range" style="margin:10px 0 4px;">Zoom de la imatge</label>
         <input type="range" id="zoom-range" min="0.1" max="3" step="0.02" value="1">
+        <label for="escala-range" style="margin:10px 0 4px;">Escala de vista (només per treballar còmode, no afecta el resultat)</label>
+        <input type="range" id="escala-range" min="0.3" max="1.5" step="0.05" value="0.55">
       </div>
     </div>
   </section>
@@ -239,6 +246,62 @@ const boxesLayer = document.getElementById('boxes-layer');
 const imageHandles = document.getElementById('image-handles');
 const bgImage = document.getElementById('bg-image');
 const tipoSelect = document.getElementById('tipo-select');
+const canvasViewport = document.getElementById('canvas-viewport');
+const workspace = document.getElementById('workspace');
+const frameBorder = document.getElementById('frame-border');
+
+// El "workspace" és una zona de treball més gran que el llenç real (960×760),
+// perquè puguis moure/redimensionar la imatge còmodament encara que
+// sobresurti del requadre. El requadre marcat és el llenç real; la resta
+// queda en gris i es descarta.
+const FRAME_W = 960, FRAME_H = 760;
+const WORKSPACE_W = 1400, WORKSPACE_H = 1100;
+const FRAME_OFFSET_X = (WORKSPACE_W - FRAME_W) / 2;
+const FRAME_OFFSET_Y = (WORKSPACE_H - FRAME_H) / 2;
+let displayScale = 0.55;
+
+workspace.style.width = WORKSPACE_W + 'px';
+workspace.style.height = WORKSPACE_H + 'px';
+frameBorder.style.left = FRAME_OFFSET_X + 'px';
+frameBorder.style.top = FRAME_OFFSET_Y + 'px';
+frameBorder.style.width = FRAME_W + 'px';
+frameBorder.style.height = FRAME_H + 'px';
+canvas.style.left = FRAME_OFFSET_X + 'px';
+canvas.style.top = FRAME_OFFSET_Y + 'px';
+canvas.style.width = FRAME_W + 'px';
+canvas.style.height = FRAME_H + 'px';
+imageHandles.style.left = '0px';
+imageHandles.style.top = '0px';
+imageHandles.style.width = WORKSPACE_W + 'px';
+imageHandles.style.height = WORKSPACE_H + 'px';
+
+// Aquest truc de box-shadow enfosqueix tot el que queda FORA del requadre
+// (i deixa net l'interior), sense necessitat de capes addicionals.
+function actualizarOscurecido() {
+  frameBorder.style.boxShadow = activeTab === 'imagen' ? '0 0 0 3000px rgba(32,36,31,0.5)' : 'none';
+}
+
+function layoutStage() {
+  if (activeTab === 'imagen') {
+    canvasViewport.style.width = Math.round(WORKSPACE_W * displayScale) + 'px';
+    canvasViewport.style.height = Math.round(WORKSPACE_H * displayScale) + 'px';
+    workspace.style.left = '0px';
+    workspace.style.top = '0px';
+    workspace.style.transform = `scale(${displayScale})`;
+  } else {
+    canvasViewport.style.width = FRAME_W + 'px';
+    canvasViewport.style.height = FRAME_H + 'px';
+    workspace.style.left = (-FRAME_OFFSET_X) + 'px';
+    workspace.style.top = (-FRAME_OFFSET_Y) + 'px';
+    workspace.style.transform = 'scale(1)';
+  }
+  actualizarOscurecido();
+}
+
+document.getElementById('escala-range').addEventListener('input', (e) => {
+  displayScale = Number(e.target.value);
+  layoutStage();
+});
 
 let activeTab = 'imagen';
 let imgState = { x: 480, y: 380, w: 880, h: 680 };
@@ -273,7 +336,7 @@ function renderImageLayer() {
     { c: 3, dx: -imgState.w / 2, dy: imgState.h / 2 }
   ];
   imageHandles.innerHTML = corners.map(p => `
-    <span class="img-resize-handle" data-corner="${p.c}" style="left:${imgState.x + p.dx - 6}px; top:${imgState.y + p.dy - 6}px;"></span>
+    <span class="img-resize-handle" data-corner="${p.c}" style="left:${FRAME_OFFSET_X + imgState.x + p.dx - 6}px; top:${FRAME_OFFSET_Y + imgState.y + p.dy - 6}px;"></span>
   `).join('');
   imageHandles.querySelectorAll('.img-resize-handle').forEach(el => {
     el.addEventListener('pointerdown', onImageResizePointerDown);
@@ -295,6 +358,7 @@ function setActiveTab(tab) {
   bgImage.style.pointerEvents = tab === 'imagen' ? 'auto' : 'none';
   boxesLayer.style.pointerEvents = tab === 'posicions' ? 'auto' : 'none';
 
+  layoutStage();
   renderImageLayer();
   render();
 }
@@ -339,7 +403,13 @@ document.getElementById('zoom-range').addEventListener('input', (e) => {
 let imgDragState = null;
 
 function canvasPointRaw(e) {
-  const rect = canvas.getBoundingClientRect();
+  const rect = canvasViewport.getBoundingClientRect();
+  if (activeTab === 'imagen') {
+    return {
+      x: (e.clientX - rect.left) / displayScale - FRAME_OFFSET_X,
+      y: (e.clientY - rect.top) / displayScale - FRAME_OFFSET_Y
+    };
+  }
   return { x: e.clientX - rect.left, y: e.clientY - rect.top };
 }
 
