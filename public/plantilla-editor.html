@@ -61,6 +61,17 @@
   }
   .pos-box.diamond { border-radius: 6px; }
   .pos-box.round { border-radius: 14px; }
+  .pos-box.locked {
+    background: var(--line); border-color: var(--ink-soft); border-style: dashed;
+    cursor: default; color: var(--ink-soft);
+  }
+  .pos-box .lock-btn {
+    position: absolute; top:-9px; left:-9px; width:16px; height:16px; border-radius:50%;
+    background: var(--paper-card); border: 1.4px solid var(--ink); color: var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; z-index: 3;
+  }
+  .pos-box.locked .lock-btn { background: var(--thread); border-color: var(--thread); color: var(--paper-card); }
   .pos-box .del-btn {
     position: absolute; top:-9px; right:-9px; width:16px; height:16px; border-radius:50%;
     background: var(--thread); color: var(--paper-card); font-size: 10px; line-height:16px; text-align:center;
@@ -314,6 +325,13 @@ function escapeHtml(str) {
   }[c]));
 }
 
+function lockIcon(locked) {
+  if (locked) {
+    return `<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="1.5" fill="currentColor"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="2.2" fill="none"/></svg>`;
+  }
+  return `<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="1.5" fill="currentColor"/><path d="M8 11V7a4 4 0 017.5-2" stroke="currentColor" stroke-width="2.2" fill="none"/></svg>`;
+}
+
 function aplicarZoom(z) {
   imgZoom = Math.max(0.1, Math.min(3, z));
   imgState.w = Math.round(imgFit.w * imgZoom);
@@ -453,7 +471,7 @@ async function cargarPlantilla() {
   const tipo = tipoSelect.value;
   const res = await fetch(`${API}/api/plantillas/${tipo}`);
   const data = await res.json();
-  posiciones = (data.data || []).map(p => ({ ...p, x: Number(p.x), y: Number(p.y), w: Number(p.w), h: Number(p.h), rotacion: Number(p.rotacion) || 0 }));
+  posiciones = (data.data || []).map(p => ({ ...p, x: Number(p.x), y: Number(p.y), w: Number(p.w), h: Number(p.h), rotacion: Number(p.rotacion) || 0, locked: false }));
   selectedIndices = new Set();
   render();
 }
@@ -472,14 +490,25 @@ function boundingBoxOf(indices) {
 
 function render() {
   boxesLayer.innerHTML = posiciones.map((p, i) => `
-    <div class="pos-box ${p.shape === 'diamond' ? 'diamond' : ''} ${p.shape === 'round' ? 'round' : ''} ${selectedIndices.has(i) ? 'selected' : ''}" data-idx="${i}"
+    <div class="pos-box ${p.shape === 'diamond' ? 'diamond' : ''} ${p.shape === 'round' ? 'round' : ''} ${selectedIndices.has(i) ? 'selected' : ''} ${p.locked ? 'locked' : ''}" data-idx="${i}"
          style="left:${p.x}px; top:${p.y}px; width:${p.w}px; height:${p.h}px; transform:translate(-50%,-50%) rotate(${p.rotacion || 0}deg);">
       <span class="pos-label">${escapeHtml(p.slot)}-${p.slotIndex}</span>
-      <span class="del-btn" data-idx="${i}" title="Eliminar">×</span>
-      ${[0,1,2,3].map(c => `<span class="resize-handle" data-idx="${i}" data-corner="${c}"></span>`).join('')}
-      ${[0,1,2,3].map(c => `<span class="rotate-handle" data-idx="${i}" data-corner="${c}">↻</span>`).join('')}
+      <span class="lock-btn" data-idx="${i}" title="${p.locked ? 'Desbloquejar' : 'Bloquejar'}">${lockIcon(p.locked)}</span>
+      ${p.locked ? '' : `<span class="del-btn" data-idx="${i}" title="Eliminar">×</span>`}
+      ${p.locked ? '' : [0,1,2,3].map(c => `<span class="resize-handle" data-idx="${i}" data-corner="${c}"></span>`).join('')}
+      ${p.locked ? '' : [0,1,2,3].map(c => `<span class="rotate-handle" data-idx="${i}" data-corner="${c}">↻</span>`).join('')}
     </div>
   `).join('');
+
+  boxesLayer.querySelectorAll('.lock-btn').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = Number(el.dataset.idx);
+      posiciones[idx].locked = !posiciones[idx].locked;
+      if (posiciones[idx].locked) selectedIndices.delete(idx);
+      render();
+    });
+  });
 
   if (selectedIndices.size > 1) {
     const b = boundingBoxOf(selectedIndices);
@@ -521,6 +550,7 @@ function render() {
 function onBoxDblClick(e) {
   const idx = Number(e.currentTarget.dataset.idx);
   const p = posiciones[idx];
+  if (p.locked) return;
   const nuevoSlot = prompt('Nom de la posició:', p.slot);
   if (nuevoSlot === null) return;
   const nuevoIndex = prompt('Índex (per a repeticions com Crossa-1, Crossa-2…):', p.slotIndex);
@@ -605,9 +635,10 @@ function toLocal(px, py, box) {
 }
 
 function onBoxPointerDown(e) {
-  if (e.target.closest('.del-btn, .resize-handle, .rotate-handle')) return;
+  if (e.target.closest('.del-btn, .resize-handle, .rotate-handle, .lock-btn')) return;
   e.stopPropagation();
   const idx = Number(e.currentTarget.dataset.idx);
+  if (posiciones[idx].locked) return;
   const pt = canvasPoint(e);
 
   if (selectedIndices.size > 1 && selectedIndices.has(idx)) {
@@ -615,10 +646,13 @@ function onBoxPointerDown(e) {
     const starts = [...selectedIndices].map(i => ({ i, x: posiciones[i].x, y: posiciones[i].y }));
     dragState = { mode: 'group-move', starts, startPt: pt };
   } else {
+    // NOTA: no cridem render() aquí (destruiria el node i trencaria el
+    // doble clic); només marquem la selecció visualment amb classList.
+    boxesLayer.querySelectorAll('.pos-box.selected').forEach(el => el.classList.remove('selected'));
+    e.currentTarget.classList.add('selected');
     selectedIndices = new Set([idx]);
     dragState = { mode: 'move', idx };
   }
-  render();
   document.addEventListener('pointermove', onDragMove);
   document.addEventListener('pointerup', onDragEnd);
 }
@@ -746,6 +780,7 @@ function onMarqueeEnd(e) {
     const m = marqueeState.rect;
     const dins = [];
     posiciones.forEach((p, i) => {
+      if (p.locked) return;
       const bx1 = p.x - p.w / 2, bx2 = p.x + p.w / 2, by1 = p.y - p.h / 2, by2 = p.y + p.h / 2;
       if (bx1 < m.x + m.w && bx2 > m.x && by1 < m.y + m.h && by2 > m.y) dins.push(i);
     });
