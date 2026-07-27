@@ -32,8 +32,8 @@
   header.ctx .back:hover { background:var(--ink); color:var(--paper-card); }
   .approx-note { font-size: 11.5px; color: var(--gold); border:1px solid var(--gold); padding: 3px 10px; border-radius: 20px; font-family:'IBM Plex Mono',monospace; }
 
-  main { max-width: 1500px; margin: 0 auto; padding: 22px 28px 80px; display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
-  @media (max-width: 980px) { main { grid-template-columns: 1fr; } }
+  main { max-width: 1650px; margin: 0 auto; padding: 22px 28px 80px; display: grid; grid-template-columns: 260px 1fr 260px; gap: 20px; align-items: start; }
+  @media (max-width: 1180px) { main { grid-template-columns: 1fr; } }
 
   section.panel { background: var(--paper-card); border: 1px solid var(--line); border-radius: var(--radius); }
   .panel-head { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
@@ -77,6 +77,24 @@
   button { cursor:pointer; border:none; border-radius:var(--radius); font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.03em; text-transform:uppercase; padding:8px 12px; }
   button.ghost { background: transparent; border:1px solid var(--ink); color: var(--ink); }
   button.ghost:hover { background: var(--ink); color: var(--paper-card); }
+
+  #tower { position: relative; padding-left: 14px; }
+  #tower::before {
+    content: ''; position: absolute; left: 5px; top: 6px; bottom: 6px; width: 2px; background: var(--ink);
+  }
+  .tower-level { position: relative; margin-bottom: 14px; padding-left: 14px; }
+  .tower-level::before {
+    content: ''; position: absolute; left: -14px; top: 50%; width: 10px; height: 2px; background: var(--ink);
+  }
+  .tower-level .lvl-label {
+    font-family:'IBM Plex Mono',monospace; font-size: 10px; text-transform:uppercase; letter-spacing:0.05em; color: var(--ink-soft);
+  }
+  .tower-level .lvl-names { font-family:'Fraunces',serif; font-weight:600; font-size: 14px; margin-top: 2px; }
+  .tower-level .lvl-names .empty { color: var(--ink-soft); font-family:'Work Sans',sans-serif; font-weight:400; font-style:italic; font-size:12px; }
+  .tower-pinya-tag {
+    margin-top: 10px; text-align:center; font-family:'Fraunces',serif; font-weight:700; font-size: 15px;
+    border-top: 1px dashed var(--line); padding-top: 10px;
+  }
 </style>
 </head>
 <body>
@@ -133,6 +151,13 @@
       </div>
     </div>
   </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2 id="castell-titulo">Castell</h2></div>
+    <div class="panel-body">
+      <div id="tower"></div>
+    </div>
+  </section>
 </main>
 
 <script>
@@ -145,6 +170,7 @@ let ensayo = null;
 let allMembers = [];
 let asistentesIds = new Set();
 let slots = []; // plantilla + asignaciones fusionadas
+let todasLasPosiciones = []; // totes les files de estructura_posiciones (planta + tronc)
 let selected = null; // { type:'slot', slot, slotIndex } | { type:'pool', id }
 
 function escapeHtml(str) {
@@ -155,40 +181,60 @@ function escapeHtml(str) {
 
 /* ---------------- Plantilla (aproximada) per tipus ---------------- */
 
+// Desplaçaments (dx,dy) de cada nucli de Baix, respecte al centre del
+// conjunt, segons l'ample del castell. Per a 3d7 intenta seguir el
+// triangle real (2 nuclis amunt, 1 avall) de la teva plantilla en paper.
+const NUCLIS_PER_AMPLE = {
+  2: [[-70, 0], [70, 0]],
+  3: [[-85, -95], [85, -95], [0, 85]],
+  4: [[0, -115], [105, 0], [0, 115], [-105, 0]],
+  5: [[0, -125], [110, -35], [70, 105], [-70, 105], [-110, -35]]
+};
+
 function generarPlantilla(tipo) {
   const amples = { '2d6': 2, '3d7': 3, '4d7': 4, '5d7': 5 }[tipo] || 3;
   const out = [];
   const cx = 480, cy = 420;
-  const colGap = 110;
-  const startX = cx - ((amples - 1) * colGap) / 2;
-  const totalWidth = (amples - 1) * colGap + 74;
+  const nuclis = NUCLIS_PER_AMPLE[amples] || NUCLIS_PER_AMPLE[3];
 
-  out.push({ slot: 'Agulla', slotIndex: 1, x: cx, y: cy + 130, w: 100, h: 34, shape: 'rect' });
+  nuclis.forEach(([dx, dy], i) => {
+    const nx = cx + dx, ny = cy + dy;
+    // vector cap al centre del conjunt, per orientar Agulla "cap endins"
+    const toCenterX = (cx - nx), toCenterY = (cy - ny);
+    const len = Math.hypot(toCenterX, toCenterY) || 1;
+    const inX = toCenterX / len, inY = toCenterY / len;
 
-  for (let i = 0; i < amples; i++) {
-    const x = startX + i * colGap;
-    out.push({ slot: 'Baix', slotIndex: i + 1, x, y: cy, w: 74, h: 32, shape: 'rect' });
-    out.push({ slot: 'Contrafort', slotIndex: i + 1, x, y: cy - 48, w: 74, h: 28, shape: 'rect' });
-    out.push({ slot: 'Crossa', slotIndex: i * 2 + 1, x: x - 48, y: cy - 8, w: 32, h: 58, shape: 'rect' });
-    out.push({ slot: 'Crossa', slotIndex: i * 2 + 2, x: x + 48, y: cy - 8, w: 32, h: 58, shape: 'rect' });
-  }
+    out.push({ slot: 'Baix', slotIndex: i + 1, x: nx, y: ny, w: 74, h: 32, shape: 'rect' });
+    out.push({ slot: 'Contrafort', slotIndex: i + 1, x: nx - inX * 46, y: ny - inY * 46, w: 70, h: 28, shape: 'rect' });
+    out.push({ slot: 'Agulla', slotIndex: i + 1, x: nx + inX * 40, y: ny + inY * 40, w: 78, h: 30, shape: 'rect' });
+    // Crossa, perpendiculars a la direcció cap al centre
+    const perpX = -inY, perpY = inX;
+    out.push({ slot: 'Crossa', slotIndex: i * 2 + 1, x: nx + perpX * 46, y: ny + perpY * 46, w: 30, h: 56, shape: 'rect' });
+    out.push({ slot: 'Crossa', slotIndex: i * 2 + 2, x: nx - perpX * 46, y: ny - perpY * 46, w: 30, h: 56, shape: 'rect' });
+  });
 
-  const lateralPerSide = amples + 1;
+  // Anells de suport, calculats sobre la caixa que ocupen els nuclis
+  const xs = nuclis.map(n => n[0]), ys = nuclis.map(n => n[1]);
+  const halfW = Math.max(...xs) - Math.min(...xs) || 140;
+  const halfH = Math.max(...ys) - Math.min(...ys) || 140;
+
+  const lateralPerSide = amples;
   for (let f = 0; f < lateralPerSide; f++) {
-    out.push({ slot: 'Lateral', slotIndex: f + 1, x: cx - totalWidth / 2 - 55 - f * 40, y: cy - 10, w: 34, h: 60, shape: 'rect' });
-    out.push({ slot: 'Lateral', slotIndex: lateralPerSide + f + 1, x: cx + totalWidth / 2 + 55 + f * 40, y: cy - 10, w: 34, h: 60, shape: 'rect' });
+    out.push({ slot: 'Lateral', slotIndex: f + 1, x: cx - halfW / 2 - 70 - f * 38, y: cy, w: 34, h: 58, shape: 'rect' });
+    out.push({ slot: 'Lateral', slotIndex: lateralPerSide + f + 1, x: cx + halfW / 2 + 70 + f * 38, y: cy, w: 34, h: 58, shape: 'rect' });
   }
 
   const clustersArriba = ['3eres mans', '2nes mans', '1eres mans'];
   clustersArriba.forEach((label, idx) => {
-    out.push({ slot: label, slotIndex: 1, x: cx - totalWidth / 2 - 30, y: cy - 105 - idx * 8, w: 66, h: 32, shape: 'diamond' });
-    out.push({ slot: label, slotIndex: 2, x: cx + totalWidth / 2 + 30, y: cy - 105 - idx * 8, w: 66, h: 32, shape: 'diamond' });
+    out.push({ slot: label, slotIndex: 1, x: cx - halfW / 2 - 30, y: cy - halfH / 2 - 55 - idx * 8, w: 64, h: 30, shape: 'diamond' });
+    out.push({ slot: label, slotIndex: 2, x: cx + halfW / 2 + 30, y: cy - halfH / 2 - 55 - idx * 8, w: 64, h: 30, shape: 'diamond' });
   });
   const clustersAbaix = ['1er vent', '2n vent', '3er vent'];
   clustersAbaix.forEach((label, idx) => {
-    out.push({ slot: label, slotIndex: 1, x: cx - totalWidth / 2 - 30, y: cy + 105 + idx * 8, w: 66, h: 32, shape: 'diamond' });
-    out.push({ slot: label, slotIndex: 2, x: cx + totalWidth / 2 + 30, y: cy + 105 + idx * 8, w: 66, h: 32, shape: 'diamond' });
+    out.push({ slot: label, slotIndex: 1, x: cx - halfW / 2 - 30, y: cy + halfH / 2 + 55 + idx * 8, w: 64, h: 30, shape: 'diamond' });
+    out.push({ slot: label, slotIndex: 2, x: cx + halfW / 2 + 30, y: cy + halfH / 2 + 55 + idx * 8, w: 64, h: 30, shape: 'diamond' });
   });
+  out.push({ slot: 'vent', slotIndex: 1, x: cx, y: cy - halfH / 2 - 90, w: 64, h: 30, shape: 'rect' });
 
   return out;
 }
@@ -230,7 +276,10 @@ async function init() {
     const guardada = posicionesGuardadas.find(g => g.slot === p.slot && g.slotIndex === p.slotIndex);
     return { ...p, castellerId: guardada ? guardada.castellerId : null, nombre: guardada ? guardada.castellerNombre : null };
   });
+  todasLasPosiciones = posicionesGuardadas;
 
+  document.getElementById('castell-titulo').textContent = `Castell · ${estructura.tipo}`;
+  renderTower();
   populatePosicionFilter();
   renderCanvas();
   renderPool();
@@ -243,7 +292,9 @@ function populatePosicionFilter() {
 }
 
 function getAssignedIds() {
-  return new Set(slots.filter(s => s.castellerId).map(s => s.castellerId));
+  const deLaPlanta = slots.filter(s => s.castellerId).map(s => s.castellerId);
+  const delTronc = todasLasPosiciones.filter(p => p.castellerId).map(p => p.castellerId);
+  return new Set([...deLaPlanta, ...delTronc]);
 }
 
 function getPoolMembers() {
@@ -265,6 +316,34 @@ function getPoolMembers() {
 }
 
 /* ---------------- Render ---------------- */
+
+function nombresPara(slotNombre) {
+  const filas = todasLasPosiciones.filter(p => p.slot === slotNombre && p.castellerId);
+  return filas
+    .sort((a, b) => a.slotIndex - b.slotIndex)
+    .map(f => escapeHtml(f.castellerNombre))
+    .join(', ');
+}
+
+function renderTower() {
+  const tower = document.getElementById('tower');
+  const baixNombres = slots.filter(s => s.slot === 'Baix' && s.nombre).map(s => s.nombre);
+
+  const niveles = [
+    { label: 'Enxaneta', names: nombresPara('Enxaneta') },
+    { label: 'Acotxador', names: nombresPara('Acotxador') },
+    { label: 'Terç', names: nombresPara('Terç') },
+    { label: 'Segon', names: nombresPara('Segon') },
+    { label: 'Baix', names: baixNombres.map(n => escapeHtml(n)).join(', ') }
+  ];
+
+  tower.innerHTML = niveles.map(n => `
+    <div class="tower-level">
+      <div class="lvl-label">${n.label}</div>
+      <div class="lvl-names">${n.names ? n.names : '<span class="empty">—</span>'}</div>
+    </div>
+  `).join('') + `<div class="tower-pinya-tag">PINYA</div>`;
+}
 
 function renderCanvas() {
   const canvas = document.getElementById('canvas');
@@ -443,12 +522,14 @@ async function reloadPosiciones() {
   const res = await fetch(`${API}/api/estructuras/${estructuraId}`);
   const data = await res.json();
   const posicionesGuardadas = data.posiciones || [];
+  todasLasPosiciones = posicionesGuardadas;
   slots = slots.map(s => {
     const guardada = posicionesGuardadas.find(g => g.slot === s.slot && g.slotIndex === s.slotIndex);
     return { ...s, castellerId: guardada ? guardada.castellerId : null, nombre: guardada ? guardada.castellerNombre : null };
   });
   renderCanvas();
   renderPool();
+  renderTower();
 }
 
 init();

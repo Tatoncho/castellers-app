@@ -687,18 +687,71 @@ app.get('/api/migrate-estructuras', async (req, res) => {
 // Crear una estructura guardada dentro de un assaig (p.ex. al pulsar
 // "Desar aquesta proposta" en el modal de propostes de castells)
 app.post('/api/ensayos/:id/estructuras', async (req, res) => {
+  const client = await pool.connect();
   try {
     const { id } = req.params;
     const { tipo, notas } = req.body;
     if (!tipo) return res.status(400).json({ error: 'tipo es obligatorio' });
 
-    const result = await pool.query(
+    const configs = {
+      '2d6': { amples: 2, segons: 2, tersos: 2 },
+      '3d7': { amples: 3, segons: 3, tersos: 3 },
+      '4d7': { amples: 4, segons: 4, tersos: 4 },
+      '5d7': { amples: 5, segons: 5, tersos: 5 }
+    };
+    const config = configs[tipo] || { amples: 3, segons: 3, tersos: 3 };
+
+    await client.query('BEGIN');
+
+    const estructuraResult = await client.query(
       `INSERT INTO estructuras_ensayo ("ensayoId", "tipo", "notas") VALUES ($1, $2, $3) RETURNING *`,
       [id, tipo, notas || null]
     );
-    res.json({ success: true, estructura: result.rows[0] });
+    const estructura = estructuraResult.rows[0];
+
+    // Calculamos un tronc inicial por alçada (com feia l'antic /api/generar):
+    // els més alts a baix, els més baixos al pom. Es pot reassignar després
+    // a mà des del constructor.
+    const presentesResult = await client.query(
+      `SELECT c."id", c."alturaHombros"
+       FROM ensayo_asistentes ea
+       JOIN castellers c ON c."id" = ea."castellerId"
+       WHERE ea."ensayoId" = $1
+       ORDER BY c."alturaHombros" DESC NULLS LAST`,
+      [id]
+    );
+    const presentes = presentesResult.rows;
+    const necesarios = config.amples + config.segons + config.tersos + 2; // baix + segons + tersos + acotxador + enxaneta
+
+    if (presentes.length >= necesarios) {
+      let i = 0;
+      const posiciones = [];
+      for (let a = 0; a < config.amples; a++) posiciones.push({ slot: 'Baix', slotIndex: a + 1, castellerId: presentes[i++].id });
+      for (let s = 0; s < config.segons; s++) posiciones.push({ slot: 'Segon', slotIndex: s + 1, castellerId: presentes[i++].id });
+      for (let t = 0; t < config.tersos; t++) posiciones.push({ slot: 'Terç', slotIndex: t + 1, castellerId: presentes[i++].id });
+      // els 2 més baixos (final de la llista, ordenada d'alt a baix) van al pom
+      const pomAcotxador = presentes[presentes.length - 2];
+      const pomEnxaneta = presentes[presentes.length - 1];
+      posiciones.push({ slot: 'Acotxador', slotIndex: 1, castellerId: pomAcotxador.id });
+      posiciones.push({ slot: 'Enxaneta', slotIndex: 1, castellerId: pomEnxaneta.id });
+
+      for (const p of posiciones) {
+        await client.query(
+          `INSERT INTO estructura_posiciones ("estructuraEnsayoId", "slot", "slotIndex", "castellerId")
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT ("estructuraEnsayoId", "slot", "slotIndex") DO UPDATE SET "castellerId" = EXCLUDED."castellerId"`,
+          [estructura.id, p.slot, p.slotIndex, p.castellerId]
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+    res.json({ success: true, estructura });
   } catch (error) {
+    await client.query('ROLLBACK');
     errorHandler(res, error);
+  } finally {
+    client.release();
   }
 });
 
