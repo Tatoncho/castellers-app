@@ -1197,6 +1197,122 @@ app.delete('/api/imagenes/:id', async (req, res) => {
   }
 });
 
+// Renombrar una imatge
+app.put('/api/imagenes/:id', async (req, res) => {
+  try {
+    const { nombre } = req.body;
+    if (!nombre) return res.status(400).json({ error: 'nombre es obligatorio' });
+    const result = await pool.query(
+      `UPDATE imagenes_referencia SET "nombre" = $1 WHERE "id" = $2 RETURNING "id","nombre","categoria","created_at"`,
+      [nombre, req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Imatge no trobada' });
+    res.json({ success: true, imagen: result.rows[0] });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+/* =========================================================
+   MÒDUL CATEGORIES D'IMATGE (gestionables des de la biblioteca)
+   ========================================================= */
+
+// ⚠️ TEMPORAL: crea la taula de categories, la sembra amb les 4 inicials, i
+// normalitza els valors antics ('pinya'/'castell') cap als noms nous. Sense
+// ?confirm=si només avisa.
+app.get('/api/migrate-categorias-imagen', async (req, res) => {
+  if (req.query.confirm !== 'si') {
+    return res.json({ success: false, aviso: 'Esto crea categorias_imagen y normaliza categorías antiguas. Añade ?confirm=si para confirmar.' });
+  }
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS categorias_imagen (
+        "id" SERIAL PRIMARY KEY,
+        "nombre" TEXT UNIQUE NOT NULL,
+        "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await pool.query(`
+      INSERT INTO categorias_imagen ("nombre") VALUES
+        ('Castells'), ('Pinyes'), ('Fotos de perfil'), ('Altres')
+      ON CONFLICT ("nombre") DO NOTHING
+    `);
+    // les imatges que es van guardar abans amb categoria='castell'/'pinya'
+    // (text lliure en minúscules) passen a fer servir els noms nous
+    await pool.query(`UPDATE imagenes_referencia SET "categoria" = 'Castells' WHERE "categoria" = 'castell'`);
+    await pool.query(`UPDATE imagenes_referencia SET "categoria" = 'Pinyes' WHERE "categoria" = 'pinya'`);
+    await pool.query(`UPDATE imagenes_referencia SET "categoria" = 'Altres' WHERE "categoria" IS NULL OR "categoria" = ''`);
+    res.json({ success: true, aviso: 'Borra /api/migrate-categorias-imagen del server.js ahora que ya la has ejecutado.' });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+app.get('/api/categorias-imagen', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT c.*, COUNT(i."id")::int AS "numImagenes"
+      FROM categorias_imagen c
+      LEFT JOIN imagenes_referencia i ON i."categoria" = c."nombre"
+      GROUP BY c."id"
+      ORDER BY c."nombre"
+    `);
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+app.post('/api/categorias-imagen', async (req, res) => {
+  try {
+    const { nombre } = req.body;
+    if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'nombre es obligatorio' });
+    const result = await pool.query(
+      `INSERT INTO categorias_imagen ("nombre") VALUES ($1) RETURNING *`,
+      [nombre.trim()]
+    );
+    res.json({ success: true, categoria: result.rows[0] });
+  } catch (error) {
+    if (error.code === '23505') return res.status(400).json({ success: false, error: 'Ja existeix una categoria amb aquest nom' });
+    errorHandler(res, error);
+  }
+});
+
+// Renombrar una categoria — actualitza també totes les imatges que la feien
+// servir, perquè quedin sincronitzades amb el nou nom.
+app.put('/api/categorias-imagen/:id', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { nombre } = req.body;
+    if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'nombre es obligatorio' });
+
+    await client.query('BEGIN');
+    const actual = await client.query('SELECT * FROM categorias_imagen WHERE "id" = $1', [req.params.id]);
+    if (actual.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Categoria no trobada' });
+    }
+    const nombreAnterior = actual.rows[0].nombre;
+
+    const result = await client.query(
+      `UPDATE categorias_imagen SET "nombre" = $1 WHERE "id" = $2 RETURNING *`,
+      [nombre.trim(), req.params.id]
+    );
+    await client.query(
+      `UPDATE imagenes_referencia SET "categoria" = $1 WHERE "categoria" = $2`,
+      [nombre.trim(), nombreAnterior]
+    );
+    await client.query('COMMIT');
+    res.json({ success: true, categoria: result.rows[0] });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    if (error.code === '23505') return res.status(400).json({ success: false, error: 'Ja existeix una categoria amb aquest nom' });
+    errorHandler(res, error);
+  } finally {
+    client.release();
+  }
+});
+
 /* =========================================================
    MÒDUL ESTRUCTURA DE CASTELLS (el tronc: nivells i quantitats)
    ========================================================= */

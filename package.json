@@ -7,8 +7,10 @@
   },
   "dependencies": {
     "express": "^4.22.2",
-    "pg": "^8.22.0",
-	"helmet": "^8.0.0",
-	"express-rate-limit": "^7.5.0"
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "image-size": "^2.0.2",
+    "multer": "^2.2.0",
+    "pg": "^8.22.0"
   }
 }

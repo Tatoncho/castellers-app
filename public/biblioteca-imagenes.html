@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Castellers · Biblioteca d'imatges</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EAE6DA; --paper-card: #F1EEE4; --ink: #20241F; --ink-soft: #4B5049;
+    --thread: #9E2B3B; --gold: #B8893D; --line: #C7C2B0; --radius: 3px;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background: linear-gradient(var(--line) 1px, transparent 1px) 0 0/100% 34px, var(--paper); color:var(--ink); font-family:'Work Sans',sans-serif; font-size:14.5px; line-height:1.5; }
+  a { color: var(--thread); }
+
+  nav.topnav { display:flex; align-items:center; gap:22px; padding:18px 28px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  nav.topnav .brand { display:flex; align-items:center; gap:10px; font-family:'Fraunces',serif; font-weight:700; font-size:18px; text-decoration:none; color:var(--ink); font-variant:small-caps; }
+  nav.topnav .links { display:flex; gap:4px; flex-wrap:wrap; }
+  nav.topnav .links a { font-family:'IBM Plex Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; padding:8px 12px; border-radius:var(--radius); text-decoration:none; color:var(--ink-soft); border:1px solid transparent; }
+  nav.topnav .links a:hover { border-color:var(--line); color:var(--ink); }
+  nav.topnav .links a.active { color:var(--ink); border-color:var(--ink); }
+  nav.topnav .spacer { margin-left:auto; }
+
+  main { max-width: 1300px; margin: 0 auto; padding: 28px 28px 80px; display:grid; grid-template-columns: 260px 1fr; gap: 20px; align-items:start; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+
+  section.panel { background: var(--paper-card); border: 1px solid var(--line); border-radius: var(--radius); }
+  .panel-head { padding: 14px 18px 10px; border-bottom: 1px solid var(--line); }
+  .panel-head h2 { font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0; }
+  .panel-body { padding: 16px 18px; }
+
+  ul.categorias-list { list-style:none; margin:0 0 14px; padding:0; }
+  ul.categorias-list li {
+    display:flex; align-items:center; gap:8px; padding: 10px 12px; margin-bottom:6px;
+    background: var(--paper); border:1px solid var(--line); border-radius: var(--radius); cursor:pointer;
+  }
+  ul.categorias-list li.active { border-color: var(--thread); background:#F3E7E5; }
+  ul.categorias-list li .cat-nombre { font-family:'Fraunces',serif; font-weight:600; flex:1; }
+  ul.categorias-list li .cat-count { font-family:'IBM Plex Mono',monospace; font-size:11px; color: var(--ink-soft); }
+  ul.categorias-list li .cat-edit { background:transparent; border:none; color: var(--ink-soft); cursor:pointer; font-size:12px; padding:2px; }
+
+  .add-cat-row { display:flex; gap:6px; }
+  .add-cat-row input { flex:1; padding:8px 9px; border:1px solid var(--line); background:var(--paper); border-radius:var(--radius); }
+  .add-cat-row button { width:auto; }
+
+  .toolbar { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+  .toolbar h2 { font-family:'Fraunces',serif; font-size:19px; margin:0; }
+  .toolbar .spacer { flex:1; }
+  .upload-label {
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; text-transform:uppercase; letter-spacing:0.04em;
+    border: 1px solid var(--ink); padding: 9px 14px; border-radius: var(--radius); cursor:pointer;
+  }
+  .upload-label:hover { background: var(--ink); color: var(--paper-card); }
+
+  .imagenes-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 14px; }
+  .img-card { border:1px solid var(--line); border-radius: var(--radius); background: var(--paper); overflow:hidden; }
+  .img-card img { width:100%; height:110px; object-fit:cover; display:block; background:#FDFCF8; }
+  .img-card .img-card-body { padding: 8px 9px; }
+  .img-card .img-nombre { font-size:12px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:6px; }
+  .img-card .img-actions { display:flex; gap:6px; }
+  .img-card button { flex:1; width:auto; padding: 5px 6px; font-size:10px; }
+
+  button { cursor:pointer; border:none; border-radius:var(--radius); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.04em; text-transform:uppercase; padding:9px 14px; }
+  button.primary { background: var(--thread); color: var(--paper-card); width:100%; }
+  button.primary:hover { background:#862432; }
+  button.ghost { background: transparent; border:1px solid var(--ink); color: var(--ink); }
+  button.ghost:hover { background: var(--ink); color: var(--paper-card); }
+  .empty-note { color: var(--ink-soft); font-style: italic; padding: 20px 0; text-align:center; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="/">
+    <svg width="26" height="26" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="20" y="4" width="6" height="8" fill="#20241F"/><rect x="14" y="14" width="18" height="8" fill="#20241F"/>
+      <rect x="8" y="26" width="30" height="8" fill="#20241F"/><rect x="2" y="38" width="42" height="6" fill="#9E2B3B"/>
+    </svg>
+    Castellers
+  </a>
+  <div class="links">
+    <a href="/">Inici</a>
+    <a href="/plantillas.html">Plantilles</a>
+    <a href="/biblioteca-imagenes.html" class="active">Imatges</a>
+  </div>
+  <div class="spacer"></div>
+</nav>
+
+<main>
+  <section class="panel">
+    <div class="panel-head"><h2>Categories</h2></div>
+    <div class="panel-body">
+      <ul class="categorias-list" id="categorias-list"></ul>
+      <div class="add-cat-row">
+        <input type="text" id="nueva-categoria-input" placeholder="Nova categoria…">
+        <button class="ghost" id="add-categoria-btn" type="button">+</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-body">
+      <div class="toolbar">
+        <h2 id="categoria-titulo">—</h2>
+        <div class="spacer"></div>
+        <label class="upload-label" for="upload-input">+ Pujar imatge</label>
+        <input type="file" id="upload-input" accept="image/*" style="display:none;">
+      </div>
+      <div class="imagenes-grid" id="imagenes-grid"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const API = '';
+let categorias = [];
+let categoriaActual = null;
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+async function cargarCategorias() {
+  const list = document.getElementById('categorias-list');
+  try {
+    const res = await fetch(`${API}/api/categorias-imagen`);
+    const data = await res.json();
+    categorias = data.data || [];
+    if (!categoriaActual && categorias.length) categoriaActual = categorias[0].nombre;
+
+    list.innerHTML = categorias.map(c => `
+      <li class="${c.nombre === categoriaActual ? 'active' : ''}" data-nombre="${escapeHtml(c.nombre)}" data-id="${c.id}">
+        <span class="cat-nombre">${escapeHtml(c.nombre)}</span>
+        <span class="cat-count">${c.numImagenes}</span>
+        <button class="cat-edit" data-id="${c.id}" data-nombre="${escapeHtml(c.nombre)}" type="button" title="Renombrar">✎</button>
+      </li>
+    `).join('');
+
+    list.querySelectorAll('li').forEach(li => {
+      li.addEventListener('click', (e) => {
+        if (e.target.closest('.cat-edit')) return;
+        categoriaActual = li.dataset.nombre;
+        cargarCategorias();
+        cargarImagenes();
+      });
+    });
+    list.querySelectorAll('.cat-edit').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const nuevoNombre = prompt('Nou nom de la categoria:', btn.dataset.nombre);
+        if (!nuevoNombre || !nuevoNombre.trim() || nuevoNombre.trim() === btn.dataset.nombre) return;
+        try {
+          const res = await fetch(`${API}/api/categorias-imagen/${btn.dataset.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre: nuevoNombre.trim() })
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) throw new Error(data.error || 'Error');
+          if (categoriaActual === btn.dataset.nombre) categoriaActual = nuevoNombre.trim();
+          await cargarCategorias();
+          await cargarImagenes();
+        } catch (err) {
+          alert('No s\'ha pogut renombrar: ' + err.message);
+        }
+      });
+    });
+
+    document.getElementById('categoria-titulo').textContent = categoriaActual || 'Sense categories';
+  } catch (err) {
+    console.error(err);
+    list.innerHTML = '<li class="empty-note">No s\'han pogut carregar.</li>';
+  }
+}
+
+document.getElementById('add-categoria-btn').addEventListener('click', async () => {
+  const input = document.getElementById('nueva-categoria-input');
+  const nombre = input.value.trim();
+  if (!nombre) return;
+  try {
+    const res = await fetch(`${API}/api/categorias-imagen`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Error');
+    input.value = '';
+    categoriaActual = nombre;
+    await cargarCategorias();
+    await cargarImagenes();
+  } catch (err) {
+    alert('No s\'ha pogut crear: ' + err.message);
+  }
+});
+
+async function cargarImagenes() {
+  const grid = document.getElementById('imagenes-grid');
+  if (!categoriaActual) { grid.innerHTML = '<p class="empty-note">Crea primer una categoria.</p>'; return; }
+  grid.innerHTML = '<p class="empty-note">Carregant…</p>';
+  try {
+    const res = await fetch(`${API}/api/imagenes?categoria=${encodeURIComponent(categoriaActual)}`);
+    const data = await res.json();
+    const imgs = data.data || [];
+    if (!imgs.length) { grid.innerHTML = '<p class="empty-note">Encara no hi ha imatges en aquesta categoria.</p>'; return; }
+
+    grid.innerHTML = imgs.map(img => `
+      <div class="img-card" data-id="${img.id}">
+        <img src="${img.dataUrl}" alt="">
+        <div class="img-card-body">
+          <div class="img-nombre">${escapeHtml(img.nombre || 'Sense nom')}</div>
+          <div class="img-actions">
+            <button class="ghost rename-btn" data-id="${img.id}" data-nombre="${escapeHtml(img.nombre || '')}" type="button">Renombrar</button>
+            <button class="ghost del-btn" data-id="${img.id}" type="button">Eliminar</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    grid.querySelectorAll('.rename-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const nuevo = prompt('Nou nom de la imatge:', btn.dataset.nombre);
+        if (nuevo === null || !nuevo.trim()) return;
+        try {
+          await fetch(`${API}/api/imagenes/${btn.dataset.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre: nuevo.trim() })
+          });
+          cargarImagenes();
+        } catch (err) { console.error(err); }
+      });
+    });
+    grid.querySelectorAll('.del-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Vols eliminar aquesta imatge?')) return;
+        try {
+          await fetch(`${API}/api/imagenes/${btn.dataset.id}`, { method: 'DELETE' });
+          cargarImagenes();
+          cargarCategorias();
+        } catch (err) { console.error(err); }
+      });
+    });
+  } catch (err) {
+    console.error(err);
+    grid.innerHTML = '<p class="empty-note">No s\'han pogut carregar.</p>';
+  }
+}
+
+document.getElementById('upload-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file || !categoriaActual) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    try {
+      await fetch(`${API}/api/imagenes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre: file.name, categoria: categoriaActual, dataUrl: ev.target.result })
+      });
+      cargarImagenes();
+      cargarCategorias();
+    } catch (err) { console.error(err); }
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+
+(async function init() {
+  await cargarCategorias();
+  await cargarImagenes();
+})();
+</script>
+
+</body>
+</html>
