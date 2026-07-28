@@ -26,8 +26,30 @@
   nav.topnav .spacer { margin-left:auto; }
   nav.topnav .user-chip { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); border:1px solid var(--line); padding:7px 11px; border-radius:var(--radius); }
 
-  main { max-width: 1300px; margin: 0 auto; padding: 28px 28px 80px; display: grid; grid-template-columns: 380px 1fr; gap: 22px; align-items: start; }
-  @media (max-width: 940px) { main { grid-template-columns: 1fr; } }
+  main { max-width: 1300px; margin: 0 auto; padding: 28px 28px 80px; }
+  .top-row { display: grid; grid-template-columns: 380px 1fr; gap: 22px; align-items: start; margin-bottom: 22px; }
+  .detail-row { display: block; }
+  @media (max-width: 940px) { .top-row { grid-template-columns: 1fr; } }
+
+  .cal-dow { display:grid; grid-template-columns: repeat(7,1fr); text-align:center; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--ink-soft); text-transform:uppercase; margin-bottom:6px; }
+  .cal-grid { display:grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+  .cal-day {
+    position:relative; aspect-ratio: 1; display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--line); border-radius: var(--radius); background: var(--paper); font-size: 12.5px;
+    color: var(--ink-soft); cursor:default;
+  }
+  .cal-day.otro-mes { opacity: 0.35; }
+  .cal-day.con-assaig { background: var(--paper-card); color: var(--ink); font-weight:600; cursor:pointer; border-color: var(--thread); }
+  .cal-day.con-assaig:hover { background: #EFE9DB; }
+  .cal-day.avui { box-shadow: inset 0 0 0 1.6px var(--gold); }
+  .cal-day .dot { position:absolute; bottom:4px; width:5px; height:5px; border-radius:50%; background: var(--thread); }
+
+  .dia-item { border:1px solid var(--line); border-radius: var(--radius); padding: 12px; margin-bottom: 10px; background: var(--paper); }
+  .dia-item .dia-meta { font-size:12px; color:var(--ink-soft); margin-bottom:8px; }
+  .dia-item .estructura-mini { display:flex; justify-content:space-between; font-size:12.5px; padding: 4px 0; border-bottom:1px solid var(--line); }
+  .dia-item .estructura-mini:last-child { border-bottom:none; }
+  .dia-item .dia-actions { display:flex; gap:8px; margin-top:10px; }
+  .dia-item .dia-actions button { flex:1; }
 
   section.panel { background: var(--paper-card); border: 1px solid var(--line); border-radius: var(--radius); }
   .panel-head { padding: 15px 18px 12px; border-bottom: 1px solid var(--line); display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
@@ -127,10 +149,15 @@
     <a href="/usuarios.html">Usuaris</a>
   </div>
   <div class="spacer"></div>
+  <label style="display:flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--gold); border:1px solid var(--gold); padding:6px 10px; border-radius:var(--radius); cursor:pointer;" title="Provisional: fins que hi hagi login real, això simula tenir permisos de Tècnica.">
+    <input type="checkbox" id="tecnica-toggle" style="margin:0;">
+    Sóc de Tècnica (simulat)
+  </label>
   <span class="user-chip">sense sessió — properament</span>
 </nav>
 
 <main>
+<div class="top-row">
   <section class="panel">
     <div class="panel-head">
       <h2>Nou assaig</h2>
@@ -163,12 +190,31 @@
     </div>
   </section>
 
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Calendari</h2>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button class="ghost small" id="cal-prev" type="button">←</button>
+        <span id="cal-mes-label" style="font-family:'Fraunces',serif; font-weight:600; min-width:120px; text-align:center; display:inline-block;"></span>
+        <button class="ghost small" id="cal-next" type="button">→</button>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="cal-dow">
+        <span>Dl</span><span>Dt</span><span>Dc</span><span>Dj</span><span>Dv</span><span>Ds</span><span>Dg</span>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+  </section>
+</div>
+
+<div class="detail-row">
   <section class="panel" id="detalle-panel">
     <div class="panel-head">
       <div class="detalle-head">
         <h2 id="detalle-titulo">Assaig</h2>
         <span class="status-badge" id="detalle-status">Esborrany</span>
-        <div class="detalle-actions">
+        <div class="detalle-actions solo-tecnica">
           <button class="ghost small" id="publicar-btn" type="button">Publicar assaig</button>
         </div>
       </div>
@@ -183,7 +229,7 @@
       </div>
       <ul class="attendance-list" id="attendance-list"></ul>
 
-      <div class="gen-actions">
+      <div class="gen-actions solo-tecnica">
         <button class="ghost" id="open-propuestas-btn" type="button">Generar propostes de castells</button>
         <button class="ghost" id="open-pinya-btn" type="button">Generar pinya</button>
       </div>
@@ -198,7 +244,18 @@
       </div>
     </div>
   </section>
+</div>
 </main>
+
+<div class="modal-overlay" id="dia-overlay">
+  <div class="modal-box" style="max-width:420px;">
+    <h3 id="dia-titulo">Assajos del dia</h3>
+    <div id="dia-contenido"></div>
+    <div class="modal-actions">
+      <button class="ghost" id="close-dia" type="button">Tancar</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal: propostes de castells -->
 <div class="modal-overlay" id="propuestas-overlay">
@@ -251,6 +308,28 @@ let ensayosList = [];
 let currentEnsayoId = null;
 let asistentesSet = new Set();
 
+// ⚠️ PROVISIONAL: fins que hi hagi login real amb permisos de veritat, això
+// simula si l'usuari és de Tècnica (guardat només al navegador, no és segur
+// ni real — no ho facis servir com a control d'accés de debò).
+let isTecnica = localStorage.getItem('castellers_tecnica_simulado') === 'true';
+const tecnicaToggle = document.getElementById('tecnica-toggle');
+tecnicaToggle.checked = isTecnica;
+tecnicaToggle.addEventListener('change', () => {
+  isTecnica = tecnicaToggle.checked;
+  localStorage.setItem('castellers_tecnica_simulado', isTecnica ? 'true' : 'false');
+  aplicarPermisos();
+});
+
+function aplicarPermisos() {
+  document.querySelectorAll('.solo-tecnica').forEach(el => {
+    el.style.display = isTecnica ? '' : 'none';
+  });
+  document.querySelectorAll('.attend-check').forEach(el => { el.disabled = !isTecnica; });
+}
+
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -261,6 +340,11 @@ function formatFecha(iso) {
   if (isNaN(d)) return iso;
   const pad = n => String(n).padStart(2, '0');
   return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
+}
+function fechaISOSinHora(iso) {
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 }
 
 /* ---------------- Carga inicial ---------------- */
@@ -284,10 +368,121 @@ async function fetchEnsayos() {
     ensayosList = data.data || [];
     document.getElementById('assajos-count').textContent = `${ensayosList.length} assaig${ensayosList.length === 1 ? '' : 's'}`;
     renderEnsayosList();
+    renderCalendario();
   } catch (err) {
     list.innerHTML = '<li class="empty-note" style="border:none;">No s\'han pogut carregar els assajos.</li>';
     console.error(err);
   }
+}
+
+/* ---------------- Calendari ---------------- */
+
+const MESOS = ['Gener','Febrer','Març','Abril','Maig','Juny','Juliol','Agost','Setembre','Octubre','Novembre','Desembre'];
+
+function renderCalendario() {
+  document.getElementById('cal-mes-label').textContent = `${MESOS[calMonth]} ${calYear}`;
+  const grid = document.getElementById('cal-grid');
+
+  const primerDiaMes = new Date(Date.UTC(calYear, calMonth, 1));
+  // getUTCDay(): 0=diumenge..6=dissabte: el convertim perquè dilluns sigui el primer
+  const offset = (primerDiaMes.getUTCDay() + 6) % 7;
+  const diasEnMes = new Date(Date.UTC(calYear, calMonth + 1, 0)).getUTCDate();
+  const hoyISO = fechaISOSinHora(new Date().toISOString());
+
+  const ensayosPorFecha = {};
+  ensayosList.forEach(e => {
+    const key = fechaISOSinHora(e.fecha);
+    if (!ensayosPorFecha[key]) ensayosPorFecha[key] = [];
+    ensayosPorFecha[key].push(e);
+  });
+
+  const celdas = [];
+  for (let i = 0; i < offset; i++) celdas.push({ dia: null });
+  for (let d = 1; d <= diasEnMes; d++) {
+    const pad = n => String(n).padStart(2, '0');
+    const key = `${calYear}-${pad(calMonth + 1)}-${pad(d)}`;
+    celdas.push({ dia: d, key, ensayos: ensayosPorFecha[key] || [] });
+  }
+
+  grid.innerHTML = celdas.map(c => {
+    if (c.dia === null) return `<div class="cal-day otro-mes"></div>`;
+    const tieneEnsayo = c.ensayos.length > 0;
+    const esHoy = c.key === hoyISO;
+    return `
+      <div class="cal-day ${tieneEnsayo ? 'con-assaig' : ''} ${esHoy ? 'avui' : ''}" data-key="${c.key}">
+        ${c.dia}
+        ${tieneEnsayo ? '<span class="dot"></span>' : ''}
+      </div>
+    `;
+  }).join('');
+
+  grid.querySelectorAll('.cal-day.con-assaig').forEach(el => {
+    el.addEventListener('click', () => mostrarDia(el.dataset.key, ensayosPorFecha[el.dataset.key]));
+  });
+}
+
+document.getElementById('cal-prev').addEventListener('click', () => {
+  calMonth--;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCalendario();
+});
+document.getElementById('cal-next').addEventListener('click', () => {
+  calMonth++;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendario();
+});
+
+const diaOverlay = document.getElementById('dia-overlay');
+document.getElementById('close-dia').addEventListener('click', () => diaOverlay.classList.remove('open'));
+diaOverlay.addEventListener('click', (e) => { if (e.target === diaOverlay) diaOverlay.classList.remove('open'); });
+
+async function mostrarDia(key, ensayosDelDia) {
+  const pad = n => String(n).padStart(2, '0');
+  const [y, m, d] = key.split('-');
+  document.getElementById('dia-titulo').textContent = `${d}/${m}/${y}`;
+  const contenido = document.getElementById('dia-contenido');
+  contenido.innerHTML = '<p class="empty-note">Carregant…</p>';
+  diaOverlay.classList.add('open');
+
+  const items = await Promise.all(ensayosDelDia.map(async (e) => {
+    let estructuras = [];
+    try {
+      const res = await fetch(`${API}/api/ensayos/${e.id}/estructuras`);
+      const data = await res.json();
+      estructuras = data.data || [];
+    } catch (err) { console.error(err); }
+    return { ensayo: e, estructuras };
+  }));
+
+  contenido.innerHTML = items.map(({ ensayo, estructuras }) => `
+    <div class="dia-item">
+      <div class="dia-meta">
+        ${ensayo.horaInicio ? escapeHtml(ensayo.horaInicio.slice(0,5)) + 'h · ' : ''}${ensayo.numAsistentes} assistents ·
+        <span class="status-badge ${ensayo.publicado ? 'publicado' : ''}">${ensayo.publicado ? 'Publicat' : 'Esborrany'}</span>
+      </div>
+      ${ensayo.notas ? `<div style="font-size:12.5px; margin-bottom:8px;">${escapeHtml(ensayo.notas)}</div>` : ''}
+      ${estructuras.length
+        ? estructuras.map(est => `
+            <div class="estructura-mini">
+              <span>${escapeHtml(est.tipo)}</span>
+              <span>${est.posicionesAsignadas}/${est.totalPosiciones || '?'} posicions</span>
+            </div>
+          `).join('')
+        : '<p class="empty-note" style="padding:8px 0;">Encara no hi ha cap castell creat en aquest assaig.</p>'
+      }
+      <div class="dia-actions">
+        <button class="ghost small veure-assaig-btn" data-id="${ensayo.id}" type="button">Veure l'assaig</button>
+      </div>
+    </div>
+  `).join('');
+
+  contenido.querySelectorAll('.veure-assaig-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      diaOverlay.classList.remove('open');
+      openEnsayo(Number(btn.dataset.id));
+      document.getElementById('detalle-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
 }
 
 function renderEnsayosList() {
@@ -393,6 +588,7 @@ function renderAttendanceList() {
       <span class="m-meta">${escapeHtml(m.posicionPinyaNombre || '')}</span>
     </li>
   `).join('');
+  aplicarPermisos();
 }
 
 document.getElementById('attendance-search').addEventListener('input', renderAttendanceList);
@@ -528,10 +724,11 @@ async function fetchEstructuras() {
       <li data-id="${e.id}">
         <span class="fecha-box">${escapeHtml(e.tipo)}</span>
         <span class="meta">${e.posicionesAsignadas}/${e.totalPosiciones || '?'} posicions assignades</span>
-        <button class="ghost small abrir-constructor-btn" data-id="${e.id}" type="button">Obrir constructor</button>
-        <button class="ghost small eliminar-estructura-btn" data-id="${e.id}" type="button">Eliminar</button>
+        <button class="ghost small abrir-constructor-btn solo-tecnica" data-id="${e.id}" type="button">Obrir constructor</button>
+        <button class="ghost small eliminar-estructura-btn solo-tecnica" data-id="${e.id}" type="button">Eliminar</button>
       </li>
     `).join('');
+    aplicarPermisos();
   } catch (err) {
     console.error(err);
     list.innerHTML = '<li class="empty-note" style="border:none;">No s\'han pogut carregar les estructures.</li>';
@@ -588,6 +785,7 @@ document.getElementById('crear-pinya-btn').addEventListener('click', async () =>
 });
 
 (async function init() {
+  aplicarPermisos();
   await fetchMembers();
   await fetchEnsayos();
 })();

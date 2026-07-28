@@ -32,8 +32,8 @@
   header.ctx .back:hover { background:var(--ink); color:var(--paper-card); }
   .approx-note { font-size: 11.5px; color: var(--gold); border:1px solid var(--gold); padding: 3px 10px; border-radius: 20px; font-family:'IBM Plex Mono',monospace; }
 
-  main { max-width: 1650px; margin: 0 auto; padding: 22px 28px 80px; display: grid; grid-template-columns: 260px 1fr 260px; gap: 20px; align-items: start; }
-  @media (max-width: 1180px) { main { grid-template-columns: 1fr; } }
+  main { max-width: 1750px; margin: 0 auto; padding: 22px 28px 80px; display: grid; grid-template-columns: 260px 1fr 420px; gap: 20px; align-items: start; }
+  @media (max-width: 1300px) { main { grid-template-columns: 1fr; } }
 
   section.panel { background: var(--paper-card); border: 1px solid var(--line); border-radius: var(--radius); }
   .panel-head { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
@@ -157,7 +157,12 @@
   <section class="panel">
     <div class="panel-head"><h2 id="castell-titulo">Castell</h2></div>
     <div class="panel-body">
+      <div id="castell-imagen-wrap" style="position:relative; width:100%; aspect-ratio: 960/760; background:#FDFCF8; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; display:none; margin-bottom:12px;">
+        <img id="castell-bg-img" alt="" style="position:absolute; object-fit:contain; pointer-events:none;">
+        <div id="castell-labels" style="position:absolute; inset:0;"></div>
+      </div>
       <div id="tower"></div>
+      <button class="ghost" id="exportar-btn" type="button" style="width:100%; margin-top:14px;">Exportar imatge de l'assaig</button>
     </div>
   </section>
 </main>
@@ -290,6 +295,7 @@ async function init() {
   todasLasPosiciones = posicionesGuardadas;
 
   document.getElementById('castell-titulo').textContent = `Castell · ${estructura.tipo}`;
+  await cargarInfoCastell(estructura.tipo);
   renderTower();
   populatePosicionFilter();
   renderCanvas();
@@ -328,6 +334,36 @@ function getPoolMembers() {
 
 /* ---------------- Render ---------------- */
 
+let castellNiveles = [];
+let castellEtiquetas = [];
+let castellImagenDataUrl = null;
+
+async function cargarInfoCastell(tipo) {
+  try {
+    const estRes = await fetch(`${API}/api/castells-estructura/${tipo}`);
+    const estData = await estRes.json();
+    castellNiveles = estData.estructura ? (estData.estructura.niveles || []) : [];
+    const imagenId = estData.estructura ? estData.estructura.imagenId : null;
+
+    const etiRes = await fetch(`${API}/api/castell-plantilla/${tipo}`);
+    const etiData = await etiRes.json();
+    castellEtiquetas = (etiData.data || []).map(p => ({
+      slot: p.slot, slotIndex: p.slotIndex, x: Number(p.x), y: Number(p.y), w: Number(p.w), h: Number(p.h)
+    }));
+
+    castellImagenDataUrl = null;
+    if (imagenId) {
+      const imgsRes = await fetch(`${API}/api/imagenes?categoria=Castells`);
+      const imgsData = await imgsRes.json();
+      const img = (imgsData.data || []).find(i => i.id === imagenId);
+      if (img) castellImagenDataUrl = img.dataUrl;
+    }
+  } catch (err) {
+    console.error(err);
+    castellNiveles = []; castellEtiquetas = []; castellImagenDataUrl = null;
+  }
+}
+
 function nombresPara(slotNombre) {
   const filas = todasLasPosiciones.filter(p => p.slot === slotNombre && p.castellerId);
   return filas
@@ -336,21 +372,59 @@ function nombresPara(slotNombre) {
     .join(', ');
 }
 
+function nombreParaIndice(slot, slotIndex) {
+  const fila = todasLasPosiciones.find(p => p.slot === slot && p.slotIndex === slotIndex && p.castellerId);
+  return fila ? fila.castellerNombre : null;
+}
+
 function renderTower() {
+  const wrap = document.getElementById('castell-imagen-wrap');
   const tower = document.getElementById('tower');
+
+  if (castellImagenDataUrl && castellEtiquetas.length) {
+    wrap.style.display = 'block';
+    tower.innerHTML = '';
+    const img = document.getElementById('castell-bg-img');
+    img.src = castellImagenDataUrl;
+    img.style.left = '0'; img.style.top = '0'; img.style.width = '100%'; img.style.height = '100%';
+
+    const labelsDiv = document.getElementById('castell-labels');
+    labelsDiv.innerHTML = castellEtiquetas.map(e => {
+      const leftPct = (e.x / 960) * 100, topPct = (e.y / 760) * 100;
+      const wPct = (e.w / 960) * 100, hPct = (e.h / 760) * 100;
+      const nombre = nombreParaIndice(e.slot, e.slotIndex);
+      return `
+        <div style="position:absolute; left:${leftPct}%; top:${topPct}%; width:${wPct}%; height:${hPct}%;
+             transform:translate(-50%,-50%); display:flex; align-items:center; justify-content:center; text-align:center;
+             background:rgba(241,238,228,0.92); border:1px solid var(--ink); border-radius:4px;
+             font-family:'Fraunces',serif; font-weight:600; font-size:11px; padding:1px 3px; overflow:hidden;">
+          ${nombre ? escapeHtml(nombre) : '<span style="color:var(--ink-soft); font-style:italic; font-family:\'Work Sans\',sans-serif; font-weight:400;">—</span>'}
+        </div>
+      `;
+    }).join('');
+    return;
+  }
+
+  wrap.style.display = 'none';
   const baixNombres = slots.filter(s => s.slot === 'Baix' && s.nombre).map(s => s.nombre);
 
-  const niveles = [
-    { label: 'Enxaneta', names: nombresPara('Enxaneta') },
-    { label: 'Acotxador', names: nombresPara('Acotxador') },
-    { label: 'Terç', names: nombresPara('Terç') },
-    { label: 'Segon', names: nombresPara('Segon') },
-    { label: 'Baix', names: baixNombres.map(n => escapeHtml(n)).join(', ') }
-  ];
+  const filas = castellNiveles.length
+    ? castellNiveles.map(n => {
+        const nombres = [];
+        for (let k = 1; k <= n.cantidad; k++) { const nm = nombreParaIndice(n.nombre, k); if (nm) nombres.push(nm); }
+        return { label: n.nombre, names: nombres.map(escapeHtml).join(', ') };
+      })
+    : [
+        { label: 'Enxaneta', names: nombresPara('Enxaneta') },
+        { label: 'Acotxador', names: nombresPara('Acotxador') },
+        { label: 'Terç', names: nombresPara('Terç') },
+        { label: 'Segon', names: nombresPara('Segon') },
+        { label: 'Baix', names: baixNombres.map(n => escapeHtml(n)).join(', ') }
+      ];
 
-  tower.innerHTML = niveles.map(n => `
+  tower.innerHTML = filas.map(n => `
     <div class="tower-level">
-      <div class="lvl-label">${n.label}</div>
+      <div class="lvl-label">${escapeHtml(n.label)}</div>
       <div class="lvl-names">${n.names ? n.names : '<span class="empty">—</span>'}</div>
     </div>
   `).join('') + `<div class="tower-pinya-tag">PINYA</div>`;
@@ -540,6 +614,112 @@ async function reloadPosiciones() {
   renderCanvas();
   renderPool();
   renderTower();
+}
+
+/* ---------------- Exportar imatge unificada ---------------- */
+
+document.getElementById('exportar-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('exportar-btn');
+  btn.disabled = true;
+  try {
+    await exportarImagenUnificada();
+  } catch (err) {
+    console.error(err);
+    alert('No s\'ha pogut exportar la imatge.');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function dibujarCajaCanvas(ctx, s, textoNivel, textoNombre) {
+  ctx.save();
+  ctx.translate(s.x, s.y);
+  ctx.rotate((s.rotacion || 0) * Math.PI / 180);
+  ctx.fillStyle = s.castellerId ? '#F1EEE4' : '#EAE6DA';
+  ctx.strokeStyle = '#20241F';
+  ctx.lineWidth = 1.4;
+  ctx.fillRect(-s.w / 2, -s.h / 2, s.w, s.h);
+  ctx.strokeRect(-s.w / 2, -s.h / 2, s.w, s.h);
+  ctx.fillStyle = '#20241F';
+  ctx.textAlign = 'center';
+  ctx.font = '600 8px "IBM Plex Mono", monospace';
+  ctx.fillText(textoNivel, 0, -3, s.w - 6);
+  ctx.font = '600 9.5px Georgia, serif';
+  ctx.fillText(textoNombre || '—', 0, 8, s.w - 6);
+  ctx.restore();
+}
+
+async function exportarImagenUnificada() {
+  const W = 960 + 40 + 960, H = 800;
+  const canvasExport = document.createElement('canvas');
+  canvasExport.width = W;
+  canvasExport.height = H;
+  const ctx = canvasExport.getContext('2d');
+
+  ctx.fillStyle = '#FDFCF8';
+  ctx.fillRect(0, 0, W, H);
+
+  // --- Planta de la pinya (esquerra) ---
+  ctx.save();
+  ctx.translate(0, 20);
+  slots.forEach(s => dibujarCajaCanvas(ctx, s, s.slot, s.nombre));
+  ctx.restore();
+
+  // línia divisòria
+  ctx.strokeStyle = '#C7C2B0';
+  ctx.setLineDash([6, 6]);
+  ctx.beginPath();
+  ctx.moveTo(1000, 10);
+  ctx.lineTo(1000, H - 10);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // --- Castell (dreta) ---
+  const offsetX = 1000;
+  if (castellImagenDataUrl && castellEtiquetas.length) {
+    const img = document.getElementById('castell-bg-img');
+    try { ctx.drawImage(img, offsetX, 20, 940, 740); } catch (err) { console.error(err); }
+    castellEtiquetas.forEach(e => {
+      const cx = offsetX + (e.x / 960) * 940;
+      const cy = 20 + (e.y / 760) * 740;
+      const w = (e.w / 960) * 940, h = (e.h / 760) * 740;
+      const nombre = nombreParaIndice(e.slot, e.slotIndex);
+      ctx.fillStyle = 'rgba(241,238,228,0.95)';
+      ctx.strokeStyle = '#20241F';
+      ctx.lineWidth = 1.4;
+      ctx.fillRect(cx - w / 2, cy - h / 2, w, h);
+      ctx.strokeRect(cx - w / 2, cy - h / 2, w, h);
+      ctx.fillStyle = '#20241F';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = '600 11px Georgia, serif';
+      ctx.fillText(nombre || '—', cx, cy, w - 6);
+    });
+    ctx.textBaseline = 'alphabetic';
+  } else {
+    // fallback: llista de text simple si no hi ha imatge de castell
+    ctx.fillStyle = '#20241F';
+    ctx.textAlign = 'left';
+    ctx.font = '700 20px Georgia, serif';
+    ctx.fillText('Castell', offsetX + 20, 50);
+    const tower = document.getElementById('tower');
+    const niveles = [...tower.querySelectorAll('.tower-level')];
+    let y = 90;
+    niveles.forEach(n => {
+      const label = n.querySelector('.lvl-label').textContent;
+      const names = n.querySelector('.lvl-names').textContent;
+      ctx.font = '600 10px "IBM Plex Mono", monospace';
+      ctx.fillText(label, offsetX + 20, y);
+      ctx.font = '600 15px Georgia, serif';
+      ctx.fillText(names, offsetX + 20, y + 20);
+      y += 55;
+    });
+  }
+
+  const link = document.createElement('a');
+  link.download = `assaig-${estructura ? estructura.tipo : 'castell'}.png`;
+  link.href = canvasExport.toDataURL('image/png');
+  link.click();
 }
 
 init();

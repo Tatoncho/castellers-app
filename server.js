@@ -694,13 +694,26 @@ app.post('/api/ensayos/:id/estructuras', async (req, res) => {
     const { tipo, notas } = req.body;
     if (!tipo) return res.status(400).json({ error: 'tipo es obligatorio' });
 
-    const configs = {
-      '2d6': { amples: 2, segons: 2, tersos: 2 },
-      '3d7': { amples: 3, segons: 3, tersos: 3 },
-      '4d7': { amples: 4, segons: 4, tersos: 4 },
-      '5d7': { amples: 5, segons: 5, tersos: 5 }
+    // Niveles reals definits a l'editor de castells per a aquest tipus.
+    // L'ordre de la llista importa: el PRIMER nivell rep els membres més
+    // baixos (ex. Enxaneta), l'ÚLTIM els més alts (ex. Baix) — es pot
+    // reordenar arrossegant a l'editor de castells.
+    const estructuraDefResult = await client.query(
+      `SELECT "niveles" FROM castells_estructura WHERE "tipo" = $1`,
+      [tipo]
+    );
+    const nivelesDefinidos = estructuraDefResult.rows[0] ? estructuraDefResult.rows[0].niveles : null;
+
+    // Si encara no hi ha una estructura de castell definida per a aquest
+    // tipus, fem servir uns nivells per defecte (compatibilitat amb el
+    // comportament anterior).
+    const configsPerDefecte = {
+      '2d6': [{ nombre: 'Enxaneta', cantidad: 1 }, { nombre: 'Acotxador', cantidad: 1 }, { nombre: 'Terç', cantidad: 2 }, { nombre: 'Segon', cantidad: 2 }, { nombre: 'Baix', cantidad: 2 }],
+      '3d7': [{ nombre: 'Enxaneta', cantidad: 1 }, { nombre: 'Acotxador', cantidad: 1 }, { nombre: 'Terç', cantidad: 3 }, { nombre: 'Segon', cantidad: 3 }, { nombre: 'Baix', cantidad: 3 }],
+      '4d7': [{ nombre: 'Enxaneta', cantidad: 1 }, { nombre: 'Acotxador', cantidad: 1 }, { nombre: 'Terç', cantidad: 4 }, { nombre: 'Segon', cantidad: 4 }, { nombre: 'Baix', cantidad: 4 }],
+      '5d7': [{ nombre: 'Enxaneta', cantidad: 1 }, { nombre: 'Acotxador', cantidad: 1 }, { nombre: 'Terç', cantidad: 5 }, { nombre: 'Segon', cantidad: 5 }, { nombre: 'Baix', cantidad: 5 }]
     };
-    const config = configs[tipo] || { amples: 3, segons: 3, tersos: 3 };
+    const niveles = nivelesDefinidos || configsPerDefecte[tipo] || configsPerDefecte['3d7'];
 
     await client.query('BEGIN');
 
@@ -710,31 +723,27 @@ app.post('/api/ensayos/:id/estructuras', async (req, res) => {
     );
     const estructura = estructuraResult.rows[0];
 
-    // Calculamos un tronc inicial por alçada (com feia l'antic /api/generar):
-    // els més alts a baix, els més baixos al pom. Es pot reassignar després
-    // a mà des del constructor.
+    // Presents ordenats de més baix a més alt: el primer nivell de la
+    // llista (normalment Enxaneta) es queda amb els primers (més baixos).
     const presentesResult = await client.query(
       `SELECT c."id", c."alturaHombros"
        FROM ensayo_asistentes ea
        JOIN castellers c ON c."id" = ea."castellerId"
        WHERE ea."ensayoId" = $1
-       ORDER BY c."alturaHombros" DESC NULLS LAST`,
+       ORDER BY c."alturaHombros" ASC NULLS FIRST`,
       [id]
     );
     const presentes = presentesResult.rows;
-    const necesarios = config.amples + config.segons + config.tersos + 2; // baix + segons + tersos + acotxador + enxaneta
+    const necesarios = niveles.reduce((acc, n) => acc + n.cantidad, 0);
 
     if (presentes.length >= necesarios) {
       let i = 0;
       const posiciones = [];
-      for (let a = 0; a < config.amples; a++) posiciones.push({ slot: 'Baix', slotIndex: a + 1, castellerId: presentes[i++].id });
-      for (let s = 0; s < config.segons; s++) posiciones.push({ slot: 'Segon', slotIndex: s + 1, castellerId: presentes[i++].id });
-      for (let t = 0; t < config.tersos; t++) posiciones.push({ slot: 'Terç', slotIndex: t + 1, castellerId: presentes[i++].id });
-      // els 2 més baixos (final de la llista, ordenada d'alt a baix) van al pom
-      const pomAcotxador = presentes[presentes.length - 2];
-      const pomEnxaneta = presentes[presentes.length - 1];
-      posiciones.push({ slot: 'Acotxador', slotIndex: 1, castellerId: pomAcotxador.id });
-      posiciones.push({ slot: 'Enxaneta', slotIndex: 1, castellerId: pomEnxaneta.id });
+      niveles.forEach(nivel => {
+        for (let k = 0; k < nivel.cantidad; k++) {
+          posiciones.push({ slot: nivel.nombre, slotIndex: k + 1, castellerId: presentes[i++].id });
+        }
+      });
 
       for (const p of posiciones) {
         await client.query(
@@ -1365,6 +1374,72 @@ app.put('/api/castells-estructura/:tipo', async (req, res) => {
     res.json({ success: true, estructura: result.rows[0] });
   } catch (error) {
     errorHandler(res, error);
+  }
+});
+
+/* =========================================================
+   MÒDUL DISSENY VISUAL DEL CASTELL (etiquetes de text sobre
+   la imatge del tronc — mateix patró que la plantilla de pinya)
+   ========================================================= */
+
+// ⚠️ TEMPORAL: crea la taula del disseny visual del castell. Sense
+// ?confirm=si només avisa.
+app.get('/api/migrate-castell-plantilla', async (req, res) => {
+  if (req.query.confirm !== 'si') {
+    return res.json({ success: false, aviso: 'Esto crea la tabla castell_plantilla_posicion. Añade ?confirm=si para confirmar.' });
+  }
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS castell_plantilla_posicion (
+        "id" SERIAL PRIMARY KEY,
+        "tipo" TEXT NOT NULL,
+        "slot" TEXT NOT NULL,
+        "slotIndex" INTEGER NOT NULL DEFAULT 1,
+        "x" NUMERIC NOT NULL,
+        "y" NUMERIC NOT NULL,
+        "w" NUMERIC NOT NULL DEFAULT 90,
+        "h" NUMERIC NOT NULL DEFAULT 28,
+        UNIQUE ("tipo", "slot", "slotIndex")
+      )
+    `);
+    res.json({ success: true, aviso: 'Borra /api/migrate-castell-plantilla del server.js ahora que ya la has ejecutado.' });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+app.get('/api/castell-plantilla/:tipo', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM castell_plantilla_posicion WHERE "tipo" = $1 ORDER BY "id"', [req.params.tipo]);
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+app.put('/api/castell-plantilla/:tipo', async (req, res) => {
+  const { tipo } = req.params;
+  const { posiciones } = req.body;
+  if (!Array.isArray(posiciones)) return res.status(400).json({ error: 'posiciones ha de ser un array' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('DELETE FROM castell_plantilla_posicion WHERE "tipo" = $1', [tipo]);
+    for (const p of posiciones) {
+      await client.query(
+        `INSERT INTO castell_plantilla_posicion ("tipo","slot","slotIndex","x","y","w","h")
+         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [tipo, p.slot, p.slotIndex || 1, p.x, p.y, p.w || 90, p.h || 28]
+      );
+    }
+    await client.query('COMMIT');
+    res.json({ success: true });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    errorHandler(res, error);
+  } finally {
+    client.release();
   }
 });
 
