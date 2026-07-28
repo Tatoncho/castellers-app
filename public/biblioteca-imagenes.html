@@ -107,7 +107,7 @@
         <h2 id="categoria-titulo">—</h2>
         <div class="spacer"></div>
         <label class="upload-label" for="upload-input">+ Pujar imatge</label>
-        <input type="file" id="upload-input" accept="image/*" style="display:none;">
+        <input type="file" id="upload-input" accept="image/*" multiple style="display:none;">
       </div>
       <div class="imagenes-grid" id="imagenes-grid"></div>
     </div>
@@ -199,6 +199,8 @@ document.getElementById('add-categoria-btn').addEventListener('click', async () 
   }
 });
 
+let imagenesActuales = [];
+
 async function cargarImagenes() {
   const grid = document.getElementById('imagenes-grid');
   if (!categoriaActual) { grid.innerHTML = '<p class="empty-note">Crea primer una categoria.</p>'; return; }
@@ -207,6 +209,7 @@ async function cargarImagenes() {
     const res = await fetch(`${API}/api/imagenes?categoria=${encodeURIComponent(categoriaActual)}`);
     const data = await res.json();
     const imgs = data.data || [];
+    imagenesActuales = imgs;
     if (!imgs.length) { grid.innerHTML = '<p class="empty-note">Encara no hi ha imatges en aquesta categoria.</p>'; return; }
 
     grid.innerHTML = imgs.map(img => `
@@ -252,22 +255,57 @@ async function cargarImagenes() {
   }
 }
 
-document.getElementById('upload-input').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file || !categoriaActual) return;
-  const reader = new FileReader();
-  reader.onload = async (ev) => {
+function leerComoDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => resolve(ev.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById('upload-input').addEventListener('change', async (e) => {
+  const files = [...e.target.files];
+  if (!files.length || !categoriaActual) return;
+
+  // noms ja existents en aquesta categoria (incloent els que anem pujant
+  // en aquesta mateixa tanda, per no permetre duplicats entre ells tampoc)
+  const nombresExistentes = new Set(imagenesActuales.map(img => img.nombre));
+
+  let pujades = 0;
+  const omitidas = [];
+
+  for (const file of files) {
+    if (nombresExistentes.has(file.name)) {
+      omitidas.push(file.name);
+      continue;
+    }
     try {
+      const dataUrl = await leerComoDataURL(file);
       await fetch(`${API}/api/imagenes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: file.name, categoria: categoriaActual, dataUrl: ev.target.result })
+        body: JSON.stringify({ nombre: file.name, categoria: categoriaActual, dataUrl })
       });
-      cargarImagenes();
-      cargarCategorias();
-    } catch (err) { console.error(err); }
-  };
-  reader.readAsDataURL(file);
+      nombresExistentes.add(file.name);
+      pujades++;
+    } catch (err) {
+      console.error(err);
+      omitidas.push(file.name + ' (error en pujar-la)');
+    }
+  }
+
+  await cargarImagenes();
+  await cargarCategorias();
+
+  if (omitidas.length) {
+    alert(
+      `${pujades} imatge${pujades === 1 ? '' : 's'} pujada${pujades === 1 ? '' : 's'}.\n` +
+      `${omitidas.length} omesa${omitidas.length === 1 ? '' : 's'} perquè ja existia${omitidas.length === 1 ? '' : 'n'} amb aquest nom a "${categoriaActual}":\n` +
+      omitidas.join('\n')
+    );
+  }
+
   e.target.value = '';
 });
 
