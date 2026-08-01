@@ -35,6 +35,15 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+// Les respostes de l'API no s'han de guardar mai en caché del navegador —
+// són dades que canvien sovint (assajos, plantilles, posicions...) i un
+// refresc normal podria ensenyar-te una versió antiga sense que et
+// n'adonis. Això evita haver de fer "refresc forçat" cada vegada.
+app.use('/api/', (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
+
 app.use(express.json({ limit: '1mb' })); // límite de tamaño de body, evita payloads gigantes
 app.use(express.static('public', {
   dotfiles: 'deny', // nunca sirvas .env, .git, etc.
