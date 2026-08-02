@@ -2,6 +2,11 @@ const express = require('express');
 const { Pool } = require('pg');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const bcrypt = require('bcryptjs');
+const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 
 const app = express();
 
@@ -70,6 +75,57 @@ const pool = new Pool({
 function errorHandler(res, error, mensajePublico = 'Error del servidor') {
   console.error(error);
   res.status(500).json({ success: false, error: mensajePublico });
+}
+
+// 🔐 Sesiones: se guardan en la misma base de datos Postgres (tabla
+// "session", se crea sola) en vez de en memoria, para que sobrevivan a
+// reinicios/redeploys y funcionen igual aunque haya varias instancias.
+// Render está detrás de un proxy: hace falta "trust proxy" para que la
+// cookie "secure" (solo por https) funcione bien.
+app.set('trust proxy', 1);
+app.use(session({
+  store: new pgSession({ pool, tableName: 'session', createTableIfMissing: true }),
+  secret: process.env.SESSION_SECRET || 'castellers-dev-secret-canvia-això-en-produccio',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 30 * 24 * 60 * 60 * 1000 // 30 dies
+  }
+}));
+
+// ✉️ Correu (verificació d'email + avisos). Configuració 100% per variables
+// d'entorn perquè canviar de Gmail a un altre proveïdor (ex. el correu
+// @castellersdetortosa.cat el dia que hi tinguis accés) sigui només canviar
+// aquestes variables a Render, sense tocar ni una línia de codi:
+//   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+// Per Gmail: SMTP_HOST=smtp.gmail.com, SMTP_PORT=587, SMTP_USER=el teu gmail,
+// SMTP_PASS=una "contrasenya d'aplicació" (no la contrasenya normal del compte).
+let mailer = null;
+if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+  mailer = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: Number(process.env.SMTP_PORT) === 465,
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+  });
+} else {
+  console.warn('⚠️ SMTP no configurat (falten variables d\'entorn) — els correus només es mostraran al log del servidor, no s\'enviaran de veritat.');
+}
+
+async function enviarCorreo({ to, subject, html }) {
+  if (mailer) {
+    await mailer.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to, subject, html
+    });
+  } else {
+    // Sense SMTP configurat: deixem constància al log perquè es pugui provar
+    // el flux igualment (mira els logs de Render per veure l'enllaç).
+    console.log(`📧 [correu simulat, sense SMTP configurat] Per a: ${to} | Assumpte: ${subject}\n${html}`);
+  }
 }
 
 // 🔥 TEST DB
@@ -1449,6 +1505,496 @@ app.put('/api/castell-plantilla/:tipo', async (req, res) => {
     errorHandler(res, error);
   } finally {
     client.release();
+  }
+});
+
+/* =========================================================
+   MÒDUL USUARIS I AUTENTICACIÓ
+   ========================================================= */
+
+// ⚠️ TEMPORAL: crea les taules d'usuaris i tokens de verificació. Sense
+// ?confirm=si només avisa.
+app.get('/api/migrate-usuarios', async (req, res) => {
+  if (req.query.confirm !== 'si') {
+    return res.json({ success: false, aviso: 'Esto crea las tablas usuarios y verificaciones_email. Añade ?confirm=si para confirmar.' });
+  }
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS usuarios (
+        "id" SERIAL PRIMARY KEY,
+        "email" TEXT UNIQUE NOT NULL,
+        "passwordHash" TEXT NOT NULL,
+        "nombre" TEXT NOT NULL,
+        "castellerId" INTEGER REFERENCES castellers("id") ON DELETE SET NULL,
+        "estado" TEXT NOT NULL DEFAULT 'pendiente',
+        "emailVerificado" BOOLEAN NOT NULL DEFAULT FALSE,
+        "permisos" TEXT[] NOT NULL DEFAULT '{}',
+        "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS verificaciones_email (
+        "id" SERIAL PRIMARY KEY,
+        "usuarioId" INTEGER NOT NULL REFERENCES usuarios("id") ON DELETE CASCADE,
+        "token" TEXT UNIQUE NOT NULL,
+        "expiraEn" TIMESTAMP NOT NULL,
+        "usado" BOOLEAN NOT NULL DEFAULT FALSE,
+        "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    res.json({ success: true, aviso: 'Borra /api/migrate-usuarios del server.js ahora que ya la has ejecutado.' });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+function emailValido(email) {
+  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+// Middleware: exigeix sessió iniciada
+async function requireLogin(req, res, next) {
+  if (!req.session || !req.session.usuarioId) {
+    return res.status(401).json({ success: false, error: 'Cal iniciar sessió' });
+  }
+  try {
+    const result = await pool.query('SELECT * FROM usuarios WHERE "id" = $1', [req.session.usuarioId]);
+    if (result.rows.length === 0 || result.rows[0].estado !== 'activo') {
+      req.session.destroy(() => {});
+      return res.status(401).json({ success: false, error: 'Sessió no vàlida' });
+    }
+    req.usuarioActual = result.rows[0];
+    next();
+  } catch (error) {
+    errorHandler(res, error);
+  }
+}
+
+// Middleware: exigeix, a més, permís d'AdminGeneral
+function requireAdmin(req, res, next) {
+  if (!req.usuarioActual || !(req.usuarioActual.permisos || []).includes('AdminGeneral')) {
+    return res.status(403).json({ success: false, error: 'Necessites permisos d\'administrador' });
+  }
+  next();
+}
+
+// Registre: crea l'usuari (pendent), envia correu de verificació
+app.post('/api/auth/registro', async (req, res) => {
+  try {
+    const { email, password, nombre } = req.body;
+    if (!emailValido(email)) return res.status(400).json({ success: false, error: 'Correu no vàlid' });
+    if (!password || password.length < 6) return res.status(400).json({ success: false, error: 'La contrasenya ha de tenir almenys 6 caràcters' });
+    if (!nombre || !nombre.trim()) return res.status(400).json({ success: false, error: 'El nom és obligatori' });
+
+    const existente = await pool.query('SELECT "id" FROM usuarios WHERE "email" = $1', [email.toLowerCase()]);
+    if (existente.rows.length > 0) {
+      return res.status(400).json({ success: false, error: 'Ja hi ha un compte amb aquest correu' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const nuevo = await pool.query(
+      `INSERT INTO usuarios ("email","passwordHash","nombre") VALUES ($1,$2,$3) RETURNING *`,
+      [email.toLowerCase(), passwordHash, nombre.trim()]
+    );
+    const usuario = nuevo.rows[0];
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiraEn = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+    await pool.query(
+      `INSERT INTO verificaciones_email ("usuarioId","token","expiraEn") VALUES ($1,$2,$3)`,
+      [usuario.id, token, expiraEn]
+    );
+
+    const enlace = `${req.protocol}://${req.get('host')}/verificar-email.html?token=${token}`;
+    await enviarCorreo({
+      to: usuario.email,
+      subject: 'Verifica el teu correu — Castellers',
+      html: `<p>Hola ${usuario.nombre.split(' ')[0]},</p>
+             <p>Per confirmar el teu correu i continuar amb l'alta, clica aquí:</p>
+             <p><a href="${enlace}">${enlace}</a></p>
+             <p>L'enllaç caduca en 24 hores. Un cop verificat, un administrador haurà de validar el teu accés.</p>`
+    });
+
+    res.json({ success: true, mensaje: 'Compte creat. Revisa el teu correu per verificar-lo.' });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Verificar correu (enllaç del token). Un cop verificat, queda pendent
+// d'aprovació d'un admin.
+app.get('/api/auth/verificar-email', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ success: false, error: 'Falta el token' });
+
+    const result = await pool.query(
+      `SELECT v.*, u."email", u."nombre" FROM verificaciones_email v
+       JOIN usuarios u ON u."id" = v."usuarioId"
+       WHERE v."token" = $1`,
+      [token]
+    );
+    if (result.rows.length === 0) return res.status(400).json({ success: false, error: 'Enllaç no vàlid' });
+    const verificacion = result.rows[0];
+    if (verificacion.usado) return res.status(400).json({ success: false, error: 'Aquest enllaç ja es va fer servir' });
+    if (new Date(verificacion.expiraEn) < new Date()) return res.status(400).json({ success: false, error: 'Aquest enllaç ha caducat' });
+
+    await pool.query('UPDATE usuarios SET "emailVerificado" = TRUE WHERE "id" = $1', [verificacion.usuarioId]);
+    await pool.query('UPDATE verificaciones_email SET "usado" = TRUE WHERE "id" = $1', [verificacion.id]);
+
+    // avisem els admins que hi ha una alta pendent de validar
+    const admins = await pool.query(`SELECT "email" FROM usuarios WHERE 'AdminGeneral' = ANY("permisos") AND "estado" = 'activo'`);
+    for (const admin of admins.rows) {
+      await enviarCorreo({
+        to: admin.email,
+        subject: 'Nova alta pendent de validar — Castellers',
+        html: `<p>${verificacion.nombre} (${verificacion.email}) ha verificat el seu correu i espera que li validis l'accés al panell d'usuaris.</p>`
+      });
+    }
+
+    res.json({ success: true, mensaje: 'Correu verificat. Un administrador ha de validar el teu accés abans que puguis entrar.' });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ success: false, error: 'Falten dades' });
+
+    const result = await pool.query('SELECT * FROM usuarios WHERE "email" = $1', [email.toLowerCase()]);
+    if (result.rows.length === 0) return res.status(401).json({ success: false, error: 'Correu o contrasenya incorrectes' });
+    const usuario = result.rows[0];
+
+    const coincide = await bcrypt.compare(password, usuario.passwordHash);
+    if (!coincide) return res.status(401).json({ success: false, error: 'Correu o contrasenya incorrectes' });
+
+    if (!usuario.emailVerificado) return res.status(403).json({ success: false, error: 'Encara no has verificat el teu correu' });
+    if (usuario.estado === 'pendiente') return res.status(403).json({ success: false, error: 'El teu accés encara està pendent de validació d\'un administrador' });
+    if (usuario.estado === 'rechazado') return res.status(403).json({ success: false, error: 'El teu accés no ha estat validat' });
+
+    req.session.usuarioId = usuario.id;
+    res.json({
+      success: true,
+      usuario: { id: usuario.id, email: usuario.email, nombre: usuario.nombre, permisos: usuario.permisos, castellerId: usuario.castellerId }
+    });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.json({ success: true });
+  });
+});
+
+app.get('/api/auth/me', async (req, res) => {
+  if (!req.session || !req.session.usuarioId) return res.json({ success: true, usuario: null });
+  try {
+    const result = await pool.query('SELECT * FROM usuarios WHERE "id" = $1', [req.session.usuarioId]);
+    if (result.rows.length === 0 || result.rows[0].estado !== 'activo') {
+      return res.json({ success: true, usuario: null });
+    }
+    const u = result.rows[0];
+    res.json({ success: true, usuario: { id: u.id, email: u.email, nombre: u.nombre, permisos: u.permisos, castellerId: u.castellerId } });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+/* ---- Gestió d'usuaris (només AdminGeneral) ---- */
+
+// Altes pendents: verificades però encara sense validar per un admin
+app.get('/api/usuarios/pendientes', requireLogin, requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT "id","email","nombre","created_at" FROM usuarios
+       WHERE "estado" = 'pendiente' AND "emailVerificado" = TRUE
+       ORDER BY "created_at" ASC`
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+app.get('/api/usuarios', requireLogin, requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`SELECT "id","email","nombre","estado","emailVerificado","permisos","castellerId","created_at" FROM usuarios ORDER BY "created_at" DESC`);
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+app.put('/api/usuarios/:id/aprobar', requireLogin, requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `UPDATE usuarios SET "estado" = 'activo' WHERE "id" = $1 AND "emailVerificado" = TRUE RETURNING *`,
+      [req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Usuari no trobat o correu no verificat' });
+    const usuario = result.rows[0];
+    await enviarCorreo({
+      to: usuario.email,
+      subject: 'El teu accés ja està validat — Castellers',
+      html: `<p>Hola ${usuario.nombre.split(' ')[0]},</p><p>Ja pots accedir amb el correu <strong>${usuario.email}</strong> i la contrasenya que vas triar.</p>`
+    });
+    res.json({ success: true, usuario });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+app.put('/api/usuarios/:id/rechazar', requireLogin, requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`UPDATE usuarios SET "estado" = 'rechazado' WHERE "id" = $1 RETURNING *`, [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Usuari no trobat' });
+    res.json({ success: true });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Editar permisos / dades d'un usuari (admin)
+app.put('/api/usuarios/:id', requireLogin, requireAdmin, async (req, res) => {
+  try {
+    const { nombre, permisos, estado, castellerId } = req.body;
+    const result = await pool.query(
+      `UPDATE usuarios SET
+         "nombre" = COALESCE($1, "nombre"),
+         "permisos" = COALESCE($2, "permisos"),
+         "estado" = COALESCE($3, "estado"),
+         "castellerId" = $4
+       WHERE "id" = $5 RETURNING "id","email","nombre","estado","emailVerificado","permisos","castellerId"`,
+      [nombre || null, permisos || null, estado || null, castellerId || null, req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Usuari no trobat' });
+    res.json({ success: true, usuario: result.rows[0] });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Perfil propi (qualsevol usuari amb sessió, no cal ser admin)
+app.put('/api/auth/perfil', requireLogin, async (req, res) => {
+  try {
+    const { nombre, passwordActual, passwordNueva } = req.body;
+    const updates = [];
+    const valores = [];
+    let idx = 1;
+
+    if (nombre && nombre.trim()) { updates.push(`"nombre" = $${idx++}`); valores.push(nombre.trim()); }
+
+    if (passwordNueva) {
+      if (!passwordActual) return res.status(400).json({ success: false, error: 'Cal la contrasenya actual per canviar-la' });
+      const coincide = await bcrypt.compare(passwordActual, req.usuarioActual.passwordHash);
+      if (!coincide) return res.status(400).json({ success: false, error: 'La contrasenya actual no és correcta' });
+      if (passwordNueva.length < 6) return res.status(400).json({ success: false, error: 'La contrasenya nova ha de tenir almenys 6 caràcters' });
+      const nuevoHash = await bcrypt.hash(passwordNueva, 10);
+      updates.push(`"passwordHash" = $${idx++}`); valores.push(nuevoHash);
+    }
+
+    if (!updates.length) return res.json({ success: true });
+
+    valores.push(req.usuarioActual.id);
+    await pool.query(`UPDATE usuarios SET ${updates.join(', ')} WHERE "id" = $${idx}`, valores);
+    res.json({ success: true });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// ⚠️ TEMPORAL: converteix un usuari ja registrat i amb correu verificat en
+// administrador actiu — necessari per crear el PRIMER admin (ningú pot
+// aprovar altes si encara no existeix cap admin). Sense ?confirm=si només
+// avisa. Bórrala del server.js en cuanto la hayas usado.
+app.get('/api/bootstrap-admin', async (req, res) => {
+  const { email } = req.query;
+  if (!email) return res.json({ success: false, aviso: 'Afegeix ?email=el-teu-correu&confirm=si a la URL.' });
+  if (req.query.confirm !== 'si') {
+    return res.json({ success: false, aviso: `Això convertirà ${email} en AdminGeneral actiu. Afegeix &confirm=si per confirmar.` });
+  }
+  try {
+    const result = await pool.query(
+      `UPDATE usuarios SET "estado" = 'activo', "emailVerificado" = TRUE, "permisos" = ARRAY['AdminGeneral']
+       WHERE "email" = $1 RETURNING "id","email","nombre","permisos"`,
+      [email.toLowerCase()]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'No hi ha cap usuari registrat amb aquest correu' });
+    res.json({ success: true, usuario: result.rows[0], aviso: 'Borra /api/bootstrap-admin del server.js ahora que ya la has usado.' });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+/* =========================================================
+   MIGRACIÓ A SUPABASE (temporal — fes-la servir una vegada i esborra-la)
+   ========================================================= */
+
+// Ordre de taules respectant les claus foranes (pares abans que fills)
+const ORDRE_TAULES = [
+  'posiciones_pinya', 'roles_castillo', 'castellers', 'casteller_roles',
+  'ensayos', 'ensayo_asistentes', 'estructuras_ensayo', 'estructura_posiciones',
+  'plantillas_posicion', 'imagenes_referencia', 'categorias_imagen',
+  'castells_estructura', 'castell_plantilla_posicion', 'usuarios', 'verificaciones_email'
+];
+
+// Taules amb clau primària composta (sense columna pròpia "id") — a
+// aquestes NO cal reajustar cap seqüència després de copiar-hi dades.
+const TAULES_SENSE_ID_SERIAL = new Set(['casteller_roles', 'ensayo_asistentes']);
+
+async function crearEsquemaCompleto(clientDestino) {
+  await clientDestino.query(`CREATE TABLE IF NOT EXISTS posiciones_pinya ("id" SERIAL PRIMARY KEY, "nombre" TEXT UNIQUE NOT NULL)`);
+  await clientDestino.query(`CREATE TABLE IF NOT EXISTS roles_castillo ("id" SERIAL PRIMARY KEY, "nombre" TEXT UNIQUE NOT NULL)`);
+  await clientDestino.query(`
+    CREATE TABLE IF NOT EXISTS castellers (
+      "id" INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+      "nombre" TEXT NOT NULL, "primerApellido" TEXT, "segundoApellido" TEXT, "apodo" TEXT,
+      "posicionPinyaId" INTEGER REFERENCES posiciones_pinya("id"),
+      "accesoAPP" BOOLEAN, "correo" TEXT, "fNac" DATE, "movil" TEXT, "fechaCamisa" DATE,
+      "alturaHombros" INTEGER, "revisado" BOOLEAN, "estadoAcogida" TEXT, "habitual" BOOLEAN,
+      "permisosAPP" TEXT[], "integranteColla" BOOLEAN, "lesionLargoPlazo" BOOLEAN,
+      "formularios" INTEGER, "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await clientDestino.query(`
+    CREATE TABLE IF NOT EXISTS casteller_roles (
+      "castellerId" INTEGER NOT NULL REFERENCES castellers("id") ON DELETE CASCADE,
+      "rolId" INTEGER NOT NULL REFERENCES roles_castillo("id") ON DELETE CASCADE,
+      "orden" INTEGER NOT NULL, PRIMARY KEY ("castellerId", "rolId")
+    )
+  `);
+  await clientDestino.query(`
+    CREATE TABLE IF NOT EXISTS ensayos (
+      "id" SERIAL PRIMARY KEY, "fecha" DATE, "horaInicio" TIME, "horaFin" TIME,
+      "notas" TEXT, "publicado" BOOLEAN DEFAULT FALSE, "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await clientDestino.query(`
+    CREATE TABLE IF NOT EXISTS ensayo_asistentes (
+      "ensayoId" INTEGER NOT NULL REFERENCES ensayos("id") ON DELETE CASCADE,
+      "castellerId" INTEGER NOT NULL REFERENCES castellers("id") ON DELETE CASCADE,
+      PRIMARY KEY ("ensayoId", "castellerId")
+    )
+  `);
+  await clientDestino.query(`
+    CREATE TABLE IF NOT EXISTS estructuras_ensayo (
+      "id" SERIAL PRIMARY KEY, "ensayoId" INTEGER REFERENCES ensayos("id") ON DELETE CASCADE,
+      "tipo" TEXT, "notas" TEXT, "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await clientDestino.query(`
+    CREATE TABLE IF NOT EXISTS estructura_posiciones (
+      "id" SERIAL PRIMARY KEY, "estructuraEnsayoId" INTEGER REFERENCES estructuras_ensayo("id") ON DELETE CASCADE,
+      "slot" TEXT NOT NULL, "slotIndex" INTEGER NOT NULL, "castellerId" INTEGER REFERENCES castellers("id"),
+      UNIQUE ("estructuraEnsayoId", "slot", "slotIndex")
+    )
+  `);
+  await clientDestino.query(`
+    CREATE TABLE IF NOT EXISTS plantillas_posicion (
+      "id" SERIAL PRIMARY KEY, "tipo" TEXT, "slot" TEXT, "slotIndex" INTEGER,
+      "x" NUMERIC, "y" NUMERIC, "w" NUMERIC, "h" NUMERIC, "shape" TEXT, "rotacion" NUMERIC DEFAULT 0,
+      UNIQUE ("tipo", "slot", "slotIndex")
+    )
+  `);
+  await clientDestino.query(`
+    CREATE TABLE IF NOT EXISTS imagenes_referencia (
+      "id" SERIAL PRIMARY KEY, "nombre" TEXT, "categoria" TEXT, "dataUrl" TEXT NOT NULL,
+      "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await clientDestino.query(`CREATE TABLE IF NOT EXISTS categorias_imagen ("id" SERIAL PRIMARY KEY, "nombre" TEXT UNIQUE NOT NULL, "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+  await clientDestino.query(`
+    CREATE TABLE IF NOT EXISTS castells_estructura (
+      "id" SERIAL PRIMARY KEY, "tipo" TEXT UNIQUE NOT NULL, "niveles" JSONB NOT NULL,
+      "imagenId" INTEGER REFERENCES imagenes_referencia("id") ON DELETE SET NULL,
+      "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await clientDestino.query(`
+    CREATE TABLE IF NOT EXISTS castell_plantilla_posicion (
+      "id" SERIAL PRIMARY KEY, "tipo" TEXT NOT NULL, "slot" TEXT NOT NULL, "slotIndex" INTEGER NOT NULL DEFAULT 1,
+      "x" NUMERIC NOT NULL, "y" NUMERIC NOT NULL, "w" NUMERIC NOT NULL DEFAULT 90, "h" NUMERIC NOT NULL DEFAULT 28,
+      UNIQUE ("tipo", "slot", "slotIndex")
+    )
+  `);
+  await clientDestino.query(`
+    CREATE TABLE IF NOT EXISTS usuarios (
+      "id" SERIAL PRIMARY KEY, "email" TEXT UNIQUE NOT NULL, "passwordHash" TEXT NOT NULL, "nombre" TEXT NOT NULL,
+      "castellerId" INTEGER REFERENCES castellers("id") ON DELETE SET NULL, "estado" TEXT NOT NULL DEFAULT 'pendiente',
+      "emailVerificado" BOOLEAN NOT NULL DEFAULT FALSE, "permisos" TEXT[] NOT NULL DEFAULT '{}',
+      "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await clientDestino.query(`
+    CREATE TABLE IF NOT EXISTS verificaciones_email (
+      "id" SERIAL PRIMARY KEY, "usuarioId" INTEGER NOT NULL REFERENCES usuarios("id") ON DELETE CASCADE,
+      "token" TEXT UNIQUE NOT NULL, "expiraEn" TIMESTAMP NOT NULL, "usado" BOOLEAN NOT NULL DEFAULT FALSE,
+      "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
+// ⚠️ TEMPORAL: copia tot l'esquema i totes les dades de la base de dades
+// actual (la de Render, ja connectada com a `pool`) cap a la base de dades
+// nova indicada a la variable d'entorn SUPABASE_DATABASE_URL. Fes-la servir
+// UNA VEGADA i esborra-la del server.js. No esborra ni toca la base de dades
+// d'origen — només llegeix d'ella.
+app.get('/api/migrar-a-supabase', async (req, res) => {
+  if (req.query.confirm !== 'si') {
+    return res.json({ success: false, aviso: 'Això copia TOTES les dades cap a SUPABASE_DATABASE_URL. Afegeix ?confirm=si per confirmar.' });
+  }
+  if (!process.env.SUPABASE_DATABASE_URL) {
+    return res.status(400).json({ success: false, error: 'Falta la variable d\'entorn SUPABASE_DATABASE_URL a Render.' });
+  }
+
+  const { Pool: PoolDestino } = require('pg');
+  const poolDestino = new PoolDestino({
+    connectionString: process.env.SUPABASE_DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+  });
+
+  const resultado = [];
+  try {
+    await crearEsquemaCompleto(poolDestino);
+
+    for (const tabla of ORDRE_TAULES) {
+      const origen = await pool.query(`SELECT * FROM "${tabla}"`);
+      const filas = origen.rows;
+      let copiadas = 0;
+
+      for (const fila of filas) {
+        const columnas = Object.keys(fila);
+        const placeholders = columnas.map((_, i) => `$${i + 1}`).join(', ');
+        const nombresCol = columnas.map(c => `"${c}"`).join(', ');
+        const valores = columnas.map(c => fila[c]);
+        await poolDestino.query(
+          `INSERT INTO "${tabla}" (${nombresCol}) VALUES (${placeholders}) ON CONFLICT DO NOTHING`,
+          valores
+        );
+        copiadas++;
+      }
+
+      // reajustem la seqüència de l'id perquè els propers inserts (sense id
+      // explícit) continuïn a partir del màxim copiat, no des d'1
+      if (!TAULES_SENSE_ID_SERIAL.has(tabla)) {
+        await poolDestino.query(
+          `SELECT setval(pg_get_serial_sequence('"${tabla}"', 'id'), COALESCE((SELECT MAX("id") FROM "${tabla}"), 1))`
+        );
+      }
+
+      resultado.push({ tabla, filas: filas.length, copiadas });
+    }
+
+    res.json({ success: true, resultado, aviso: 'Migració completada. Comprova els comptadors i, si tot quadra, actualitza DATABASE_URL a Render i esborra aquest endpoint.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: error.message, progreso: resultado });
+  } finally {
+    await poolDestino.end();
   }
 });
 

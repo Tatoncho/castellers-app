@@ -607,12 +607,19 @@ const oldSaveBtnListener = document.getElementById('save-btn');
 oldSaveBtnListener.addEventListener('click', async () => {
   const tipo = tipoSelect.value;
   try {
-    await fetch(`${API}/api/castell-plantilla/${tipo}`, {
+    const res = await fetch(`${API}/api/castell-plantilla/${tipo}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ posiciones: etiquetas })
     });
-  } catch (err) { console.error(err); }
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || `Estat ${res.status}`);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Els nivells s\'han desat, però NO les etiquetes de la imatge: ' + err.message);
+  }
 });
 
 /* ==================== Selector d'imatges ==================== */

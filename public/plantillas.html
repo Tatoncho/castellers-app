@@ -36,6 +36,21 @@
   .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 22px; }
   @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
 
+  .preview-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 800px) { .preview-grid { grid-template-columns: 1fr; } }
+  .preview-label { font-family:'IBM Plex Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); margin-bottom:6px; }
+  .preview-box {
+    position: relative; width: 100%; aspect-ratio: 960/760; background: #FDFCF8;
+    border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
+  }
+  .preview-box img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+  .preview-box .p-box {
+    position:absolute; transform: translate(-50%,-50%); display:flex; align-items:center; justify-content:center;
+    text-align:center; background: rgba(241,238,228,0.92); border: 1px solid var(--ink); border-radius: 3px;
+    font-family:'IBM Plex Mono',monospace; font-size: 9px; overflow:hidden; padding: 0 2px; color: var(--ink);
+  }
+  .preview-empty { display:flex; align-items:center; justify-content:center; height:100%; color: var(--ink-soft); font-size:12.5px; font-style:italic; text-align:center; padding: 20px; }
+
   section.panel { background: var(--paper-card); border: 1px solid var(--line); border-radius: var(--radius); }
   .panel-head { padding: 15px 18px 12px; border-bottom: 1px solid var(--line); }
   .panel-head h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 17px; margin: 0; }
@@ -106,6 +121,22 @@
       <div class="panel-body" id="pinya-body">Carregant…</div>
     </section>
   </div>
+
+  <section class="panel" style="margin-top:22px;">
+    <div class="panel-head"><h2>Vista prèvia combinada</h2></div>
+    <div class="panel-body">
+      <div class="preview-grid">
+        <div class="preview-half">
+          <div class="preview-label">Castell</div>
+          <div id="preview-castell" class="preview-box"></div>
+        </div>
+        <div class="preview-half">
+          <div class="preview-label">Pinya</div>
+          <div id="preview-pinya" class="preview-box"></div>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
 
 <script>
@@ -216,10 +247,75 @@ async function cargarPinya(tipo) {
   }
 }
 
+async function cargarPreview(tipo) {
+  const boxCastell = document.getElementById('preview-castell');
+  const boxPinya = document.getElementById('preview-pinya');
+  boxCastell.innerHTML = '<div class="preview-empty">Carregant…</div>';
+  boxPinya.innerHTML = '<div class="preview-empty">Carregant…</div>';
+
+  // --- Castell ---
+  try {
+    const estRes = await fetch(`${API}/api/castells-estructura/${tipo}`);
+    const estData = await estRes.json();
+    const imagenId = estData.estructura ? estData.estructura.imagenId : null;
+
+    const etiRes = await fetch(`${API}/api/castell-plantilla/${tipo}`);
+    const etiData = await etiRes.json();
+    const etiquetas = etiData.data || [];
+
+    let dataUrl = null;
+    if (imagenId) {
+      const imgsRes = await fetch(`${API}/api/imagenes?categoria=Castells`);
+      const imgsData = await imgsRes.json();
+      const img = (imgsData.data || []).find(i => i.id === imagenId);
+      if (img) dataUrl = img.dataUrl;
+    }
+
+    if (dataUrl && etiquetas.length) {
+      boxCastell.innerHTML = `<img src="${escapeHtml(dataUrl)}" alt="">` + etiquetas.map(e => {
+        const leftPct = (e.x / 960) * 100, topPct = (e.y / 760) * 100;
+        const wPct = (e.w / 960) * 100, hPct = (e.h / 760) * 100;
+        const mismoRol = etiquetas.filter(x => x.slot === e.slot).length > 1;
+        const texto = mismoRol ? `${e.slot}-${e.slotIndex}` : e.slot;
+        return `<div class="p-box" style="left:${leftPct}%; top:${topPct}%; width:${wPct}%; height:${hPct}%; transform:translate(-50%,-50%);">${escapeHtml(texto)}</div>`;
+      }).join('');
+    } else {
+      boxCastell.innerHTML = '<div class="preview-empty">Encara no hi ha disseny visual del castell.</div>';
+    }
+  } catch (err) {
+    console.error(err);
+    boxCastell.innerHTML = '<div class="preview-empty">No s\'ha pogut carregar.</div>';
+  }
+
+  // --- Pinya ---
+  try {
+    const res = await fetch(`${API}/api/plantillas/${tipo}`);
+    const data = await res.json();
+    const posiciones = data.data || [];
+
+    if (posiciones.length) {
+      boxPinya.innerHTML = posiciones.map(p => {
+        const leftPct = (p.x / 960) * 100, topPct = (p.y / 760) * 100;
+        const wPct = (p.w / 960) * 100, hPct = (p.h / 760) * 100;
+        const mismoRol = posiciones.filter(x => x.slot === p.slot).length > 1;
+        const texto = mismoRol ? `${p.slot}-${p.slotIndex}` : p.slot;
+        const rot = Number(p.rotacion) || 0;
+        return `<div class="p-box" style="left:${leftPct}%; top:${topPct}%; width:${wPct}%; height:${hPct}%; transform:translate(-50%,-50%) rotate(${rot}deg);">${escapeHtml(texto)}</div>`;
+      }).join('');
+    } else {
+      boxPinya.innerHTML = '<div class="preview-empty">Encara no hi ha planta de pinya dissenyada.</div>';
+    }
+  } catch (err) {
+    console.error(err);
+    boxPinya.innerHTML = '<div class="preview-empty">No s\'ha pogut carregar.</div>';
+  }
+}
+
 function cargarTodo() {
   const tipo = tipoSelect.value;
   cargarCastell(tipo);
   cargarPinya(tipo);
+  cargarPreview(tipo);
 }
 
 tipoSelect.addEventListener('change', cargarTodo);

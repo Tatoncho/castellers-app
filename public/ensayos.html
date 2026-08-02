@@ -81,6 +81,21 @@
   ul.assajos-list li.selected { border-color: var(--thread); }
   ul.assajos-list .fecha-box { font-family: 'Fraunces', serif; font-weight: 600; font-size: 14px; }
   ul.assajos-list .meta { font-size: 11.5px; color: var(--ink-soft); flex: 1; }
+  .preview-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 700px) { .preview-grid { grid-template-columns: 1fr; } }
+  .preview-label { font-family:'IBM Plex Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); margin-bottom:6px; }
+  .preview-box {
+    position: relative; width: 100%; aspect-ratio: 960/760; background: #FDFCF8;
+    border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
+  }
+  .preview-box img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+  .preview-box .p-box {
+    position:absolute; transform: translate(-50%,-50%); display:flex; align-items:center; justify-content:center;
+    text-align:center; background: rgba(241,238,228,0.92); border: 1px solid var(--ink); border-radius: 3px;
+    font-family:'IBM Plex Mono',monospace; font-size: 9px; overflow:hidden; padding: 0 2px; color: var(--ink);
+  }
+  .preview-empty { display:flex; align-items:center; justify-content:center; height:100%; color: var(--ink-soft); font-size:12.5px; font-style:italic; text-align:center; padding: 20px; }
+
   .status-badge {
     font-family:'IBM Plex Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:0.05em;
     padding: 2px 7px; border-radius: 20px; border: 1px solid var(--ink-soft); color: var(--ink-soft);
@@ -220,28 +235,51 @@
       </div>
     </div>
     <div class="panel-body">
-      <p class="hint" style="font-size:12px;color:var(--ink-soft);margin:0 0 4px;">
-        Marca qui assisteix a aquest assaig. Encara no hi ha sessions d'usuari, així que de moment tothom veu tots els assajos (esborranys inclosos).
-      </p>
 
-      <div class="attendance-search">
-        <input type="text" id="attendance-search" placeholder="Cerca per nom, àlies o cognoms…">
-      </div>
-      <ul class="attendance-list" id="attendance-list"></ul>
+      <!-- Vista completa: Tècnica, o qualsevol un cop l'assaig ja és públic -->
+      <div id="vista-completa">
+        <p class="hint" style="font-size:12px;color:var(--ink-soft);margin:0 0 4px;">
+          Marca qui assisteix a aquest assaig.
+        </p>
 
-      <div class="gen-actions solo-tecnica">
-        <button class="ghost" id="open-propuestas-btn" type="button">Generar propostes de castells</button>
-        <button class="ghost" id="open-pinya-btn" type="button">Generar pinya</button>
-      </div>
-
-      <div style="margin-top:20px;">
-        <div class="panel-head" style="padding:0 0 10px; border-bottom:1px solid var(--line); margin-bottom:10px;">
-          <h2 style="font-size:15px;">Estructures guardades d'aquest assaig</h2>
+        <div class="attendance-search">
+          <input type="text" id="attendance-search" placeholder="Cerca per nom, àlies o cognoms…">
         </div>
-        <ul class="assajos-list" id="estructuras-list">
-          <li class="empty-note" style="border:none;">Encara no s'ha desat cap estructura.</li>
-        </ul>
+        <ul class="attendance-list" id="attendance-list"></ul>
+
+        <div class="gen-actions solo-tecnica">
+          <button class="ghost" id="open-propuestas-btn" type="button">Generar propostes de castells</button>
+          <button class="ghost" id="open-pinya-btn" type="button">Generar pinya</button>
+        </div>
+
+        <div style="margin-top:20px;">
+          <div class="panel-head" style="padding:0 0 10px; border-bottom:1px solid var(--line); margin-bottom:10px;">
+            <h2 style="font-size:15px;">Estructures guardades d'aquest assaig</h2>
+          </div>
+          <ul class="assajos-list" id="estructuras-list">
+            <li class="empty-note" style="border:none;">Encara no s'ha desat cap estructura.</li>
+          </ul>
+        </div>
       </div>
+
+      <!-- Vista d'auto-inscripció: no-Tècnica mentre l'assaig és esborrany -->
+      <div id="vista-autoinscripcio" style="display:none;">
+        <p class="hint" style="font-size:12px;color:var(--gold);margin:0 0 14px; border:1px solid var(--gold); padding:8px 10px; border-radius:3px;">
+          Aquest assaig encara és un esborrany — de moment només pots apuntar-t'hi. La resta de detalls (qui més ve, els castells...) es veuran quan es publiqui.
+        </p>
+        <div id="autoinscripcio-notas" style="font-size:13px; margin-bottom:16px;"></div>
+
+        <label style="display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); margin-bottom:6px;">Qui ets? (provisional, sense login)</label>
+        <input type="text" id="jo-search" placeholder="Cerca el teu nom o àlies…" style="width:100%; padding:9px 10px; border:1px solid var(--line); background:var(--paper); border-radius:3px; margin-bottom:8px;">
+        <ul class="assajos-list" id="jo-resultados" style="max-height:220px; overflow-y:auto;"></ul>
+
+        <div id="jo-seleccionado" style="display:none; margin-top:16px; padding:14px; background:var(--paper); border:1px solid var(--line); border-radius:3px;">
+          <div style="font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin-bottom:10px;" id="jo-nombre"></div>
+          <button class="ghost" id="jo-toggle-btn" type="button" style="width:100%;"></button>
+          <button class="ghost" id="jo-canviar-btn" type="button" style="width:100%; margin-top:8px;">No sóc jo — canviar</button>
+        </div>
+      </div>
+
     </div>
   </section>
 </div>
@@ -253,6 +291,25 @@
     <div id="dia-contenido"></div>
     <div class="modal-actions">
       <button class="ghost" id="close-dia" type="button">Tancar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="imagen-estructura-overlay">
+  <div class="modal-box" style="max-width:960px;">
+    <h3 id="imagen-estructura-titulo">Castell</h3>
+    <div class="preview-grid">
+      <div class="preview-half">
+        <div class="preview-label">Castell</div>
+        <div id="ie-castell" class="preview-box"></div>
+      </div>
+      <div class="preview-half">
+        <div class="preview-label">Pinya</div>
+        <div id="ie-pinya" class="preview-box"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="ghost" id="close-imagen-estructura" type="button">Tancar</button>
     </div>
   </div>
 </div>
@@ -306,6 +363,13 @@ const API = '';
 let allMembers = [];
 let ensayosList = [];
 let currentEnsayoId = null;
+let currentEnsayoObj = null;
+
+// ⚠️ PROVISIONAL: sense login real, "qui ets" és només una selecció que es
+// guarda al navegador — no verifica identitat de veritat.
+let joMateixId = localStorage.getItem('castellers_jo_mateix_id')
+  ? Number(localStorage.getItem('castellers_jo_mateix_id'))
+  : null;
 let asistentesSet = new Set();
 
 // ⚠️ PROVISIONAL: fins que hi hagi login real amb permisos de veritat, això
@@ -318,6 +382,17 @@ tecnicaToggle.addEventListener('change', () => {
   isTecnica = tecnicaToggle.checked;
   localStorage.setItem('castellers_tecnica_simulado', isTecnica ? 'true' : 'false');
   aplicarPermisos();
+  renderEnsayosList();
+  renderCalendario();
+
+  // si estava obert un assaig que ja no pot veure, el tanquem
+  if (!isTecnica && currentEnsayoId) {
+    const actual = ensayosList.find(e => e.id === currentEnsayoId);
+    if (actual && !actual.publicado) {
+      currentEnsayoId = null;
+      document.getElementById('detalle-panel').style.display = 'none';
+    }
+  }
 });
 
 function aplicarPermisos() {
@@ -390,7 +465,7 @@ function renderCalendario() {
   const hoyISO = fechaISOSinHora(new Date().toISOString());
 
   const ensayosPorFecha = {};
-  ensayosList.forEach(e => {
+  ensayosVisibles().forEach(e => {
     const key = fechaISOSinHora(e.fecha);
     if (!ensayosPorFecha[key]) ensayosPorFecha[key] = [];
     ensayosPorFecha[key].push(e);
@@ -485,13 +560,21 @@ async function mostrarDia(key, ensayosDelDia) {
   });
 }
 
+function ensayosVisibles() {
+  // Ara TOTS els assajos es veuen a la llista i al calendari (amb la marca
+  // d'Esborrany/Publicat) — el que canvia és quant contingut es mostra en
+  // obrir-los, no si es veuen que existeixen.
+  return ensayosList;
+}
+
 function renderEnsayosList() {
   const list = document.getElementById('assajos-list');
-  if (!ensayosList.length) {
-    list.innerHTML = '<li class="empty-note" style="border:none;">Encara no hi ha cap assaig creat.</li>';
+  const visibles = ensayosVisibles();
+  if (!visibles.length) {
+    list.innerHTML = `<li class="empty-note" style="border:none;">${isTecnica ? 'Encara no hi ha cap assaig creat.' : 'Encara no hi ha cap assaig publicat.'}</li>`;
     return;
   }
-  list.innerHTML = ensayosList.map(e => `
+  list.innerHTML = visibles.map(e => `
     <li class="${e.id === currentEnsayoId ? 'selected' : ''}" data-id="${e.id}">
       <span class="fecha-box">${formatFecha(e.fecha)}</span>
       <span class="meta">
@@ -545,7 +628,9 @@ async function openEnsayo(id) {
   try {
     const res = await fetch(`${API}/api/ensayos/${id}`);
     const data = await res.json();
+
     currentEnsayoId = id;
+    currentEnsayoObj = data.ensayo;
     asistentesSet = new Set(data.asistentesIds || []);
 
     document.getElementById('detalle-titulo').textContent = `Assaig · ${formatFecha(data.ensayo.fecha)}`;
@@ -556,10 +641,20 @@ async function openEnsayo(id) {
     document.getElementById('publicar-btn').textContent = data.ensayo.publicado ? 'Ja publicat' : 'Publicar assaig';
 
     document.getElementById('detalle-panel').style.display = 'block';
-    document.getElementById('attendance-search').value = '';
-    renderAttendanceList();
+
+    const modoCompleto = isTecnica || data.ensayo.publicado;
+    document.getElementById('vista-completa').style.display = modoCompleto ? 'block' : 'none';
+    document.getElementById('vista-autoinscripcio').style.display = modoCompleto ? 'none' : 'block';
+
+    if (modoCompleto) {
+      document.getElementById('attendance-search').value = '';
+      renderAttendanceList();
+      await fetchEstructuras();
+    } else {
+      document.getElementById('autoinscripcio-notas').textContent = data.ensayo.notas || '';
+      iniciarAutoinscripcio();
+    }
     renderEnsayosList();
-    await fetchEstructuras();
   } catch (err) {
     console.error(err);
     alert('No s\'ha pogut obrir l\'assaig.');
@@ -592,6 +687,94 @@ function renderAttendanceList() {
 }
 
 document.getElementById('attendance-search').addEventListener('input', renderAttendanceList);
+
+/* ---------------- Auto-inscripció (esborrany, no-Tècnica) ---------------- */
+
+function iniciarAutoinscripcio() {
+  document.getElementById('jo-search').value = '';
+  const yaSeleccionado = joMateixId && allMembers.find(m => m.id === joMateixId);
+  if (yaSeleccionado) {
+    mostrarJoSeleccionado(yaSeleccionado);
+  } else {
+    document.getElementById('jo-seleccionado').style.display = 'none';
+    renderJoResultados('');
+  }
+}
+
+function renderJoResultados(q) {
+  const cont = document.getElementById('jo-resultados');
+  const texto = q.trim().toLowerCase();
+  if (!texto) { cont.innerHTML = ''; return; }
+
+  const encontrados = allMembers
+    .filter(m => `${m.nombre || ''} ${m.apodo || ''}`.toLowerCase().includes(texto))
+    .slice(0, 20);
+
+  if (!encontrados.length) {
+    cont.innerHTML = '<li class="empty-note" style="border:none;">Ningú coincideix amb aquesta cerca.</li>';
+    return;
+  }
+  cont.innerHTML = encontrados.map(m => `
+    <li data-id="${m.id}" style="cursor:pointer;">
+      <span class="fecha-box" style="font-size:14px;">${escapeHtml(m.nombre)}${m.apodo ? ' · ' + escapeHtml(m.apodo) : ''}</span>
+    </li>
+  `).join('');
+  cont.querySelectorAll('li[data-id]').forEach(li => {
+    li.addEventListener('click', () => {
+      const m = allMembers.find(x => x.id === Number(li.dataset.id));
+      if (!m) return;
+      joMateixId = m.id;
+      localStorage.setItem('castellers_jo_mateix_id', String(m.id));
+      mostrarJoSeleccionado(m);
+    });
+  });
+}
+
+document.getElementById('jo-search').addEventListener('input', (e) => renderJoResultados(e.target.value));
+
+function mostrarJoSeleccionado(m) {
+  document.getElementById('jo-resultados').innerHTML = '';
+  document.getElementById('jo-search').value = '';
+  document.getElementById('jo-seleccionado').style.display = 'block';
+  document.getElementById('jo-nombre').textContent = `${m.nombre}${m.apodo ? ' · ' + m.apodo : ''}`;
+  actualizarBotonJoToggle();
+}
+
+function actualizarBotonJoToggle() {
+  const btn = document.getElementById('jo-toggle-btn');
+  const hiVaig = asistentesSet.has(joMateixId);
+  btn.textContent = hiVaig ? '✓ Hi aniré — clica per treure\'t' : 'Apunta\'m a aquest assaig';
+}
+
+document.getElementById('jo-toggle-btn').addEventListener('click', async () => {
+  if (!currentEnsayoId || !joMateixId) return;
+  const nuevoEstado = !asistentesSet.has(joMateixId);
+  const btn = document.getElementById('jo-toggle-btn');
+  btn.disabled = true;
+  try {
+    await fetch(`${API}/api/ensayos/${currentEnsayoId}/asistencia`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ castellerId: joMateixId, asiste: nuevoEstado })
+    });
+    if (nuevoEstado) asistentesSet.add(joMateixId); else asistentesSet.delete(joMateixId);
+    actualizarBotonJoToggle();
+    await fetchEnsayos();
+  } catch (err) {
+    console.error(err);
+    alert('No s\'ha pogut desar.');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('jo-canviar-btn').addEventListener('click', () => {
+  joMateixId = null;
+  localStorage.removeItem('castellers_jo_mateix_id');
+  document.getElementById('jo-seleccionado').style.display = 'none';
+  document.getElementById('jo-search').value = '';
+  document.getElementById('jo-resultados').innerHTML = '';
+});
 
 document.getElementById('attendance-list').addEventListener('change', async (e) => {
   const checkbox = e.target.closest('.attend-check');
@@ -631,6 +814,81 @@ document.getElementById('publicar-btn').addEventListener('click', async () => {
 });
 
 /* ---------------- Modal: propostes de castells ---------------- */
+
+/* ---------------- Vista prèvia amb noms reals d'una estructura ---------------- */
+
+const imagenEstructuraOverlay = document.getElementById('imagen-estructura-overlay');
+document.getElementById('close-imagen-estructura').addEventListener('click', () => imagenEstructuraOverlay.classList.remove('open'));
+imagenEstructuraOverlay.addEventListener('click', (e) => { if (e.target === imagenEstructuraOverlay) imagenEstructuraOverlay.classList.remove('open'); });
+
+async function mostrarImagenEstructura(estructuraId, tipo) {
+  document.getElementById('imagen-estructura-titulo').textContent = `Castell · ${tipo}`;
+  const boxCastell = document.getElementById('ie-castell');
+  const boxPinya = document.getElementById('ie-pinya');
+  boxCastell.innerHTML = '<div class="preview-empty">Carregant…</div>';
+  boxPinya.innerHTML = '<div class="preview-empty">Carregant…</div>';
+  imagenEstructuraOverlay.classList.add('open');
+
+  try {
+    const estRes = await fetch(`${API}/api/estructuras/${estructuraId}`);
+    const estData = await estRes.json();
+    const posiciones = estData.posiciones || [];
+
+    const nombrePara = (slot, slotIndex) => {
+      const fila = posiciones.find(p => p.slot === slot && p.slotIndex === slotIndex && p.castellerId);
+      return fila ? fila.castellerNombre : null;
+    };
+
+    // --- Castell ---
+    const castellEstRes = await fetch(`${API}/api/castells-estructura/${tipo}`);
+    const castellEstData = await castellEstRes.json();
+    const imagenId = castellEstData.estructura ? castellEstData.estructura.imagenId : null;
+
+    const etiRes = await fetch(`${API}/api/castell-plantilla/${tipo}`);
+    const etiData = await etiRes.json();
+    const etiquetas = etiData.data || [];
+
+    let dataUrl = null;
+    if (imagenId) {
+      const imgsRes = await fetch(`${API}/api/imagenes?categoria=Castells`);
+      const imgsData = await imgsRes.json();
+      const img = (imgsData.data || []).find(i => i.id === imagenId);
+      if (img) dataUrl = img.dataUrl;
+    }
+
+    if (dataUrl && etiquetas.length) {
+      boxCastell.innerHTML = `<img src="${escapeHtml(dataUrl)}" alt="">` + etiquetas.map(e => {
+        const leftPct = (e.x / 960) * 100, topPct = (e.y / 760) * 100;
+        const wPct = (e.w / 960) * 100, hPct = (e.h / 760) * 100;
+        const nombre = nombrePara(e.slot, e.slotIndex);
+        return `<div class="p-box" style="left:${leftPct}%; top:${topPct}%; width:${wPct}%; height:${hPct}%; transform:translate(-50%,-50%); font-family:'Fraunces',serif; font-weight:600; font-size:11px;">${nombre ? escapeHtml(nombre) : '—'}</div>`;
+      }).join('');
+    } else {
+      boxCastell.innerHTML = '<div class="preview-empty">Aquest castell encara no té disseny visual.</div>';
+    }
+
+    // --- Pinya ---
+    const pinRes = await fetch(`${API}/api/plantillas/${tipo}`);
+    const pinData = await pinRes.json();
+    const floorSlots = pinData.data || [];
+
+    if (floorSlots.length) {
+      boxPinya.innerHTML = floorSlots.map(p => {
+        const leftPct = (p.x / 960) * 100, topPct = (p.y / 760) * 100;
+        const wPct = (p.w / 960) * 100, hPct = (p.h / 760) * 100;
+        const rot = Number(p.rotacion) || 0;
+        const nombre = nombrePara(p.slot, p.slotIndex);
+        return `<div class="p-box" style="left:${leftPct}%; top:${topPct}%; width:${wPct}%; height:${hPct}%; transform:translate(-50%,-50%) rotate(${rot}deg);">${nombre ? escapeHtml(nombre) : '—'}</div>`;
+      }).join('');
+    } else {
+      boxPinya.innerHTML = '<div class="preview-empty">Aquest castell encara no té planta de pinya.</div>';
+    }
+  } catch (err) {
+    console.error(err);
+    boxCastell.innerHTML = '<div class="preview-empty">Error carregant.</div>';
+    boxPinya.innerHTML = '<div class="preview-empty">Error carregant.</div>';
+  }
+}
 
 const propuestasOverlay = document.getElementById('propuestas-overlay');
 
@@ -724,6 +982,7 @@ async function fetchEstructuras() {
       <li data-id="${e.id}">
         <span class="fecha-box">${escapeHtml(e.tipo)}</span>
         <span class="meta">${e.posicionesAsignadas}/${e.totalPosiciones || '?'} posicions assignades</span>
+        <button class="ghost small ver-imagen-btn" data-id="${e.id}" data-tipo="${escapeHtml(e.tipo)}" type="button">Veure imatge</button>
         <button class="ghost small abrir-constructor-btn solo-tecnica" data-id="${e.id}" type="button">Obrir constructor</button>
         <button class="ghost small eliminar-estructura-btn solo-tecnica" data-id="${e.id}" type="button">Eliminar</button>
       </li>
@@ -738,6 +997,12 @@ async function fetchEstructuras() {
 document.getElementById('estructuras-list').addEventListener('click', async (e) => {
   const abrirBtn = e.target.closest('.abrir-constructor-btn');
   const eliminarBtn = e.target.closest('.eliminar-estructura-btn');
+  const verBtn = e.target.closest('.ver-imagen-btn');
+
+  if (verBtn) {
+    mostrarImagenEstructura(Number(verBtn.dataset.id), verBtn.dataset.tipo);
+    return;
+  }
 
   if (abrirBtn) {
     location.href = `/pinya.html?id=${abrirBtn.dataset.id}`;
