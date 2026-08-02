@@ -1970,7 +1970,19 @@ app.get('/api/migrar-a-supabase', async (req, res) => {
         const columnas = Object.keys(fila);
         const placeholders = columnas.map((_, i) => `$${i + 1}`).join(', ');
         const nombresCol = columnas.map(c => `"${c}"`).join(', ');
-        const valores = columnas.map(c => fila[c]);
+        const valores = columnas.map(c => {
+          const v = fila[c];
+          // Les columnes JSONB (com "niveles") arriben com a array/objecte JS
+          // des de node-pg. Cal passar-les com a text JSON explícit — si no,
+          // node-pg intenta serialitzar-les com a array de Postgres i falla.
+          // Els arrays de text normals (com "permisos"/"permisosAPP") NO
+          // s'han de tocar: es distingeixen perquè un array JSONB conté
+          // objectes, mentre que un TEXT[] conté cadenes soltes.
+          const esArrayObjectes = Array.isArray(v) && v.length > 0 && typeof v[0] === 'object' && v[0] !== null;
+          const esObjectePla = v !== null && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date);
+          if (esArrayObjectes || esObjectePla) return JSON.stringify(v);
+          return v;
+        });
         await poolDestino.query(
           `INSERT INTO "${tabla}" (${nombresCol}) VALUES (${placeholders}) ON CONFLICT DO NOTHING`,
           valores
