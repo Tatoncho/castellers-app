@@ -26,9 +26,23 @@
   .msg { margin-top:14px; padding:10px 12px; border-radius:var(--radius); font-size:13px; display:none; }
   .msg.error { display:block; background:#F3E7E5; border:1px solid var(--thread); color:var(--thread); }
   .foot-link { text-align:center; margin-top:18px; font-size:13px; color:var(--ink-soft); }
+
+  .lang-switcher { position:fixed; top:14px; right:14px; display:flex; gap:6px; z-index:50; }
+  .lang-btn { width:auto; margin:0; padding:5px 7px; background:var(--paper-card); border:1.5px solid var(--line); border-radius:var(--radius); font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center; }
+  .lang-btn.active { border-color: var(--ink); }
+  .lang-btn svg { display:block; border-radius:1px; }
 </style>
 </head>
 <body>
+
+<div class="lang-switcher">
+  <button class="lang-btn" data-lang="ca" title="Català" type="button">
+    <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>
+  </button>
+  <button class="lang-btn" data-lang="es" title="Español" type="button">🇪🇸</button>
+  <button class="lang-btn" data-lang="en" title="English" type="button">🇬🇧</button>
+</div>
+
 <main>
   <a class="brand" href="/">
     <svg width="26" height="26" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -38,20 +52,52 @@
     Castellers
   </a>
   <section class="panel">
-    <h1>Iniciar sessió</h1>
+    <h1 data-i18n="login_title">Iniciar sessió</h1>
     <form id="login-form">
-      <label for="email">Correu</label>
+      <label for="email" data-i18n="label_correu">Correu</label>
       <input type="email" id="email" required>
-      <label for="password">Contrasenya</label>
+      <label for="password" data-i18n="label_contrasenya">Contrasenya</label>
       <input type="password" id="password" required>
-      <button class="primary" type="submit" id="submit-btn">Entrar</button>
+      <button class="primary" type="submit" id="submit-btn" data-i18n="btn_entrar">Entrar</button>
     </form>
     <div class="msg" id="msg"></div>
-    <div class="foot-link">Encara no tens compte? <a href="/registro.html">Crea'l</a></div>
+    <div class="foot-link"><span data-i18n="foot_no_compte">Encara no tens compte?</span> <a href="/registro.html" data-i18n="foot_crear">Crea'l</a></div>
   </section>
 </main>
 
 <script>
+const TRADUCCIONES = {
+  ca: {
+    login_title: 'Iniciar sessió', label_correu: 'Correu', label_contrasenya: 'Contrasenya',
+    btn_entrar: 'Entrar', foot_no_compte: 'Encara no tens compte?', foot_crear: 'Crea\'l'
+  },
+  es: {
+    login_title: 'Iniciar sesión', label_correu: 'Correo', label_contrasenya: 'Contraseña',
+    btn_entrar: 'Entrar', foot_no_compte: '¿Aún no tienes cuenta?', foot_crear: 'Créala'
+  },
+  en: {
+    login_title: 'Log in', label_correu: 'Email', label_contrasenya: 'Password',
+    btn_entrar: 'Log in', foot_no_compte: "Don't have an account yet?", foot_crear: 'Create one'
+  }
+};
+
+function aplicarIdioma(idioma) {
+  const t = TRADUCCIONES[idioma] || TRADUCCIONES.ca;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (t[key] !== undefined) el.textContent = t[key];
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === idioma));
+  localStorage.setItem('castellers_idioma', idioma);
+  document.documentElement.lang = idioma;
+}
+
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', () => aplicarIdioma(btn.dataset.lang));
+});
+
+aplicarIdioma(localStorage.getItem('castellers_idioma') || 'ca');
+
 const API = '';
 const form = document.getElementById('login-form');
 const msg = document.getElementById('msg');
@@ -72,6 +118,11 @@ form.addEventListener('submit', async (e) => {
     });
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.error || 'Error desconegut');
+    // El servidor recorda l'idioma preferit d'aquest usuari — l'apliquem
+    // ara perquè la resta de l'app ja el respecti des del primer moment.
+    if (data.usuario && data.usuario.idioma) {
+      localStorage.setItem('castellers_idioma', data.usuario.idioma);
+    }
     location.href = '/';
   } catch (err) {
     msg.textContent = err.message;

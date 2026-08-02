@@ -28,9 +28,23 @@
   .msg.ok { display:block; background:#E4EEE6; border:1px solid var(--ok); color:var(--ok); }
   .msg.error { display:block; background:#F3E7E5; border:1px solid var(--thread); color:var(--thread); }
   .foot-link { text-align:center; margin-top:18px; font-size:13px; color:var(--ink-soft); }
+
+  .lang-switcher { position:fixed; top:14px; right:14px; display:flex; gap:6px; z-index:50; }
+  .lang-btn { width:auto; margin:0; padding:5px 7px; background:var(--paper-card); border:1.5px solid var(--line); border-radius:var(--radius); font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center; }
+  .lang-btn.active { border-color: var(--ink); }
+  .lang-btn svg { display:block; border-radius:1px; }
 </style>
 </head>
 <body>
+
+<div class="lang-switcher">
+  <button class="lang-btn" data-lang="ca" title="Català" type="button">
+    <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>
+  </button>
+  <button class="lang-btn" data-lang="es" title="Español" type="button">🇪🇸</button>
+  <button class="lang-btn" data-lang="en" title="English" type="button">🇬🇧</button>
+</div>
+
 <main>
   <a class="brand" href="/">
     <svg width="26" height="26" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -40,31 +54,87 @@
     Castellers
   </a>
   <section class="panel">
-    <h1>Crear compte</h1>
-    <p class="lead">L'accés quedarà pendent de verificar el correu i que un administrador el validi.</p>
+    <h1 data-i18n="registro_title">Crear compte</h1>
+    <p class="lead" data-i18n="registro_lead">L'accés quedarà pendent de verificar el correu i que un administrador el validi.</p>
     <form id="registro-form">
-      <label for="nombre">Nom</label>
+      <label for="nombre" data-i18n="label_nombre">Nom</label>
       <input type="text" id="nombre" required>
-      <label for="primerApellido">Primer cognom</label>
+      <label for="primerApellido" data-i18n="label_primerApellido">Primer cognom</label>
       <input type="text" id="primerApellido" required>
-      <label for="segundoApellido">Segon cognom</label>
+      <label for="segundoApellido" data-i18n="label_segundoApellido">Segon cognom</label>
       <input type="text" id="segundoApellido">
-      <label for="apodo">Àlies (opcional)</label>
+      <label for="apodo" data-i18n="label_apodo">Àlies (opcional)</label>
       <input type="text" id="apodo">
-      <label for="email">Correu</label>
+      <label for="email" data-i18n="label_correu">Correu</label>
       <input type="email" id="email" required>
-      <label for="password">Contrasenya</label>
+      <label for="password" data-i18n="label_contrasenya">Contrasenya</label>
       <input type="password" id="password" required minlength="6">
-      <label for="password2">Repeteix la contrasenya</label>
+      <label for="password2" data-i18n="label_repetir">Repeteix la contrasenya</label>
       <input type="password" id="password2" required minlength="6">
-      <button class="primary" type="submit" id="submit-btn">Crear compte</button>
+      <button class="primary" type="submit" id="submit-btn" data-i18n="btn_crear">Crear compte</button>
     </form>
     <div class="msg" id="msg"></div>
-    <div class="foot-link">Ja tens compte? <a href="/login.html">Inicia sessió</a></div>
+    <div class="foot-link"><span data-i18n="foot_ja_compte">Ja tens compte?</span> <a href="/login.html" data-i18n="foot_inicia">Inicia sessió</a></div>
   </section>
 </main>
 
 <script>
+const TRADUCCIONES = {
+  ca: {
+    registro_title: 'Crear compte',
+    registro_lead: 'L\'accés quedarà pendent de verificar el correu i que un administrador el validi.',
+    label_nombre: 'Nom', label_primerApellido: 'Primer cognom', label_segundoApellido: 'Segon cognom',
+    label_apodo: 'Àlies (opcional)', label_correu: 'Correu', label_contrasenya: 'Contrasenya',
+    label_repetir: 'Repeteix la contrasenya', btn_crear: 'Crear compte',
+    foot_ja_compte: 'Ja tens compte?', foot_inicia: 'Inicia sessió',
+    err_no_coincide: 'Les contrasenyes no coincideixen.',
+    aviso_pendiente: (email) => `Ja hi ha una sol·licitud pendent de verificar amb el correu <strong>${email}</strong>. Comprova que sigui realment el teu correu (és fàcil equivocar-se entre adreces semblants).`,
+    btn_reenviar: 'És el meu correu — reenvia\'m l\'enllaç'
+  },
+  es: {
+    registro_title: 'Crear cuenta',
+    registro_lead: 'El acceso quedará pendiente de verificar el correo y que un administrador lo valide.',
+    label_nombre: 'Nombre', label_primerApellido: 'Primer apellido', label_segundoApellido: 'Segundo apellido',
+    label_apodo: 'Alias (opcional)', label_correu: 'Correo', label_contrasenya: 'Contraseña',
+    label_repetir: 'Repite la contraseña', btn_crear: 'Crear cuenta',
+    foot_ja_compte: '¿Ya tienes cuenta?', foot_inicia: 'Inicia sesión',
+    err_no_coincide: 'Las contraseñas no coinciden.',
+    aviso_pendiente: (email) => `Ya hay una solicitud pendiente de verificar con el correo <strong>${email}</strong>. Comprueba que sea realmente tu correo (es fácil equivocarse entre direcciones parecidas).`,
+    btn_reenviar: 'Es mi correo — reenvíame el enlace'
+  },
+  en: {
+    registro_title: 'Create account',
+    registro_lead: 'Access will stay pending until you verify your email and an admin approves it.',
+    label_nombre: 'First name', label_primerApellido: 'Last name', label_segundoApellido: 'Second last name',
+    label_apodo: 'Nickname (optional)', label_correu: 'Email', label_contrasenya: 'Password',
+    label_repetir: 'Repeat password', btn_crear: 'Create account',
+    foot_ja_compte: 'Already have an account?', foot_inicia: 'Log in',
+    err_no_coincide: 'Passwords do not match.',
+    aviso_pendiente: (email) => `There is already a pending request to verify with the email <strong>${email}</strong>. Check that it's really your email (easy to mix up similar addresses).`,
+    btn_reenviar: "It's my email — resend the link"
+  }
+};
+
+let idiomaActual = localStorage.getItem('castellers_idioma') || 'ca';
+
+function aplicarIdioma(idioma) {
+  idiomaActual = idioma;
+  const t = TRADUCCIONES[idioma] || TRADUCCIONES.ca;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (t[key] !== undefined) el.textContent = t[key];
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === idioma));
+  localStorage.setItem('castellers_idioma', idioma);
+  document.documentElement.lang = idioma;
+}
+
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', () => aplicarIdioma(btn.dataset.lang));
+});
+
+aplicarIdioma(idiomaActual);
+
 const API = '';
 const form = document.getElementById('registro-form');
 const msg = document.getElementById('msg');
@@ -82,7 +152,7 @@ form.addEventListener('submit', async (e) => {
   const password2 = document.getElementById('password2').value;
 
   if (password !== password2) {
-    msg.textContent = 'Les contrasenyes no coincideixen.';
+    msg.textContent = TRADUCCIONES[idiomaActual].err_no_coincide;
     msg.className = 'msg error';
     return;
   }
@@ -93,7 +163,7 @@ form.addEventListener('submit', async (e) => {
     const res = await fetch(`${API}/api/auth/registro`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, primerApellido, segundoApellido, apodo, email, password })
+      body: JSON.stringify({ nombre, primerApellido, segundoApellido, apodo, email, password, idioma: idiomaActual })
     });
     const data = await res.json();
 
@@ -115,12 +185,12 @@ form.addEventListener('submit', async (e) => {
 });
 
 function mostrarAvisoPendiente(email) {
+  const t = TRADUCCIONES[idiomaActual];
   msg.className = 'msg error';
   msg.innerHTML = `
-    Ja hi ha una sol·licitud pendent de verificar amb el correu <strong>${email}</strong>.
-    Comprova que sigui realment el teu correu (és fàcil equivocar-se entre adreces semblants).
+    ${t.aviso_pendiente(email)}
     <br><br>
-    <button type="button" id="reenviar-btn" style="width:auto; padding:8px 14px;">És el meu correu — reenvia\'m l\'enllaç</button>
+    <button type="button" id="reenviar-btn" style="width:auto; padding:8px 14px;">${t.btn_reenviar}</button>
   `;
   document.getElementById('reenviar-btn').addEventListener('click', async (e) => {
     const btnReenviar = e.target;

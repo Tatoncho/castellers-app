@@ -1611,6 +1611,7 @@ app.get('/api/migrate-usuarios', async (req, res) => {
     await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "primerApellido" TEXT`);
     await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "segundoApellido" TEXT`);
     await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "apodo" TEXT`);
+    await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "idioma" TEXT NOT NULL DEFAULT 'ca'`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS registros_pendientes (
         "id" SERIAL PRIMARY KEY,
@@ -1620,6 +1621,7 @@ app.get('/api/migrate-usuarios', async (req, res) => {
         "primerApellido" TEXT NOT NULL,
         "segundoApellido" TEXT,
         "apodo" TEXT,
+        "idioma" TEXT NOT NULL DEFAULT 'ca',
         "token" TEXT UNIQUE NOT NULL,
         "expiraEn" TIMESTAMP NOT NULL,
         "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -1644,11 +1646,12 @@ function escaparHtmlCorreo(str) {
 // Registre: crea l'usuari (pendent), envia correu de verificació
 app.post('/api/auth/registro', async (req, res) => {
   try {
-    const { email, password, nombre, primerApellido, segundoApellido, apodo } = req.body;
+    const { email, password, nombre, primerApellido, segundoApellido, apodo, idioma } = req.body;
     if (!emailValido(email)) return res.status(400).json({ success: false, error: 'Correu no vàlid' });
     if (!password || password.length < 6) return res.status(400).json({ success: false, error: 'La contrasenya ha de tenir almenys 6 caràcters' });
     if (!nombre || !nombre.trim()) return res.status(400).json({ success: false, error: 'El nom és obligatori' });
     if (!primerApellido || !primerApellido.trim()) return res.status(400).json({ success: false, error: 'El primer cognom és obligatori' });
+    const idiomaValido = ['ca', 'es', 'en'].includes(idioma) ? idioma : 'ca';
 
     const emailNorm = email.toLowerCase();
 
@@ -1683,9 +1686,9 @@ app.post('/api/auth/registro', async (req, res) => {
 
     await pool.query(
       `INSERT INTO registros_pendientes
-         ("email","passwordHash","nombre","primerApellido","segundoApellido","apodo","token","expiraEn")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-      [emailNorm, passwordHash, nombre.trim(), primerApellido.trim(), (segundoApellido || '').trim() || null, (apodo || '').trim() || null, token, expiraEn]
+         ("email","passwordHash","nombre","primerApellido","segundoApellido","apodo","idioma","token","expiraEn")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [emailNorm, passwordHash, nombre.trim(), primerApellido.trim(), (segundoApellido || '').trim() || null, (apodo || '').trim() || null, idiomaValido, token, expiraEn]
     );
 
     const enlace = `${req.protocol}://${req.get('host')}/verificar-email.html?token=${token}`;
@@ -1774,9 +1777,9 @@ app.get('/api/auth/verificar-email', async (req, res) => {
     }
 
     const nuevo = await pool.query(
-      `INSERT INTO usuarios ("email","passwordHash","nombre","primerApellido","segundoApellido","apodo","emailVerificado")
-       VALUES ($1,$2,$3,$4,$5,$6,TRUE) RETURNING *`,
-      [pendiente.email, pendiente.passwordHash, pendiente.nombre, pendiente.primerApellido, pendiente.segundoApellido, pendiente.apodo]
+      `INSERT INTO usuarios ("email","passwordHash","nombre","primerApellido","segundoApellido","apodo","idioma","emailVerificado")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,TRUE) RETURNING *`,
+      [pendiente.email, pendiente.passwordHash, pendiente.nombre, pendiente.primerApellido, pendiente.segundoApellido, pendiente.apodo, pendiente.idioma || 'ca']
     );
     const usuario = nuevo.rows[0];
     await pool.query('DELETE FROM registros_pendientes WHERE "id" = $1', [pendiente.id]);
@@ -1820,7 +1823,7 @@ app.post('/api/auth/login', async (req, res) => {
     req.session.usuarioId = usuario.id;
     res.json({
       success: true,
-      usuario: { id: usuario.id, email: usuario.email, nombre: usuario.nombre, primerApellido: usuario.primerApellido, segundoApellido: usuario.segundoApellido, apodo: usuario.apodo, permisos: usuario.permisos, castellerId: usuario.castellerId }
+      usuario: { id: usuario.id, email: usuario.email, nombre: usuario.nombre, primerApellido: usuario.primerApellido, segundoApellido: usuario.segundoApellido, apodo: usuario.apodo, idioma: usuario.idioma, permisos: usuario.permisos, castellerId: usuario.castellerId }
     });
   } catch (error) {
     errorHandler(res, error);
@@ -1841,7 +1844,7 @@ app.get('/api/auth/me', async (req, res) => {
       return res.json({ success: true, usuario: null });
     }
     const u = result.rows[0];
-    res.json({ success: true, usuario: { id: u.id, email: u.email, nombre: u.nombre, primerApellido: u.primerApellido, segundoApellido: u.segundoApellido, apodo: u.apodo, permisos: u.permisos, castellerId: u.castellerId } });
+    res.json({ success: true, usuario: { id: u.id, email: u.email, nombre: u.nombre, primerApellido: u.primerApellido, segundoApellido: u.segundoApellido, apodo: u.apodo, idioma: u.idioma, permisos: u.permisos, castellerId: u.castellerId } });
   } catch (error) {
     errorHandler(res, error);
   }
@@ -1922,6 +1925,20 @@ app.put('/api/usuarios/:id', requireAdmin, async (req, res) => {
 });
 
 // Perfil propi (qualsevol usuari amb sessió, no cal ser admin)
+// Canviar l'idioma preferit — es pot cridar en qualsevol moment des de
+// qualsevol mòdul (el guardia global ja exigeix sessió iniciada aquí).
+app.put('/api/auth/idioma', async (req, res) => {
+  try {
+    const { idioma } = req.body;
+    if (!['ca', 'es', 'en'].includes(idioma)) return res.status(400).json({ success: false, error: 'Idioma no vàlid' });
+    if (!req.usuarioActual) return res.status(401).json({ success: false, error: 'Cal iniciar sessió' });
+    await pool.query('UPDATE usuarios SET "idioma" = $1 WHERE "id" = $2', [idioma, req.usuarioActual.id]);
+    res.json({ success: true });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
 app.put('/api/auth/perfil', async (req, res) => {
   try {
     const { nombre, passwordActual, passwordNueva } = req.body;
