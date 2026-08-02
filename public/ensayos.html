@@ -620,6 +620,7 @@ document.getElementById('assajos-list').addEventListener('click', (e) => {
   const btn = e.target.closest('.gestionar-btn');
   if (!btn) return;
   openEnsayo(Number(btn.dataset.id));
+  document.getElementById('detalle-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
 /* ---------------- Detalle: asistencia ---------------- */
@@ -642,18 +643,15 @@ async function openEnsayo(id) {
 
     document.getElementById('detalle-panel').style.display = 'block';
 
-    const modoCompleto = isTecnica || data.ensayo.publicado;
-    document.getElementById('vista-completa').style.display = modoCompleto ? 'block' : 'none';
-    document.getElementById('vista-autoinscripcio').style.display = modoCompleto ? 'none' : 'block';
+    // La vista d'auto-inscripció queda de moment aparcada — es retomarà quan
+    // el sistema de login real estigui connectat aquí, en comptes del
+    // simulador provisional.
+    document.getElementById('vista-completa').style.display = 'block';
+    document.getElementById('vista-autoinscripcio').style.display = 'none';
 
-    if (modoCompleto) {
-      document.getElementById('attendance-search').value = '';
-      renderAttendanceList();
-      await fetchEstructuras();
-    } else {
-      document.getElementById('autoinscripcio-notas').textContent = data.ensayo.notas || '';
-      iniciarAutoinscripcio();
-    }
+    document.getElementById('attendance-search').value = '';
+    renderAttendanceList();
+    await fetchEstructuras();
     renderEnsayosList();
   } catch (err) {
     console.error(err);
