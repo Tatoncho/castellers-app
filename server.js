@@ -103,28 +103,58 @@ app.use(session({
 //   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
 // Per Gmail: SMTP_HOST=smtp.gmail.com, SMTP_PORT=587, SMTP_USER=el teu gmail,
 // SMTP_PASS=una "contrasenya d'aplicació" (no la contrasenya normal del compte).
+// ✉️ Correu (verificació d'email + avisos). Prioritzem Resend (funciona per
+// HTTPS, no per un port SMTP — necessari perquè Render bloqueja els ports
+// SMTP tradicionals al pla gratuït). Si no hi ha RESEND_API_KEY, cau cap a
+// SMTP (útil el dia que hi hagi un pla de pagament o un altre proveïdor que
+// sí accepti SMTP). Sense cap de les dues, es queda en mode "simulat" (log).
 let mailer = null;
-if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+if (!process.env.RESEND_API_KEY && process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
   mailer = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT) || 587,
     secure: Number(process.env.SMTP_PORT) === 465,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    // si el proveïdor/xarxa bloqueja la connexió (com fa Render al pla
+    // gratuït amb els ports SMTP), que falli de seguida en comptes de deixar
+    // la petició penjada per sempre esperant una resposta que no arribarà
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000
   });
-} else {
-  console.warn('⚠️ SMTP no configurat (falten variables d\'entorn) — els correus només es mostraran al log del servidor, no s\'enviaran de veritat.');
+} else if (!process.env.RESEND_API_KEY) {
+  console.warn('⚠️ Ni RESEND_API_KEY ni SMTP configurats — els correus només es mostraran al log del servidor, no s\'enviaran de veritat.');
 }
 
 async function enviarCorreo({ to, subject, html }) {
-  if (mailer) {
+  if (process.env.RESEND_API_KEY) {
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: process.env.SMTP_FROM || 'onboarding@resend.dev',
+        to: [to],
+        subject,
+        html
+      })
+    });
+    if (!resp.ok) {
+      const detalle = await resp.text().catch(() => '');
+      throw new Error(`Resend ha respost ${resp.status}: ${detalle}`);
+    }
+  } else if (mailer) {
     await mailer.sendMail({
       from: process.env.SMTP_FROM || process.env.SMTP_USER,
       to, subject, html
     });
   } else {
-    // Sense SMTP configurat: deixem constància al log perquè es pugui provar
-    // el flux igualment (mira els logs de Render per veure l'enllaç).
-    console.log(`📧 [correu simulat, sense SMTP configurat] Per a: ${to} | Assumpte: ${subject}\n${html}`);
+    // Sense cap proveïdor configurat: deixem constància al log perquè es
+    // pugui provar el flux igualment (mira els logs de Render per veure
+    // l'enllaç).
+    console.log(`📧 [correu simulat, sense proveïdor configurat] Per a: ${to} | Assumpte: ${subject}\n${html}`);
   }
 }
 
@@ -1516,7 +1546,7 @@ app.put('/api/castell-plantilla/:tipo', async (req, res) => {
 // ?confirm=si només avisa.
 app.get('/api/migrate-usuarios', async (req, res) => {
   if (req.query.confirm !== 'si') {
-    return res.json({ success: false, aviso: 'Esto crea las tablas usuarios y verificaciones_email. Añade ?confirm=si para confirmar.' });
+    return res.json({ success: false, aviso: 'Esto crea las tablas usuarios y registros_pendientes. Añade ?confirm=si para confirmar.' });
   }
   try {
     await pool.query(`
@@ -1538,12 +1568,16 @@ app.get('/api/migrate-usuarios', async (req, res) => {
     await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "segundoApellido" TEXT`);
     await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "apodo" TEXT`);
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS verificaciones_email (
+      CREATE TABLE IF NOT EXISTS registros_pendientes (
         "id" SERIAL PRIMARY KEY,
-        "usuarioId" INTEGER NOT NULL REFERENCES usuarios("id") ON DELETE CASCADE,
+        "email" TEXT UNIQUE NOT NULL,
+        "passwordHash" TEXT NOT NULL,
+        "nombre" TEXT NOT NULL,
+        "primerApellido" TEXT NOT NULL,
+        "segundoApellido" TEXT,
+        "apodo" TEXT,
         "token" TEXT UNIQUE NOT NULL,
         "expiraEn" TIMESTAMP NOT NULL,
-        "usado" BOOLEAN NOT NULL DEFAULT FALSE,
         "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -1555,6 +1589,12 @@ app.get('/api/migrate-usuarios', async (req, res) => {
 
 function emailValido(email) {
   return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function escaparHtmlCorreo(str) {
+  return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
 }
 
 // Middleware: exigeix sessió iniciada
@@ -1592,71 +1632,149 @@ app.post('/api/auth/registro', async (req, res) => {
     if (!nombre || !nombre.trim()) return res.status(400).json({ success: false, error: 'El nom és obligatori' });
     if (!primerApellido || !primerApellido.trim()) return res.status(400).json({ success: false, error: 'El primer cognom és obligatori' });
 
-    const existente = await pool.query('SELECT "id" FROM usuarios WHERE "email" = $1', [email.toLowerCase()]);
+    const emailNorm = email.toLowerCase();
+
+    const existente = await pool.query('SELECT "id" FROM usuarios WHERE "email" = $1', [emailNorm]);
     if (existente.rows.length > 0) {
       return res.status(400).json({ success: false, error: 'Ja hi ha un compte amb aquest correu' });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
-    const nuevo = await pool.query(
-      `INSERT INTO usuarios ("email","passwordHash","nombre","primerApellido","segundoApellido","apodo")
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [email.toLowerCase(), passwordHash, nombre.trim(), primerApellido.trim(), (segundoApellido || '').trim() || null, (apodo || '').trim() || null]
-    );
-    const usuario = nuevo.rows[0];
+    // neteja de pas qualsevol registre pendent caducat (housekeeping barat,
+    // sense necessitat d'un cron a part)
+    await pool.query(`DELETE FROM registros_pendientes WHERE "expiraEn" < NOW()::timestamp`);
 
+    // Si ja hi havia una sol·licitud pendent (no caducada) per aquest
+    // correu, NO la substituïm mai per les dades noves ni reenviem res
+    // automàticament: avisem que ja n'hi ha una, perquè la persona pugui
+    // comprovar que el correu és realment el seu (és fàcil equivocar-se
+    // entre correus semblants d'una mateixa família, ex. garciaj@ vs
+    // garciaju@) abans de decidir reenviar-lo de veritat.
+    const pendienteExistente = await pool.query('SELECT "id" FROM registros_pendientes WHERE "email" = $1', [emailNorm]);
+    if (pendienteExistente.rows.length > 0) {
+      return res.json({
+        success: false,
+        yaPendiente: true,
+        email: emailNorm,
+        error: `Ja hi ha una sol·licitud pendent de verificar amb el correu ${emailNorm}. Comprova que sigui realment el teu correu.`
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
     const token = crypto.randomBytes(32).toString('hex');
     const expiraEn = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+
     await pool.query(
-      `INSERT INTO verificaciones_email ("usuarioId","token","expiraEn") VALUES ($1,$2,$3)`,
-      [usuario.id, token, expiraEn]
+      `INSERT INTO registros_pendientes
+         ("email","passwordHash","nombre","primerApellido","segundoApellido","apodo","token","expiraEn")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [emailNorm, passwordHash, nombre.trim(), primerApellido.trim(), (segundoApellido || '').trim() || null, (apodo || '').trim() || null, token, expiraEn]
     );
 
     const enlace = `${req.protocol}://${req.get('host')}/verificar-email.html?token=${token}`;
-    await enviarCorreo({
-      to: usuario.email,
-      subject: 'Verifica el teu correu — Castellers',
-      html: `<p>Hola ${usuario.nombre.split(' ')[0]},</p>
-             <p>Per confirmar el teu correu i continuar amb l'alta, clica aquí:</p>
-             <p><a href="${enlace}">${enlace}</a></p>
-             <p>L'enllaç caduca en 24 hores. Un cop verificat, un administrador haurà de validar el teu accés.</p>`
-    });
+    try {
+      await enviarCorreo({
+        to: emailNorm,
+        subject: 'Verifica el teu correu — Castellers',
+        html: `<p>Hola ${escaparHtmlCorreo(nombre.trim())},</p>
+               <p>Per confirmar el teu correu i continuar amb l'alta, clica aquí:</p>
+               <p><a href="${enlace}">${enlace}</a></p>
+               <p>L'enllaç caduca en 24 hores. Un cop verificat, un administrador haurà de validar el teu accés.</p>`
+      });
+    } catch (errCorreo) {
+      // el registre pendent ja ha quedat desat — l'usuari pot demanar-nos
+      // reenviar-lo o l'administrador pot mirar els logs, però la petició
+      // no s'ha de quedar penjada ni fallar per un problema del correu
+      console.error('Error enviant correu de verificació:', errCorreo);
+    }
 
-    res.json({ success: true, mensaje: 'Compte creat. Revisa el teu correu per verificar-lo.' });
+    res.json({ success: true, mensaje: 'Registre rebut. Revisa el teu correu per verificar-lo (caduca en 24 hores).' });
   } catch (error) {
     errorHandler(res, error);
   }
 });
 
-// Verificar correu (enllaç del token). Un cop verificat, queda pendent
-// d'aprovació d'un admin.
+// Verificar correu (enllaç del token). Aquí és quan es crea l'usuari de
+// veritat — si mai es verifica, no queda cap usuari desat, només el
+// registre pendent (que a més caduca sol). Un cop verificat, l'usuari queda
+// pendent d'aprovació d'un admin.
+// Reenviar el correu de verificació d'una sol·licitud pendent — nomès
+// s'invoca si la persona confirma explícitament que el correu és el seu
+// (mai automàticament des de /registro, per evitar enviar correus a algú
+// que no els ha demanat per un simple error de tecleig).
+app.post('/api/auth/reenviar-verificacion', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!emailValido(email)) return res.status(400).json({ success: false, error: 'Correu no vàlid' });
+    const emailNorm = email.toLowerCase();
+
+    const result = await pool.query('SELECT * FROM registros_pendientes WHERE "email" = $1', [emailNorm]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'No hi ha cap sol·licitud pendent amb aquest correu' });
+    }
+    const p = result.rows[0];
+    const enlace = `${req.protocol}://${req.get('host')}/verificar-email.html?token=${p.token}`;
+
+    try {
+      await enviarCorreo({
+        to: emailNorm,
+        subject: 'Verifica el teu correu — Castellers',
+        html: `<p>Hola ${escaparHtmlCorreo(p.nombre)},</p>
+               <p>Aquí tens de nou l'enllaç per confirmar el teu correu:</p>
+               <p><a href="${enlace}">${enlace}</a></p>
+               <p>Si no vas ser tu qui va omplir aquest formulari, pots ignorar aquest correu amb tranquil·litat.</p>`
+      });
+    } catch (errCorreo) {
+      console.error('Error reenviant correu de verificació:', errCorreo);
+      return res.status(500).json({ success: false, error: 'No s\'ha pogut enviar el correu. Torna-ho a provar en uns minuts.' });
+    }
+
+    res.json({ success: true, mensaje: 'Enllaç reenviat. Revisa el teu correu.' });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
 app.get('/api/auth/verificar-email', async (req, res) => {
   try {
     const { token } = req.query;
     if (!token) return res.status(400).json({ success: false, error: 'Falta el token' });
 
-    const result = await pool.query(
-      `SELECT v.*, u."email", u."nombre" FROM verificaciones_email v
-       JOIN usuarios u ON u."id" = v."usuarioId"
-       WHERE v."token" = $1`,
-      [token]
-    );
-    if (result.rows.length === 0) return res.status(400).json({ success: false, error: 'Enllaç no vàlid' });
-    const verificacion = result.rows[0];
-    if (verificacion.usado) return res.status(400).json({ success: false, error: 'Aquest enllaç ja es va fer servir' });
-    if (new Date(verificacion.expiraEn) < new Date()) return res.status(400).json({ success: false, error: 'Aquest enllaç ha caducat' });
+    const result = await pool.query('SELECT * FROM registros_pendientes WHERE "token" = $1', [token]);
+    if (result.rows.length === 0) return res.status(400).json({ success: false, error: 'Enllaç no vàlid o ja fet servir' });
+    const pendiente = result.rows[0];
+    if (new Date(pendiente.expiraEn) < new Date()) {
+      await pool.query('DELETE FROM registros_pendientes WHERE "id" = $1', [pendiente.id]);
+      return res.status(400).json({ success: false, error: 'Aquest enllaç ha caducat — torna a registrar-te' });
+    }
 
-    await pool.query('UPDATE usuarios SET "emailVerificado" = TRUE WHERE "id" = $1', [verificacion.usuarioId]);
-    await pool.query('UPDATE verificaciones_email SET "usado" = TRUE WHERE "id" = $1', [verificacion.id]);
+    // pot ser que, entre que es va registrar i ara, algú altre hagi creat un
+    // compte amb el mateix correu (poc probable, però ho comprovem igual)
+    const yaExiste = await pool.query('SELECT "id" FROM usuarios WHERE "email" = $1', [pendiente.email]);
+    if (yaExiste.rows.length > 0) {
+      await pool.query('DELETE FROM registros_pendientes WHERE "id" = $1', [pendiente.id]);
+      return res.status(400).json({ success: false, error: 'Ja hi ha un compte amb aquest correu' });
+    }
+
+    const nuevo = await pool.query(
+      `INSERT INTO usuarios ("email","passwordHash","nombre","primerApellido","segundoApellido","apodo","emailVerificado")
+       VALUES ($1,$2,$3,$4,$5,$6,TRUE) RETURNING *`,
+      [pendiente.email, pendiente.passwordHash, pendiente.nombre, pendiente.primerApellido, pendiente.segundoApellido, pendiente.apodo]
+    );
+    const usuario = nuevo.rows[0];
+    await pool.query('DELETE FROM registros_pendientes WHERE "id" = $1', [pendiente.id]);
 
     // avisem els admins que hi ha una alta pendent de validar
     const admins = await pool.query(`SELECT "email" FROM usuarios WHERE 'AdminGeneral' = ANY("permisos") AND "estado" = 'activo'`);
     for (const admin of admins.rows) {
-      await enviarCorreo({
-        to: admin.email,
-        subject: 'Nova alta pendent de validar — Castellers',
-        html: `<p>${verificacion.nombre} (${verificacion.email}) ha verificat el seu correu i espera que li validis l'accés al panell d'usuaris.</p>`
-      });
+      try {
+        await enviarCorreo({
+          to: admin.email,
+          subject: 'Nova alta pendent de validar — Castellers',
+          html: `<p>${escaparHtmlCorreo(usuario.nombre)} (${escaparHtmlCorreo(usuario.email)}) ha verificat el seu correu i espera que li validis l'accés al panell d'usuaris.</p>`
+        });
+      } catch (errCorreo) {
+        console.error('Error avisant a l\'admin', admin.email, errCorreo);
+      }
     }
 
     res.json({ success: true, mensaje: 'Correu verificat. Un administrador ha de validar el teu accés abans que puguis entrar.' });
@@ -1846,7 +1964,7 @@ const ORDRE_TAULES = [
   'posiciones_pinya', 'roles_castillo', 'castellers', 'casteller_roles',
   'ensayos', 'ensayo_asistentes', 'estructuras_ensayo', 'estructura_posiciones',
   'plantillas_posicion', 'imagenes_referencia', 'categorias_imagen',
-  'castells_estructura', 'castell_plantilla_posicion', 'usuarios', 'verificaciones_email'
+  'castells_estructura', 'castell_plantilla_posicion', 'usuarios', 'registros_pendientes'
 ];
 
 // Taules amb clau primària composta (sense columna pròpia "id") — a
@@ -1938,10 +2056,10 @@ async function crearEsquemaCompleto(clientDestino) {
     )
   `);
   await clientDestino.query(`
-    CREATE TABLE IF NOT EXISTS verificaciones_email (
-      "id" SERIAL PRIMARY KEY, "usuarioId" INTEGER NOT NULL REFERENCES usuarios("id") ON DELETE CASCADE,
-      "token" TEXT UNIQUE NOT NULL, "expiraEn" TIMESTAMP NOT NULL, "usado" BOOLEAN NOT NULL DEFAULT FALSE,
-      "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    CREATE TABLE IF NOT EXISTS registros_pendientes (
+      "id" SERIAL PRIMARY KEY, "email" TEXT UNIQUE NOT NULL, "passwordHash" TEXT NOT NULL, "nombre" TEXT NOT NULL,
+      "primerApellido" TEXT NOT NULL, "segundoApellido" TEXT, "apodo" TEXT,
+      "token" TEXT UNIQUE NOT NULL, "expiraEn" TIMESTAMP NOT NULL, "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
 }

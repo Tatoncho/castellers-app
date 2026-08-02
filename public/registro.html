@@ -96,6 +96,12 @@ form.addEventListener('submit', async (e) => {
       body: JSON.stringify({ nombre, primerApellido, segundoApellido, apodo, email, password })
     });
     const data = await res.json();
+
+    if (data.yaPendiente) {
+      mostrarAvisoPendiente(data.email);
+      btn.disabled = false;
+      return;
+    }
     if (!res.ok || !data.success) throw new Error(data.error || 'Error desconegut');
 
     msg.textContent = data.mensaje || 'Compte creat. Revisa el teu correu.';
@@ -107,6 +113,35 @@ form.addEventListener('submit', async (e) => {
     btn.disabled = false;
   }
 });
+
+function mostrarAvisoPendiente(email) {
+  msg.className = 'msg error';
+  msg.innerHTML = `
+    Ja hi ha una sol·licitud pendent de verificar amb el correu <strong>${email}</strong>.
+    Comprova que sigui realment el teu correu (és fàcil equivocar-se entre adreces semblants).
+    <br><br>
+    <button type="button" id="reenviar-btn" style="width:auto; padding:8px 14px;">És el meu correu — reenvia\'m l\'enllaç</button>
+  `;
+  document.getElementById('reenviar-btn').addEventListener('click', async (e) => {
+    const btnReenviar = e.target;
+    btnReenviar.disabled = true;
+    try {
+      const res = await fetch(`${API}/api/auth/reenviar-verificacion`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Error desconegut');
+      msg.textContent = data.mensaje;
+      msg.className = 'msg ok';
+    } catch (err) {
+      msg.textContent = err.message;
+      msg.className = 'msg error';
+      btnReenviar.disabled = false;
+    }
+  });
+}
 </script>
 </body>
 </html>
