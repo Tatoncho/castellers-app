@@ -96,6 +96,50 @@ app.use(session({
   }
 }));
 
+// Middleware: exigeix sessió iniciada
+async function requireLogin(req, res, next) {
+  if (!req.session || !req.session.usuarioId) {
+    return res.status(401).json({ success: false, error: 'Cal iniciar sessió' });
+  }
+  try {
+    const result = await pool.query('SELECT * FROM usuarios WHERE "id" = $1', [req.session.usuarioId]);
+    if (result.rows.length === 0 || result.rows[0].estado !== 'activo') {
+      req.session.destroy(() => {});
+      return res.status(401).json({ success: false, error: 'Sessió no vàlida' });
+    }
+    req.usuarioActual = result.rows[0];
+    next();
+  } catch (error) {
+    errorHandler(res, error);
+  }
+}
+
+// Middleware: exigeix, a més, permís d'AdminGeneral
+function requireAdmin(req, res, next) {
+  if (!req.usuarioActual || !(req.usuarioActual.permisos || []).includes('AdminGeneral')) {
+    return res.status(403).json({ success: false, error: 'Necessites permisos d\'administrador' });
+  }
+  next();
+}
+
+// 🔒 Guardia global: TOTA la API exigeix sessió iniciada, tret de les rutes
+// d'autenticació en si mateixes (login/registre/verificació...) i de les
+// rutes temporals de migració (que ja de per si s'han d'esborrar aviat).
+// Això és el que de veritat protegeix les dades — l'ocultació visual al
+// frontend (CSS/redirect) és només per evitar el parpelleig, mai seguretat
+// real: sense això, qualsevol podria trucar directament a l'API sense passar
+// per cap pàgina ni sessió.
+const RUTAS_PUBLICAS_API = new Set([
+  '/api/auth/registro', '/api/auth/login', '/api/auth/logout',
+  '/api/auth/verificar-email', '/api/auth/reenviar-verificacion', '/api/auth/me'
+]);
+app.use('/api/', (req, res, next) => {
+  const rutaCompleta = req.originalUrl.split('?')[0];
+  const esTemporal = /^\/api\/(migrate-|bootstrap-admin|migrar-a-supabase|debug-|test-|fix-id-sequence|reset-miembros)/.test(rutaCompleta);
+  if (RUTAS_PUBLICAS_API.has(rutaCompleta) || esTemporal) return next();
+  requireLogin(req, res, next);
+});
+
 // ✉️ Correu (verificació d'email + avisos). Configuració 100% per variables
 // d'entorn perquè canviar de Gmail a un altre proveïdor (ex. el correu
 // @castellersdetortosa.cat el dia que hi tinguis accés) sigui només canviar
@@ -1597,32 +1641,6 @@ function escaparHtmlCorreo(str) {
   }[c]));
 }
 
-// Middleware: exigeix sessió iniciada
-async function requireLogin(req, res, next) {
-  if (!req.session || !req.session.usuarioId) {
-    return res.status(401).json({ success: false, error: 'Cal iniciar sessió' });
-  }
-  try {
-    const result = await pool.query('SELECT * FROM usuarios WHERE "id" = $1', [req.session.usuarioId]);
-    if (result.rows.length === 0 || result.rows[0].estado !== 'activo') {
-      req.session.destroy(() => {});
-      return res.status(401).json({ success: false, error: 'Sessió no vàlida' });
-    }
-    req.usuarioActual = result.rows[0];
-    next();
-  } catch (error) {
-    errorHandler(res, error);
-  }
-}
-
-// Middleware: exigeix, a més, permís d'AdminGeneral
-function requireAdmin(req, res, next) {
-  if (!req.usuarioActual || !(req.usuarioActual.permisos || []).includes('AdminGeneral')) {
-    return res.status(403).json({ success: false, error: 'Necessites permisos d\'administrador' });
-  }
-  next();
-}
-
 // Registre: crea l'usuari (pendent), envia correu de verificació
 app.post('/api/auth/registro', async (req, res) => {
   try {
@@ -1832,7 +1850,7 @@ app.get('/api/auth/me', async (req, res) => {
 /* ---- Gestió d'usuaris (només AdminGeneral) ---- */
 
 // Altes pendents: verificades però encara sense validar per un admin
-app.get('/api/usuarios/pendientes', requireLogin, requireAdmin, async (req, res) => {
+app.get('/api/usuarios/pendientes', requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT "id","email","nombre","primerApellido","segundoApellido","apodo","created_at" FROM usuarios
@@ -1845,7 +1863,7 @@ app.get('/api/usuarios/pendientes', requireLogin, requireAdmin, async (req, res)
   }
 });
 
-app.get('/api/usuarios', requireLogin, requireAdmin, async (req, res) => {
+app.get('/api/usuarios', requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(`SELECT "id","email","nombre","primerApellido","segundoApellido","apodo","estado","emailVerificado","permisos","castellerId","created_at" FROM usuarios ORDER BY "created_at" DESC`);
     res.json({ success: true, data: result.rows });
@@ -1854,7 +1872,7 @@ app.get('/api/usuarios', requireLogin, requireAdmin, async (req, res) => {
   }
 });
 
-app.put('/api/usuarios/:id/aprobar', requireLogin, requireAdmin, async (req, res) => {
+app.put('/api/usuarios/:id/aprobar', requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(
       `UPDATE usuarios SET "estado" = 'activo' WHERE "id" = $1 AND "emailVerificado" = TRUE RETURNING *`,
@@ -1873,7 +1891,7 @@ app.put('/api/usuarios/:id/aprobar', requireLogin, requireAdmin, async (req, res
   }
 });
 
-app.put('/api/usuarios/:id/rechazar', requireLogin, requireAdmin, async (req, res) => {
+app.put('/api/usuarios/:id/rechazar', requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(`UPDATE usuarios SET "estado" = 'rechazado' WHERE "id" = $1 RETURNING *`, [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Usuari no trobat' });
@@ -1884,7 +1902,7 @@ app.put('/api/usuarios/:id/rechazar', requireLogin, requireAdmin, async (req, re
 });
 
 // Editar permisos / dades d'un usuari (admin)
-app.put('/api/usuarios/:id', requireLogin, requireAdmin, async (req, res) => {
+app.put('/api/usuarios/:id', requireAdmin, async (req, res) => {
   try {
     const { nombre, permisos, estado, castellerId } = req.body;
     const result = await pool.query(
@@ -1904,7 +1922,7 @@ app.put('/api/usuarios/:id', requireLogin, requireAdmin, async (req, res) => {
 });
 
 // Perfil propi (qualsevol usuari amb sessió, no cal ser admin)
-app.put('/api/auth/perfil', requireLogin, async (req, res) => {
+app.put('/api/auth/perfil', async (req, res) => {
   try {
     const { nombre, passwordActual, passwordNueva } = req.body;
     const updates = [];

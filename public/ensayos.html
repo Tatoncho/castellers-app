@@ -164,10 +164,6 @@
     <a href="/usuarios.html">Usuaris</a>
   </div>
   <div class="spacer"></div>
-  <label style="display:flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--gold); border:1px solid var(--gold); padding:6px 10px; border-radius:var(--radius); cursor:pointer;" title="Provisional: fins que hi hagi login real, això simula tenir permisos de Tècnica.">
-    <input type="checkbox" id="tecnica-toggle" style="margin:0;">
-    Sóc de Tècnica (simulat)
-  </label>
   <span class="user-chip" id="user-chip">…</span>
 </nav>
 <script>
@@ -395,28 +391,23 @@ let joMateixId = localStorage.getItem('castellers_jo_mateix_id')
   : null;
 let asistentesSet = new Set();
 
-// ⚠️ PROVISIONAL: fins que hi hagi login real amb permisos de veritat, això
-// simula si l'usuari és de Tècnica (guardat només al navegador, no és segur
-// ni real — no ho facis servir com a control d'accés de debò).
-let isTecnica = localStorage.getItem('castellers_tecnica_simulado') === 'true';
-const tecnicaToggle = document.getElementById('tecnica-toggle');
-tecnicaToggle.checked = isTecnica;
-tecnicaToggle.addEventListener('change', () => {
-  isTecnica = tecnicaToggle.checked;
-  localStorage.setItem('castellers_tecnica_simulado', isTecnica ? 'true' : 'false');
-  aplicarPermisos();
-  renderEnsayosList();
-  renderCalendario();
+// Permisos reals de la sessió (substitueix el simulador provisional).
+let isTecnica = false;
+let usuarioActual = null;
 
-  // si estava obert un assaig que ja no pot veure, el tanquem
-  if (!isTecnica && currentEnsayoId) {
-    const actual = ensayosList.find(e => e.id === currentEnsayoId);
-    if (actual && !actual.publicado) {
-      currentEnsayoId = null;
-      document.getElementById('detalle-panel').style.display = 'none';
-    }
+async function cargarPermisosReales() {
+  try {
+    const res = await fetch(`${API}/api/auth/me`);
+    const data = await res.json();
+    usuarioActual = data.usuario;
+    const permisos = usuarioActual ? (usuarioActual.permisos || []) : [];
+    isTecnica = permisos.includes('Tècnica') || permisos.includes('AdminGeneral');
+  } catch (err) {
+    console.error(err);
+    isTecnica = false;
   }
-});
+  aplicarPermisos();
+}
 
 function aplicarPermisos() {
   document.querySelectorAll('.solo-tecnica').forEach(el => {
@@ -1071,7 +1062,7 @@ document.getElementById('crear-pinya-btn').addEventListener('click', async () =>
 });
 
 (async function init() {
-  aplicarPermisos();
+  await cargarPermisosReales();
   await fetchMembers();
   await fetchEnsayos();
 })();
