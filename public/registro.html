@@ -45,6 +45,12 @@
     <form id="registro-form">
       <label for="nombre">Nom</label>
       <input type="text" id="nombre" required>
+      <label for="primerApellido">Primer cognom</label>
+      <input type="text" id="primerApellido" required>
+      <label for="segundoApellido">Segon cognom</label>
+      <input type="text" id="segundoApellido">
+      <label for="apodo">Àlies (opcional)</label>
+      <input type="text" id="apodo">
       <label for="email">Correu</label>
       <input type="email" id="email" required>
       <label for="password">Contrasenya</label>
@@ -68,6 +74,9 @@ form.addEventListener('submit', async (e) => {
   msg.className = 'msg';
 
   const nombre = document.getElementById('nombre').value.trim();
+  const primerApellido = document.getElementById('primerApellido').value.trim();
+  const segundoApellido = document.getElementById('segundoApellido').value.trim();
+  const apodo = document.getElementById('apodo').value.trim();
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
   const password2 = document.getElementById('password2').value;
@@ -84,7 +93,7 @@ form.addEventListener('submit', async (e) => {
     const res = await fetch(`${API}/api/auth/registro`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, email, password })
+      body: JSON.stringify({ nombre, primerApellido, segundoApellido, apodo, email, password })
     });
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.error || 'Error desconegut');

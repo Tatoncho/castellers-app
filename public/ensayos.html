@@ -168,8 +168,31 @@
     <input type="checkbox" id="tecnica-toggle" style="margin:0;">
     Sóc de Tècnica (simulat)
   </label>
-  <span class="user-chip">sense sessió — properament</span>
+  <span class="user-chip" id="user-chip">…</span>
 </nav>
+<script>
+// Guardia de sessió: si no has iniciat sessió, et redirigeix a /login.html.
+// S'executa abans que la resta del contingut de la pàgina es carregui.
+(function() {
+  fetch('/api/auth/me').then(r => r.json()).then(data => {
+    if (!data.usuario) {
+      location.href = '/login.html';
+      return;
+    }
+    window.usuarioActual = data.usuario;
+    const chip = document.getElementById('user-chip');
+    if (chip) {
+      chip.textContent = `${data.usuario.nombre} · Tancar sessió`;
+      chip.style.cursor = 'pointer';
+      chip.onclick = async () => {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        location.href = '/login.html';
+      };
+    }
+  }).catch(() => { location.href = '/login.html'; });
+})();
+</script>
+
 
 <main>
 <div class="top-row">

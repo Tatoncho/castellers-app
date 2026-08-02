@@ -1532,6 +1532,11 @@ app.get('/api/migrate-usuarios', async (req, res) => {
         "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    // idempotent: si la taula ja existia d'abans (com ara mateix), afegim
+    // les columnes noves del nom complet
+    await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "primerApellido" TEXT`);
+    await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "segundoApellido" TEXT`);
+    await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "apodo" TEXT`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS verificaciones_email (
         "id" SERIAL PRIMARY KEY,
@@ -1581,10 +1586,11 @@ function requireAdmin(req, res, next) {
 // Registre: crea l'usuari (pendent), envia correu de verificació
 app.post('/api/auth/registro', async (req, res) => {
   try {
-    const { email, password, nombre } = req.body;
+    const { email, password, nombre, primerApellido, segundoApellido, apodo } = req.body;
     if (!emailValido(email)) return res.status(400).json({ success: false, error: 'Correu no vàlid' });
     if (!password || password.length < 6) return res.status(400).json({ success: false, error: 'La contrasenya ha de tenir almenys 6 caràcters' });
     if (!nombre || !nombre.trim()) return res.status(400).json({ success: false, error: 'El nom és obligatori' });
+    if (!primerApellido || !primerApellido.trim()) return res.status(400).json({ success: false, error: 'El primer cognom és obligatori' });
 
     const existente = await pool.query('SELECT "id" FROM usuarios WHERE "email" = $1', [email.toLowerCase()]);
     if (existente.rows.length > 0) {
@@ -1593,8 +1599,9 @@ app.post('/api/auth/registro', async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const nuevo = await pool.query(
-      `INSERT INTO usuarios ("email","passwordHash","nombre") VALUES ($1,$2,$3) RETURNING *`,
-      [email.toLowerCase(), passwordHash, nombre.trim()]
+      `INSERT INTO usuarios ("email","passwordHash","nombre","primerApellido","segundoApellido","apodo")
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [email.toLowerCase(), passwordHash, nombre.trim(), primerApellido.trim(), (segundoApellido || '').trim() || null, (apodo || '').trim() || null]
     );
     const usuario = nuevo.rows[0];
 
@@ -1677,7 +1684,7 @@ app.post('/api/auth/login', async (req, res) => {
     req.session.usuarioId = usuario.id;
     res.json({
       success: true,
-      usuario: { id: usuario.id, email: usuario.email, nombre: usuario.nombre, permisos: usuario.permisos, castellerId: usuario.castellerId }
+      usuario: { id: usuario.id, email: usuario.email, nombre: usuario.nombre, primerApellido: usuario.primerApellido, segundoApellido: usuario.segundoApellido, apodo: usuario.apodo, permisos: usuario.permisos, castellerId: usuario.castellerId }
     });
   } catch (error) {
     errorHandler(res, error);
@@ -1698,7 +1705,7 @@ app.get('/api/auth/me', async (req, res) => {
       return res.json({ success: true, usuario: null });
     }
     const u = result.rows[0];
-    res.json({ success: true, usuario: { id: u.id, email: u.email, nombre: u.nombre, permisos: u.permisos, castellerId: u.castellerId } });
+    res.json({ success: true, usuario: { id: u.id, email: u.email, nombre: u.nombre, primerApellido: u.primerApellido, segundoApellido: u.segundoApellido, apodo: u.apodo, permisos: u.permisos, castellerId: u.castellerId } });
   } catch (error) {
     errorHandler(res, error);
   }
@@ -1710,7 +1717,7 @@ app.get('/api/auth/me', async (req, res) => {
 app.get('/api/usuarios/pendientes', requireLogin, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT "id","email","nombre","created_at" FROM usuarios
+      `SELECT "id","email","nombre","primerApellido","segundoApellido","apodo","created_at" FROM usuarios
        WHERE "estado" = 'pendiente' AND "emailVerificado" = TRUE
        ORDER BY "created_at" ASC`
     );
@@ -1722,7 +1729,7 @@ app.get('/api/usuarios/pendientes', requireLogin, requireAdmin, async (req, res)
 
 app.get('/api/usuarios', requireLogin, requireAdmin, async (req, res) => {
   try {
-    const result = await pool.query(`SELECT "id","email","nombre","estado","emailVerificado","permisos","castellerId","created_at" FROM usuarios ORDER BY "created_at" DESC`);
+    const result = await pool.query(`SELECT "id","email","nombre","primerApellido","segundoApellido","apodo","estado","emailVerificado","permisos","castellerId","created_at" FROM usuarios ORDER BY "created_at" DESC`);
     res.json({ success: true, data: result.rows });
   } catch (error) {
     errorHandler(res, error);
@@ -1924,6 +1931,7 @@ async function crearEsquemaCompleto(clientDestino) {
   await clientDestino.query(`
     CREATE TABLE IF NOT EXISTS usuarios (
       "id" SERIAL PRIMARY KEY, "email" TEXT UNIQUE NOT NULL, "passwordHash" TEXT NOT NULL, "nombre" TEXT NOT NULL,
+      "primerApellido" TEXT, "segundoApellido" TEXT, "apodo" TEXT,
       "castellerId" INTEGER REFERENCES castellers("id") ON DELETE SET NULL, "estado" TEXT NOT NULL DEFAULT 'pendiente',
       "emailVerificado" BOOLEAN NOT NULL DEFAULT FALSE, "permisos" TEXT[] NOT NULL DEFAULT '{}',
       "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP

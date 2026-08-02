@@ -112,22 +112,29 @@ function escapeHtml(str) {
   }[c]));
 }
 
+function nombreCompleto(u) {
+  const partes = [u.nombre, u.primerApellido, u.segundoApellido].filter(Boolean);
+  const base = partes.join(' ');
+  return u.apodo ? `${base} · ${u.apodo}` : base;
+}
+
 async function cargarSesion() {
   const res = await fetch(`${API}/api/auth/me`);
   const data = await res.json();
   usuarioActual = data.usuario;
 
-  const chip = document.getElementById('user-chip');
-  if (usuarioActual) {
-    chip.textContent = `${usuarioActual.nombre} · Tancar sessió`;
-    chip.onclick = async () => {
-      await fetch(`${API}/api/auth/logout`, { method: 'POST' });
-      location.reload();
-    };
-  } else {
-    chip.textContent = 'Iniciar sessió';
-    chip.onclick = () => location.href = '/login.html';
+  if (!usuarioActual) {
+    location.href = '/login.html';
+    return;
   }
+
+  const chip = document.getElementById('user-chip');
+  chip.textContent = `${usuarioActual.nombre} · Tancar sessió`;
+  chip.style.cursor = 'pointer';
+  chip.onclick = async () => {
+    await fetch(`${API}/api/auth/logout`, { method: 'POST' });
+    location.href = '/login.html';
+  };
 }
 
 function esAdmin() {
@@ -230,7 +237,7 @@ async function cargarPendientes() {
     body.innerHTML = `<ul class="lista">${pendientes.map(u => `
       <li>
         <div>
-          <div class="u-nombre">${escapeHtml(u.nombre)}</div>
+          <div class="u-nombre">${escapeHtml(nombreCompleto(u))}</div>
           <div class="u-email">${escapeHtml(u.email)}</div>
         </div>
         <div class="u-meta">
@@ -278,7 +285,7 @@ async function cargarUsuarios() {
     body.innerHTML = `<ul class="lista">${usuarios.map(u => `
       <li data-id="${u.id}">
         <div>
-          <div class="u-nombre">${escapeHtml(u.nombre)}</div>
+          <div class="u-nombre">${escapeHtml(nombreCompleto(u))}</div>
           <div class="u-email">${escapeHtml(u.email)}</div>
         </div>
         <div class="u-meta">
@@ -304,7 +311,7 @@ let permisosUsuarioId = null;
 function abrirEditorPermisos(usuario) {
   permisosUsuarioId = usuario.id;
   const actuales = new Set(usuario.permisos || []);
-  document.getElementById('permisos-titulo').textContent = `Permisos · ${usuario.nombre}`;
+  document.getElementById('permisos-titulo').textContent = `Permisos · ${nombreCompleto(usuario)}`;
   document.getElementById('permisos-checks').innerHTML = PERMISOS_DISPONIBLES.map(p => `
     <label><input type="checkbox" value="${escapeHtml(p)}" ${actuales.has(p) ? 'checked' : ''}> ${escapeHtml(p)}</label>
   `).join('');
