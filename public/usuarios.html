@@ -8,10 +8,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root{ --paper:#EAE6DA; --paper-card:#F1EEE4; --ink:#20241F; --ink-soft:#4B5049; --thread:#9E2B3B; --gold:#B8893D; --line:#C7C2B0; --radius:3px; }
+  :root{ --paper:#EAE6DA; --paper-card:#F1EEE4; --ink:#20241F; --ink-soft:#4B5049; --thread:#9E2B3B; --gold:#B8893D; --line:#C7C2B0; --ok:#3E7A4E; --radius:3px; }
   * { box-sizing: border-box; }
-  body { margin:0; background: linear-gradient(var(--line) 1px, transparent 1px) 0 0/100% 34px, var(--paper); color:var(--ink); font-family:'Work Sans',sans-serif; font-size:15px; line-height:1.5; }
+  body { margin:0; background: linear-gradient(var(--line) 1px, transparent 1px) 0 0/100% 34px, var(--paper); color:var(--ink); font-family:'Work Sans',sans-serif; font-size:14.5px; line-height:1.5; }
   a { color: var(--thread); }
+
   nav.topnav { display:flex; align-items:center; gap:22px; padding:18px 28px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
   nav.topnav .brand { display:flex; align-items:center; gap:10px; font-family:'Fraunces',serif; font-weight:700; font-size:18px; text-decoration:none; color:var(--ink); font-variant:small-caps; }
   nav.topnav .links { display:flex; gap:4px; flex-wrap:wrap; }
@@ -19,15 +20,48 @@
   nav.topnav .links a:hover { border-color:var(--line); color:var(--ink); }
   nav.topnav .links a.active { color:var(--ink); border-color:var(--ink); }
   nav.topnav .spacer { margin-left:auto; }
-  nav.topnav .user-chip { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); border:1px solid var(--line); padding:7px 11px; border-radius:var(--radius); }
+  nav.topnav .user-chip { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); border:1px solid var(--line); padding:7px 11px; border-radius:var(--radius); cursor:pointer; background:none; }
 
-  main { max-width: 900px; margin: 0 auto; padding: 60px 28px 100px; text-align: center; }
-  .badge { display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--gold); border:1px solid var(--gold); padding:4px 12px; border-radius:20px; margin-bottom:18px; }
-  h1 { font-family:'Fraunces',serif; font-weight:700; font-size:30px; margin: 0 0 14px; }
-  p.lead { color: var(--ink-soft); max-width: 56ch; margin: 0 auto 32px; }
-  .preview { background: var(--paper-card); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; text-align: left; }
-  .preview h3 { font-family:'Fraunces',serif; font-size: 17px; margin: 0 0 10px; }
-  .preview ul { margin: 0; padding-left: 20px; color: var(--ink-soft); font-size: 13.5px; line-height: 1.9; }
+  main { max-width: 1000px; margin: 0 auto; padding: 34px 28px 80px; }
+  section.panel { background: var(--paper-card); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 22px; }
+  .panel-head { padding: 15px 18px 12px; border-bottom: 1px solid var(--line); }
+  .panel-head h2 { font-family:'Fraunces',serif; font-weight:600; font-size:17px; margin:0; }
+  .panel-body { padding: 18px; }
+
+  .empty-note { color: var(--ink-soft); font-style: italic; padding: 14px 0; text-align:center; }
+  ul.lista { list-style:none; margin:0; padding:0; }
+  ul.lista li { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding: 12px; border:1px solid var(--line); border-radius: var(--radius); margin-bottom:8px; background: var(--paper); }
+  .u-nombre { font-family:'Fraunces',serif; font-weight:600; }
+  .u-email { font-size:12px; color: var(--ink-soft); }
+  .u-meta { margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .status-badge { font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; padding:2px 8px; border-radius:20px; border:1px solid var(--ink-soft); color:var(--ink-soft); }
+  .status-badge.activo { border-color: var(--ok); color: var(--ok); }
+  .status-badge.pendiente { border-color: var(--gold); color: var(--gold); }
+  .status-badge.rechazado { border-color: var(--thread); color: var(--thread); }
+  .perm-chip { font-family:'IBM Plex Mono',monospace; font-size:9.5px; padding:1px 7px; border-radius:20px; border:1px solid var(--ink-soft); color:var(--ink-soft); }
+
+  button { cursor:pointer; border:none; border-radius:var(--radius); font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.04em; text-transform:uppercase; padding:8px 12px; }
+  button.primary { background: var(--thread); color: var(--paper-card); }
+  button.primary:hover { background:#862432; }
+  button.ghost { background: transparent; border:1px solid var(--ink); color: var(--ink); }
+  button.ghost:hover { background: var(--ink); color: var(--paper-card); }
+
+  label { display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); margin:12px 0 4px; }
+  label:first-of-type { margin-top:0; }
+  input[type="text"], input[type="password"] { width:100%; max-width: 340px; padding:9px 10px; border:1px solid var(--line); background:var(--paper); border-radius:var(--radius); }
+  .check-row { display:flex; gap:16px; margin-top:6px; flex-wrap:wrap; }
+  .check-row label { display:flex; align-items:center; gap:6px; margin:0; font-size:12px; text-transform:none; letter-spacing:0; }
+  .msg { margin-top:12px; padding:9px 11px; border-radius:var(--radius); font-size:13px; display:none; max-width: 340px; }
+  .msg.ok { display:block; background:#E4EEE6; border:1px solid var(--ok); color:var(--ok); }
+  .msg.error { display:block; background:#F3E7E5; border:1px solid var(--thread); color:var(--thread); }
+
+  .badge-info { display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--gold); border:1px solid var(--gold); padding:3px 10px; border-radius:20px; margin-bottom:14px; }
+
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(32,36,31,0.55); align-items:flex-start; justify-content:center; padding:30px 20px; z-index:80; overflow-y:auto; }
+  .modal-overlay.open { display:flex; }
+  .modal-box { background: var(--paper); border-radius: var(--radius); max-width: 400px; width:100%; padding: 20px 22px 22px; border:1px solid var(--line); }
+  .modal-box h3 { font-family:'Fraunces',serif; font-size:19px; margin:0 0 14px; }
+  .modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top: 18px; }
 </style>
 </head>
 <body>
@@ -50,23 +84,261 @@
     <a href="/usuarios.html" class="active">Usuaris</a>
   </div>
   <div class="spacer"></div>
-  <span class="user-chip">sense sessió — properament</span>
+  <span class="user-chip" id="user-chip">…</span>
 </nav>
 
-<main>
-  <span class="badge">Properament</span>
-  <h1>Gestió d'usuaris</h1>
-  <p class="lead">Aquí es gestionaran els comptes que es logegen a l'app: qui pot fer què, altes pendents de confirmar i el perfil de cadascú. Requereix construir primer el sistema de login segur.</p>
-  <div class="preview">
-    <h3>El que hi haurà aquí</h3>
-    <ul>
-      <li>Registre amb verificació per correu electrònic</li>
-      <li>Cua d'altes pendents de confirmació, amb notificació als administradors</li>
-      <li>Gestió de permisos (qui pot administrar usuaris, qui no)</li>
-      <li>Perfil personal: foto, dades de contacte, canvi de contrasenya</li>
-    </ul>
-  </div>
+<main id="main-contenido">
+  <p class="empty-note">Carregant…</p>
 </main>
+
+<div class="modal-overlay" id="permisos-overlay">
+  <div class="modal-box">
+    <h3 id="permisos-titulo">Permisos</h3>
+    <div class="check-row" id="permisos-checks" style="flex-direction:column; gap:10px;"></div>
+    <div class="modal-actions">
+      <button class="ghost" id="permisos-cancelar" type="button">Cancel·lar</button>
+      <button class="primary" id="permisos-guardar" type="button">Desar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let usuarioActual = null;
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+async function cargarSesion() {
+  const res = await fetch(`${API}/api/auth/me`);
+  const data = await res.json();
+  usuarioActual = data.usuario;
+
+  const chip = document.getElementById('user-chip');
+  if (usuarioActual) {
+    chip.textContent = `${usuarioActual.nombre} · Tancar sessió`;
+    chip.onclick = async () => {
+      await fetch(`${API}/api/auth/logout`, { method: 'POST' });
+      location.reload();
+    };
+  } else {
+    chip.textContent = 'Iniciar sessió';
+    chip.onclick = () => location.href = '/login.html';
+  }
+}
+
+function esAdmin() {
+  return usuarioActual && (usuarioActual.permisos || []).includes('AdminGeneral');
+}
+
+async function render() {
+  const main = document.getElementById('main-contenido');
+  if (!usuarioActual) {
+    main.innerHTML = `
+      <section class="panel"><div class="panel-body" style="text-align:center; padding:40px 20px;">
+        <p>Cal iniciar sessió per veure aquesta pàgina.</p>
+        <button class="primary" onclick="location.href='/login.html'" type="button">Iniciar sessió</button>
+      </div></section>
+    `;
+    return;
+  }
+
+  let html = '';
+
+  if (esAdmin()) {
+    html += `
+      <section class="panel">
+        <div class="panel-head"><h2>Altes pendents</h2></div>
+        <div class="panel-body" id="pendientes-body"><p class="empty-note">Carregant…</p></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>Tots els usuaris</h2></div>
+        <div class="panel-body" id="usuarios-body"><p class="empty-note">Carregant…</p></div>
+      </section>
+    `;
+  }
+
+  html += `
+    <section class="panel">
+      <div class="panel-head"><h2>El meu perfil</h2></div>
+      <div class="panel-body">
+        <label for="perfil-nombre">Nom</label>
+        <input type="text" id="perfil-nombre" value="${escapeHtml(usuarioActual.nombre)}">
+        <label for="perfil-actual">Contrasenya actual (només si vols canviar-la)</label>
+        <input type="password" id="perfil-actual">
+        <label for="perfil-nueva">Contrasenya nova</label>
+        <input type="password" id="perfil-nueva">
+        <div style="margin-top:16px;">
+          <button class="primary" id="guardar-perfil-btn" type="button">Desar canvis</button>
+        </div>
+        <div class="msg" id="perfil-msg"></div>
+      </div>
+    </section>
+  `;
+
+  main.innerHTML = html;
+
+  document.getElementById('guardar-perfil-btn').addEventListener('click', guardarPerfil);
+
+  if (esAdmin()) {
+    await cargarPendientes();
+    await cargarUsuarios();
+  }
+}
+
+async function guardarPerfil() {
+  const msg = document.getElementById('perfil-msg');
+  msg.className = 'msg';
+  const nombre = document.getElementById('perfil-nombre').value.trim();
+  const passwordActual = document.getElementById('perfil-actual').value;
+  const passwordNueva = document.getElementById('perfil-nueva').value;
+
+  try {
+    const res = await fetch(`${API}/api/auth/perfil`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre, passwordActual: passwordActual || null, passwordNueva: passwordNueva || null })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Error desconegut');
+    msg.textContent = 'Desat correctament.';
+    msg.className = 'msg ok';
+    document.getElementById('perfil-actual').value = '';
+    document.getElementById('perfil-nueva').value = '';
+    await cargarSesion();
+  } catch (err) {
+    msg.textContent = err.message;
+    msg.className = 'msg error';
+  }
+}
+
+/* ---------------- Admin: altes pendents ---------------- */
+
+async function cargarPendientes() {
+  const body = document.getElementById('pendientes-body');
+  try {
+    const res = await fetch(`${API}/api/usuarios/pendientes`);
+    const data = await res.json();
+    const pendientes = data.data || [];
+    if (!pendientes.length) {
+      body.innerHTML = '<p class="empty-note">Cap alta pendent.</p>';
+      return;
+    }
+    body.innerHTML = `<ul class="lista">${pendientes.map(u => `
+      <li>
+        <div>
+          <div class="u-nombre">${escapeHtml(u.nombre)}</div>
+          <div class="u-email">${escapeHtml(u.email)}</div>
+        </div>
+        <div class="u-meta">
+          <button class="ghost aprobar-btn" data-id="${u.id}" type="button">Aprovar</button>
+          <button class="ghost rechazar-btn" data-id="${u.id}" type="button">Rebutjar</button>
+        </div>
+      </li>
+    `).join('')}</ul>`;
+
+    body.querySelectorAll('.aprobar-btn').forEach(btn => btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        await fetch(`${API}/api/usuarios/${btn.dataset.id}/aprobar`, { method: 'PUT' });
+        await cargarPendientes();
+        await cargarUsuarios();
+      } catch (err) { console.error(err); btn.disabled = false; }
+    }));
+    body.querySelectorAll('.rechazar-btn').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('Segur que vols rebutjar aquesta alta?')) return;
+      btn.disabled = true;
+      try {
+        await fetch(`${API}/api/usuarios/${btn.dataset.id}/rechazar`, { method: 'PUT' });
+        await cargarPendientes();
+        await cargarUsuarios();
+      } catch (err) { console.error(err); btn.disabled = false; }
+    }));
+  } catch (err) {
+    console.error(err);
+    body.innerHTML = '<p class="empty-note">No s\'han pogut carregar.</p>';
+  }
+}
+
+/* ---------------- Admin: tots els usuaris ---------------- */
+
+const PERMISOS_DISPONIBLES = ['Tècnica', 'Junta', 'AdminGeneral'];
+
+async function cargarUsuarios() {
+  const body = document.getElementById('usuarios-body');
+  try {
+    const res = await fetch(`${API}/api/usuarios`);
+    const data = await res.json();
+    const usuarios = data.data || [];
+    if (!usuarios.length) { body.innerHTML = '<p class="empty-note">Cap usuari.</p>'; return; }
+
+    body.innerHTML = `<ul class="lista">${usuarios.map(u => `
+      <li data-id="${u.id}">
+        <div>
+          <div class="u-nombre">${escapeHtml(u.nombre)}</div>
+          <div class="u-email">${escapeHtml(u.email)}</div>
+        </div>
+        <div class="u-meta">
+          <span class="status-badge ${u.estado}">${u.estado}</span>
+          ${(u.permisos || []).map(p => `<span class="perm-chip">${escapeHtml(p)}</span>`).join('')}
+          <button class="ghost editar-permisos-btn" data-id="${u.id}" type="button">Editar permisos</button>
+        </div>
+      </li>
+    `).join('')}</ul>`;
+
+    body.querySelectorAll('.editar-permisos-btn').forEach(btn => {
+      btn.addEventListener('click', () => abrirEditorPermisos(usuarios.find(u => u.id === Number(btn.dataset.id))));
+    });
+  } catch (err) {
+    console.error(err);
+    body.innerHTML = '<p class="empty-note">No s\'han pogut carregar.</p>';
+  }
+}
+
+const permisosOverlay = document.getElementById('permisos-overlay');
+let permisosUsuarioId = null;
+
+function abrirEditorPermisos(usuario) {
+  permisosUsuarioId = usuario.id;
+  const actuales = new Set(usuario.permisos || []);
+  document.getElementById('permisos-titulo').textContent = `Permisos · ${usuario.nombre}`;
+  document.getElementById('permisos-checks').innerHTML = PERMISOS_DISPONIBLES.map(p => `
+    <label><input type="checkbox" value="${escapeHtml(p)}" ${actuales.has(p) ? 'checked' : ''}> ${escapeHtml(p)}</label>
+  `).join('');
+  permisosOverlay.classList.add('open');
+}
+
+document.getElementById('permisos-cancelar').addEventListener('click', () => permisosOverlay.classList.remove('open'));
+permisosOverlay.addEventListener('click', (e) => { if (e.target === permisosOverlay) permisosOverlay.classList.remove('open'); });
+
+document.getElementById('permisos-guardar').addEventListener('click', async () => {
+  const seleccion = [...document.querySelectorAll('#permisos-checks input:checked')].map(el => el.value);
+  await guardarPermisos(permisosUsuarioId, seleccion);
+  permisosOverlay.classList.remove('open');
+});
+
+async function guardarPermisos(id, permisos) {
+  try {
+    await fetch(`${API}/api/usuarios/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ permisos })
+    });
+    await cargarUsuarios();
+  } catch (err) {
+    console.error(err);
+    alert('No s\'han pogut desar els permisos.');
+  }
+}
+
+(async function init() {
+  await cargarSesion();
+  await render();
+})();
+</script>
 
 </body>
 </html>

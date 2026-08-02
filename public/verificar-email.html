@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Castellers · Verificar correu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --paper:#EAE6DA; --paper-card:#F1EEE4; --ink:#20241F; --ink-soft:#4B5049; --thread:#9E2B3B; --ok:#3E7A4E; --line:#C7C2B0; --radius:3px; }
+  * { box-sizing: border-box; }
+  body { margin:0; background: linear-gradient(var(--line) 1px, transparent 1px) 0 0/100% 34px, var(--paper); color:var(--ink); font-family:'Work Sans',sans-serif; font-size:15px; line-height:1.5; }
+  a { color: var(--thread); }
+  main { max-width: 440px; margin: 90px auto; padding: 0 20px; text-align:center; }
+  section.panel { background: var(--paper-card); border: 1px solid var(--line); border-radius: var(--radius); padding: 34px 26px; }
+  h1 { font-family:'Fraunces',serif; font-weight:700; font-size:21px; margin:0 0 14px; }
+  p { color: var(--ink-soft); font-size:14px; }
+  .ok { color: var(--ok); }
+  .error { color: var(--thread); }
+  a.back { display:inline-block; margin-top: 18px; }
+</style>
+</head>
+<body>
+<main>
+  <section class="panel">
+    <h1 id="titulo">Verificant…</h1>
+    <p id="mensaje"></p>
+    <a class="back" id="link-login" href="/login.html" style="display:none;">Anar a iniciar sessió</a>
+  </section>
+</main>
+
+<script>
+const token = new URLSearchParams(location.search).get('token');
+const titulo = document.getElementById('titulo');
+const mensaje = document.getElementById('mensaje');
+
+(async () => {
+  if (!token) {
+    titulo.textContent = 'Falta l\'enllaç';
+    mensaje.textContent = 'Aquest enllaç no és vàlid.';
+    mensaje.className = 'error';
+    return;
+  }
+  try {
+    const res = await fetch(`/api/auth/verificar-email?token=${encodeURIComponent(token)}`);
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Error desconegut');
+    titulo.textContent = 'Correu verificat ✓';
+    mensaje.textContent = data.mensaje;
+    mensaje.className = 'ok';
+    document.getElementById('link-login').style.display = 'inline-block';
+  } catch (err) {
+    titulo.textContent = 'No s\'ha pogut verificar';
+    mensaje.textContent = err.message;
+    mensaje.className = 'error';
+  }
+})();
+</script>
+</body>
+</html>
