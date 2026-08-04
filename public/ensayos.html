@@ -52,8 +52,10 @@
     color: var(--ink-soft); cursor:default;
   }
   .cal-day.otro-mes { opacity: 0.35; }
-  .cal-day.con-assaig { background: var(--paper-card); color: var(--ink); font-weight:600; cursor:pointer; border-color: var(--thread); }
-  .cal-day.con-assaig:hover { background: #EFE9DB; }
+  .cal-day.sin-assaig { cursor:pointer; border-color: var(--ok); }
+  .cal-day.sin-assaig:hover { background: #E4EEE6; }
+  .cal-day.con-assaig { background: var(--paper-card); color: var(--ink); font-weight:600; cursor:pointer; border-color: var(--thread); border-width: 1.6px; }
+  .cal-day.con-assaig:hover { background: #F3E7E5; }
   .cal-day.avui { box-shadow: inset 0 0 0 1.6px var(--gold); }
   .cal-day .dot { position:absolute; bottom:4px; width:5px; height:5px; border-radius:50%; background: var(--thread); }
 
@@ -523,15 +525,22 @@ function renderCalendario() {
     const tieneEnsayo = c.ensayos.length > 0;
     const esHoy = c.key === hoyISO;
     return `
-      <div class="cal-day ${tieneEnsayo ? 'con-assaig' : ''} ${esHoy ? 'avui' : ''}" data-key="${c.key}">
+      <div class="cal-day ${tieneEnsayo ? 'con-assaig' : 'sin-assaig'} ${esHoy ? 'avui' : ''}" data-key="${c.key}">
         ${c.dia}
         ${tieneEnsayo ? '<span class="dot"></span>' : ''}
       </div>
     `;
   }).join('');
 
-  grid.querySelectorAll('.cal-day.con-assaig').forEach(el => {
-    el.addEventListener('click', () => mostrarDia(el.dataset.key, ensayosPorFecha[el.dataset.key]));
+  grid.querySelectorAll('.cal-day.con-assaig, .cal-day.sin-assaig').forEach(el => {
+    el.addEventListener('click', () => {
+      // Sempre omplim la data del formulari de "Nou assaig" amb el dia clicat.
+      document.getElementById('fecha').value = el.dataset.key;
+      // Si el dia ja té assajos, a més mostrem el globus amb el detall.
+      if (el.classList.contains('con-assaig')) {
+        mostrarDia(el.dataset.key, ensayosPorFecha[el.dataset.key]);
+      }
+    });
   });
 }
 
