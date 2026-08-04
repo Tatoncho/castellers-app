@@ -25,10 +25,17 @@
   nav.topnav .links a:hover { border-color:var(--line); color:var(--ink); }
   nav.topnav .links a.active { color:var(--ink); border-color:var(--ink); }
   nav.topnav .spacer { margin-left:auto; }
-  .lang-switcher { display:flex; gap:6px; }
-  .lang-btn { width:auto; margin:0; padding:5px 7px; background:var(--paper-card); border:1.5px solid var(--line); border-radius:var(--radius); font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center; cursor:pointer; }
-  .lang-btn.active { border-color: var(--ink); }
-  .lang-btn svg { display:block; border-radius:1px; }
+  .lang-dropdown { position:relative; }
+  .lang-dropdown-toggle { width:auto; margin:0; display:flex; align-items:center; gap:7px; background:var(--paper-card); border:1.5px solid var(--line); border-radius:var(--radius); padding:7px 10px; cursor:pointer; color:var(--ink); }
+  .lang-dropdown-toggle:hover { border-color: var(--ink); }
+  .lang-dropdown-toggle svg.lang-icon { flex-shrink:0; color: var(--ink-soft); }
+  .lang-current-flag svg { display:block; border-radius:1px; }
+  .lang-dropdown-menu { display:none; position:absolute; top:calc(100% + 6px); right:0; min-width:160px; background:var(--paper-card); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; box-shadow: 0 6px 16px rgba(32,36,31,0.18); z-index:60; }
+  .lang-dropdown-menu.open { display:block; }
+  .lang-btn { width:100%; margin:0; display:flex; align-items:center; gap:9px; background:none; border:none; padding:10px 12px; cursor:pointer; font-family:'Work Sans',sans-serif; font-size:13px; font-weight:400; text-transform:none; letter-spacing:0; color: var(--ink); text-align:left; }
+  .lang-btn:hover { background: var(--paper); }
+  .lang-btn.active { font-weight:600; background: var(--paper); }
+  .lang-btn svg { display:block; border-radius:1px; flex-shrink:0; }
   .user-chip { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); border:1px solid var(--line); padding:7px 11px; border-radius:var(--radius); cursor:pointer; background:none; }
 
   main { max-width: 1300px; margin: 0 auto; padding: 28px 28px 80px; display:grid; grid-template-columns: 260px 1fr; gap: 20px; align-items:start; }
@@ -94,12 +101,36 @@
     <a href="/biblioteca-imagenes.html" class="active" data-i18n="nav_imatges">Imatges</a>
   </div>
   <div class="spacer"></div>
-  <div class="lang-switcher">
-    <button class="lang-btn" data-lang="ca" title="Català" type="button">
-      <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>
+  <div class="lang-dropdown">
+    <button class="lang-dropdown-toggle" id="lang-dropdown-toggle" type="button" aria-label="Canviar idioma">
+      <svg class="lang-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M3 12h18"/>
+        <path d="M12 3c2.8 2.6 4.3 5.7 4.3 9s-1.5 6.4-4.3 9c-2.8-2.6-4.3-5.7-4.3-9s1.5-6.4 4.3-9z"/>
+      </svg>
+      <span class="lang-current-flag" id="lang-current-flag"></span>
+      <svg width="9" height="9" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6"/></svg>
     </button>
-    <button class="lang-btn" data-lang="es" title="Español" type="button">🇪🇸</button>
-    <button class="lang-btn" data-lang="en" title="English" type="button">🇬🇧</button>
+    <div class="lang-dropdown-menu" id="lang-dropdown-menu">
+      <button class="lang-btn" data-lang="ca" type="button">
+        <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>
+        Català
+      </button>
+      <button class="lang-btn" data-lang="es" type="button">
+        <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#AA151B"/><rect y="3.5" width="20" height="7" fill="#F1BF00"/></svg>
+        Español
+      </button>
+      <button class="lang-btn" data-lang="en" type="button">
+        <svg width="20" height="14" viewBox="0 0 20 14">
+          <rect width="20" height="14" fill="#00247D"/>
+          <path d="M0,0 L20,14 M20,0 L0,14" stroke="#FFFFFF" stroke-width="2.6"/>
+          <path d="M0,0 L20,14 M20,0 L0,14" stroke="#CF142B" stroke-width="1.1"/>
+          <path d="M10,0 V14 M0,7 H20" stroke="#FFFFFF" stroke-width="4.4"/>
+          <path d="M10,0 V14 M0,7 H20" stroke="#CF142B" stroke-width="2.4"/>
+        </svg>
+        English
+      </button>
+    </div>
   </div>
   <span class="user-chip" id="user-chip">…</span>
 </nav>
@@ -109,6 +140,11 @@ let categorias = [];
 let categoriaActual = null;
 let usuarioActual = null;
 
+const FLAGS_SVG = {
+  ca: '<svg width="18" height="13" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>',
+  es: '<svg width="18" height="13" viewBox="0 0 20 14"><rect width="20" height="14" fill="#AA151B"/><rect y="3.5" width="20" height="7" fill="#F1BF00"/></svg>',
+  en: '<svg width="18" height="13" viewBox="0 0 20 14"><rect width="20" height="14" fill="#00247D"/><path d="M0,0 L20,14 M20,0 L0,14" stroke="#FFFFFF" stroke-width="2.6"/><path d="M0,0 L20,14 M20,0 L0,14" stroke="#CF142B" stroke-width="1.1"/><path d="M10,0 V14 M0,7 H20" stroke="#FFFFFF" stroke-width="4.4"/><path d="M10,0 V14 M0,7 H20" stroke="#CF142B" stroke-width="2.4"/></svg>'
+};
 const TRADUCCIONES = {
   ca: {
     nav_inici: 'Inici', nav_plantilles: 'Plantilles', nav_imatges: 'Imatges', chip_tancar: 'Tancar sessió',
@@ -160,6 +196,8 @@ function aplicarIdioma(idioma) {
     if (val !== key) el.placeholder = val;
   });
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === idioma));
+  document.getElementById('lang-current-flag').innerHTML = FLAGS_SVG[idioma] || FLAGS_SVG.ca;
+  document.getElementById('lang-dropdown-menu').classList.remove('open');
   localStorage.setItem('castellers_idioma', idioma);
   document.documentElement.lang = idioma;
   const chip = document.getElementById('user-chip');
@@ -167,6 +205,15 @@ function aplicarIdioma(idioma) {
   cargarCategorias();
   cargarImagenes();
 }
+
+const langDropdownToggle = document.getElementById('lang-dropdown-toggle');
+const langDropdownMenu = document.getElementById('lang-dropdown-menu');
+langDropdownToggle.addEventListener('click', (e) => {
+  e.stopPropagation();
+  langDropdownMenu.classList.toggle('open');
+});
+document.addEventListener('click', () => langDropdownMenu.classList.remove('open'));
+langDropdownMenu.addEventListener('click', (e) => e.stopPropagation());
 
 document.querySelectorAll('.lang-btn').forEach(btn => {
   btn.addEventListener('click', async () => {
