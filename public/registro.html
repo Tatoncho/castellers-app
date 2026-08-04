@@ -19,7 +19,7 @@
   p.lead { color: var(--ink-soft); font-size:13px; text-align:center; margin:0 0 22px; }
   label { display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); margin:14px 0 4px; }
   label:first-of-type { margin-top:0; }
-  input { width:100%; padding:10px 11px; border:1px solid var(--line); background:var(--paper); border-radius:var(--radius); font-family:'Work Sans',sans-serif; font-size:14px; }
+  input, select { width:100%; padding:10px 11px; border:1px solid var(--line); background:var(--paper); border-radius:var(--radius); font-family:'Work Sans',sans-serif; font-size:14px; }
   button { width:100%; cursor:pointer; border:none; border-radius:var(--radius); font-family:'IBM Plex Mono',monospace; font-size:12.5px; letter-spacing:0.04em; text-transform:uppercase; padding:12px 16px; margin-top:20px; }
   button.primary { background: var(--thread); color: var(--paper-card); }
   button.primary:hover { background:#862432; }
@@ -29,20 +29,62 @@
   .msg.error { display:block; background:#F3E7E5; border:1px solid var(--thread); color:var(--thread); }
   .foot-link { text-align:center; margin-top:18px; font-size:13px; color:var(--ink-soft); }
 
-  .lang-switcher { position:fixed; top:14px; right:14px; display:flex; gap:6px; z-index:50; }
-  .lang-btn { width:auto; margin:0; padding:5px 7px; background:var(--paper-card); border:1.5px solid var(--line); border-radius:var(--radius); font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center; }
-  .lang-btn.active { border-color: var(--ink); }
-  .lang-btn svg { display:block; border-radius:1px; }
+  .lang-dropdown { position:fixed; top:14px; right:14px; z-index:50; }
+  .lang-dropdown-toggle {
+    width:auto; margin:0; display:flex; align-items:center; gap:7px; background:var(--paper-card);
+    border:1.5px solid var(--line); border-radius:var(--radius); padding:7px 10px; cursor:pointer; color:var(--ink);
+  }
+  .lang-dropdown-toggle:hover { border-color: var(--ink); }
+  .lang-dropdown-toggle svg.lang-icon { flex-shrink:0; color: var(--ink-soft); }
+  .lang-current-flag svg { display:block; border-radius:1px; }
+  .lang-dropdown-menu {
+    display:none; position:absolute; top:calc(100% + 6px); right:0; min-width:160px;
+    background:var(--paper-card); border:1px solid var(--line); border-radius:var(--radius);
+    overflow:hidden; box-shadow: 0 6px 16px rgba(32,36,31,0.18);
+  }
+  .lang-dropdown-menu.open { display:block; }
+  .lang-btn {
+    width:100%; margin:0; display:flex; align-items:center; gap:9px; background:none; border:none;
+    padding:10px 12px; cursor:pointer; font-family:'Work Sans',sans-serif; font-size:13px; font-weight:400;
+    text-transform:none; letter-spacing:0; color: var(--ink); text-align:left;
+  }
+  .lang-btn:hover { background: var(--paper); }
+  .lang-btn.active { font-weight:600; background: var(--paper); }
+  .lang-btn svg { display:block; border-radius:1px; flex-shrink:0; }
 </style>
 </head>
 <body>
 
-<div class="lang-switcher">
-  <button class="lang-btn" data-lang="ca" title="Català" type="button">
-    <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>
+<div class="lang-dropdown">
+  <button class="lang-dropdown-toggle" id="lang-dropdown-toggle" type="button" aria-label="Canviar idioma">
+    <svg class="lang-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M3 12h18"/>
+      <path d="M12 3c2.8 2.6 4.3 5.7 4.3 9s-1.5 6.4-4.3 9c-2.8-2.6-4.3-5.7-4.3-9s1.5-6.4 4.3-9z"/>
+    </svg>
+    <span class="lang-current-flag" id="lang-current-flag"></span>
+    <svg width="9" height="9" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6"/></svg>
   </button>
-  <button class="lang-btn" data-lang="es" title="Español" type="button">🇪🇸</button>
-  <button class="lang-btn" data-lang="en" title="English" type="button">🇬🇧</button>
+  <div class="lang-dropdown-menu" id="lang-dropdown-menu">
+    <button class="lang-btn" data-lang="ca" type="button">
+      <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>
+      Català
+    </button>
+    <button class="lang-btn" data-lang="es" type="button">
+      <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#AA151B"/><rect y="3.5" width="20" height="7" fill="#F1BF00"/></svg>
+      Español
+    </button>
+    <button class="lang-btn" data-lang="en" type="button">
+      <svg width="20" height="14" viewBox="0 0 20 14">
+        <rect width="20" height="14" fill="#00247D"/>
+        <path d="M0,0 L20,14 M20,0 L0,14" stroke="#FFFFFF" stroke-width="2.6"/>
+        <path d="M0,0 L20,14 M20,0 L0,14" stroke="#CF142B" stroke-width="1.1"/>
+        <path d="M10,0 V14 M0,7 H20" stroke="#FFFFFF" stroke-width="4.4"/>
+        <path d="M10,0 V14 M0,7 H20" stroke="#CF142B" stroke-width="2.4"/>
+      </svg>
+      English
+    </button>
+  </div>
 </div>
 
 <main>
@@ -65,12 +107,24 @@
       <input type="text" id="segundoApellido">
       <label for="apodo" data-i18n="label_apodo">Àlies (opcional)</label>
       <input type="text" id="apodo">
+      <label for="idioma-preferit" data-i18n="label_idioma">Idioma de preferència</label>
+      <select id="idioma-preferit">
+        <option value="ca">Català</option>
+        <option value="es">Español</option>
+        <option value="en">English</option>
+      </select>
       <label for="email" data-i18n="label_correu">Correu</label>
       <input type="email" id="email" required>
       <label for="password" data-i18n="label_contrasenya">Contrasenya</label>
       <input type="password" id="password" required minlength="6">
       <label for="password2" data-i18n="label_repetir">Repeteix la contrasenya</label>
       <input type="password" id="password2" required minlength="6">
+      <label for="idioma-select" data-i18n="label_idioma">Idioma de preferència</label>
+      <select id="idioma-select">
+        <option value="ca">Català</option>
+        <option value="es">Español</option>
+        <option value="en">English</option>
+      </select>
       <button class="primary" type="submit" id="submit-btn" data-i18n="btn_crear">Crear compte</button>
     </form>
     <div class="msg" id="msg"></div>
@@ -84,7 +138,7 @@ const TRADUCCIONES = {
     registro_title: 'Crear compte',
     registro_lead: 'L\'accés quedarà pendent de verificar el correu i que un administrador el validi.',
     label_nombre: 'Nom', label_primerApellido: 'Primer cognom', label_segundoApellido: 'Segon cognom',
-    label_apodo: 'Àlies (opcional)', label_correu: 'Correu', label_contrasenya: 'Contrasenya',
+    label_apodo: 'Àlies (opcional)', label_idioma: 'Idioma de preferència', label_correu: 'Correu', label_contrasenya: 'Contrasenya',
     label_repetir: 'Repeteix la contrasenya', btn_crear: 'Crear compte',
     foot_ja_compte: 'Ja tens compte?', foot_inicia: 'Inicia sessió',
     err_no_coincide: 'Les contrasenyes no coincideixen.',
@@ -95,7 +149,7 @@ const TRADUCCIONES = {
     registro_title: 'Crear cuenta',
     registro_lead: 'El acceso quedará pendiente de verificar el correo y que un administrador lo valide.',
     label_nombre: 'Nombre', label_primerApellido: 'Primer apellido', label_segundoApellido: 'Segundo apellido',
-    label_apodo: 'Alias (opcional)', label_correu: 'Correo', label_contrasenya: 'Contraseña',
+    label_apodo: 'Alias (opcional)', label_idioma: 'Idioma de preferencia', label_correu: 'Correo', label_contrasenya: 'Contraseña',
     label_repetir: 'Repite la contraseña', btn_crear: 'Crear cuenta',
     foot_ja_compte: '¿Ya tienes cuenta?', foot_inicia: 'Inicia sesión',
     err_no_coincide: 'Las contraseñas no coinciden.',
@@ -106,7 +160,7 @@ const TRADUCCIONES = {
     registro_title: 'Create account',
     registro_lead: 'Access will stay pending until you verify your email and an admin approves it.',
     label_nombre: 'First name', label_primerApellido: 'Last name', label_segundoApellido: 'Second last name',
-    label_apodo: 'Nickname (optional)', label_correu: 'Email', label_contrasenya: 'Password',
+    label_apodo: 'Nickname (optional)', label_idioma: 'Preferred language', label_correu: 'Email', label_contrasenya: 'Password',
     label_repetir: 'Repeat password', btn_crear: 'Create account',
     foot_ja_compte: 'Already have an account?', foot_inicia: 'Log in',
     err_no_coincide: 'Passwords do not match.',
@@ -115,7 +169,14 @@ const TRADUCCIONES = {
   }
 };
 
+const FLAGS_SVG = {
+  ca: '<svg width="18" height="13" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>',
+  es: '<svg width="18" height="13" viewBox="0 0 20 14"><rect width="20" height="14" fill="#AA151B"/><rect y="3.5" width="20" height="7" fill="#F1BF00"/></svg>',
+  en: '<svg width="18" height="13" viewBox="0 0 20 14"><rect width="20" height="14" fill="#00247D"/><path d="M0,0 L20,14 M20,0 L0,14" stroke="#FFFFFF" stroke-width="2.6"/><path d="M0,0 L20,14 M20,0 L0,14" stroke="#CF142B" stroke-width="1.1"/><path d="M10,0 V14 M0,7 H20" stroke="#FFFFFF" stroke-width="4.4"/><path d="M10,0 V14 M0,7 H20" stroke="#CF142B" stroke-width="2.4"/></svg>'
+};
+
 let idiomaActual = localStorage.getItem('castellers_idioma') || 'ca';
+let idiomaPreferitTocado = false;
 
 function aplicarIdioma(idioma) {
   idiomaActual = idioma;
@@ -127,10 +188,32 @@ function aplicarIdioma(idioma) {
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === idioma));
   localStorage.setItem('castellers_idioma', idioma);
   document.documentElement.lang = idioma;
+  document.getElementById('lang-current-flag').innerHTML = FLAGS_SVG[idioma] || FLAGS_SVG.ca;
+  document.getElementById('lang-dropdown-menu').classList.remove('open');
+
+  // El desplegable "idioma de preferència" del formulari es sincronitza amb
+  // l'idioma de la pàgina només fins que la persona el toqui manualment —
+  // a partir d'aquell moment la seva tria queda com a definitiva.
+  if (!idiomaPreferitTocado) {
+    document.getElementById('idioma-preferit').value = idioma;
+  }
 }
+
+const langToggle = document.getElementById('lang-dropdown-toggle');
+const langMenu = document.getElementById('lang-dropdown-menu');
+langToggle.addEventListener('click', (e) => {
+  e.stopPropagation();
+  langMenu.classList.toggle('open');
+});
+document.addEventListener('click', () => langMenu.classList.remove('open'));
+langMenu.addEventListener('click', (e) => e.stopPropagation());
 
 document.querySelectorAll('.lang-btn').forEach(btn => {
   btn.addEventListener('click', () => aplicarIdioma(btn.dataset.lang));
+});
+
+document.getElementById('idioma-preferit').addEventListener('change', () => {
+  idiomaPreferitTocado = true;
 });
 
 aplicarIdioma(idiomaActual);
@@ -147,6 +230,7 @@ form.addEventListener('submit', async (e) => {
   const primerApellido = document.getElementById('primerApellido').value.trim();
   const segundoApellido = document.getElementById('segundoApellido').value.trim();
   const apodo = document.getElementById('apodo').value.trim();
+  const idioma = document.getElementById('idioma-preferit').value;
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
   const password2 = document.getElementById('password2').value;
@@ -163,7 +247,7 @@ form.addEventListener('submit', async (e) => {
     const res = await fetch(`${API}/api/auth/registro`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, primerApellido, segundoApellido, apodo, email, password, idioma: idiomaActual })
+      body: JSON.stringify({ nombre, primerApellido, segundoApellido, apodo, email, password, idioma })
     });
     const data = await res.json();
 
