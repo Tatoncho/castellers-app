@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
+<style>html:not(.sessio-confirmada) body { visibility: hidden; }</style>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Castellers · Usuaris</title>
@@ -21,6 +22,10 @@
   nav.topnav .links a.active { color:var(--ink); border-color:var(--ink); }
   nav.topnav .spacer { margin-left:auto; }
   nav.topnav .user-chip { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); border:1px solid var(--line); padding:7px 11px; border-radius:var(--radius); cursor:pointer; background:none; }
+  .lang-switcher { display:flex; gap:6px; }
+  .lang-btn { width:auto; margin:0; padding:5px 7px; background:var(--paper-card); border:1.5px solid var(--line); border-radius:var(--radius); font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .lang-btn.active { border-color: var(--ink); }
+  .lang-btn svg { display:block; border-radius:1px; }
 
   main { max-width: 1000px; margin: 0 auto; padding: 34px 28px 80px; }
   section.panel { background: var(--paper-card); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 22px; }
@@ -75,15 +80,22 @@
     Castellers
   </a>
   <div class="links">
-    <a href="/">Inici</a>
-    <a href="/ensayos.html">Assajos</a>
-    <a href="/actuaciones.html">Actuacions</a>
-    <a href="/biblioteca-imagenes.html">Imatges</a>
-    <a href="/plantillas.html">Plantilles</a>
-    <a href="/miembros.html">Membres</a>
-    <a href="/usuarios.html" class="active">Usuaris</a>
+    <a href="/" data-i18n="nav_inici">Inici</a>
+    <a href="/ensayos.html" data-i18n="nav_assajos">Assajos</a>
+    <a href="/actuaciones.html" data-i18n="nav_actuacions">Actuacions</a>
+    <a href="/biblioteca-imagenes.html" data-i18n="nav_imatges">Imatges</a>
+    <a href="/plantillas.html" data-i18n="nav_plantilles">Plantilles</a>
+    <a href="/miembros.html" data-i18n="nav_membres">Membres</a>
+    <a href="/usuarios.html" class="active" data-i18n="nav_usuaris">Usuaris</a>
   </div>
   <div class="spacer"></div>
+  <div class="lang-switcher">
+    <button class="lang-btn" data-lang="ca" title="Català" type="button">
+      <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>
+    </button>
+    <button class="lang-btn" data-lang="es" title="Español" type="button">🇪🇸</button>
+    <button class="lang-btn" data-lang="en" title="English" type="button">🇬🇧</button>
+  </div>
   <span class="user-chip" id="user-chip">…</span>
 </nav>
 
@@ -105,6 +117,78 @@
 <script>
 const API = '';
 let usuarioActual = null;
+
+const TRADUCCIONES = {
+  ca: {
+    nav_inici: 'Inici', nav_assajos: 'Assajos', nav_actuacions: 'Actuacions', nav_imatges: 'Imatges',
+    nav_plantilles: 'Plantilles', nav_membres: 'Membres', nav_usuaris: 'Usuaris',
+    chip_tancar: 'Tancar sessió',
+    cal_login: 'Cal iniciar sessió per veure aquesta pàgina.', btn_login: 'Iniciar sessió',
+    altes_pendents: 'Altes pendents', tots_usuaris: 'Tots els usuaris', el_meu_perfil: 'El meu perfil',
+    label_nombre: 'Nom', label_password_actual: 'Contrasenya actual (només si vols canviar-la)',
+    label_password_nueva: 'Contrasenya nova', btn_desar: 'Desar canvis', desat_ok: 'Desat correctament.',
+    cap_alta_pendent: 'Cap alta pendent.', cap_usuari: 'Cap usuari.', no_carregat: 'No s\'han pogut carregar.',
+    btn_aprovar: 'Aprovar', btn_rebutjar: 'Rebutjar', confirm_rebutjar: 'Segur que vols rebutjar aquesta alta?',
+    btn_editar_permisos: 'Editar permisos', permisos_titulo: 'Permisos', btn_cancelar: 'Cancel·lar', btn_guardar: 'Desar',
+    err_permisos: 'No s\'han pogut desar els permisos.', carregant: 'Carregant…'
+  },
+  es: {
+    nav_inici: 'Inicio', nav_assajos: 'Ensayos', nav_actuacions: 'Actuaciones', nav_imatges: 'Imágenes',
+    nav_plantilles: 'Plantillas', nav_membres: 'Miembros', nav_usuaris: 'Usuarios',
+    chip_tancar: 'Cerrar sesión',
+    cal_login: 'Debes iniciar sesión para ver esta página.', btn_login: 'Iniciar sesión',
+    altes_pendents: 'Altas pendientes', tots_usuaris: 'Todos los usuarios', el_meu_perfil: 'Mi perfil',
+    label_nombre: 'Nombre', label_password_actual: 'Contraseña actual (solo si quieres cambiarla)',
+    label_password_nueva: 'Contraseña nueva', btn_desar: 'Guardar cambios', desat_ok: 'Guardado correctamente.',
+    cap_alta_pendent: 'Ninguna alta pendiente.', cap_usuari: 'Ningún usuario.', no_carregat: 'No se han podido cargar.',
+    btn_aprovar: 'Aprobar', btn_rebutjar: 'Rechazar', confirm_rebutjar: '¿Seguro que quieres rechazar esta alta?',
+    btn_editar_permisos: 'Editar permisos', permisos_titulo: 'Permisos', btn_cancelar: 'Cancelar', btn_guardar: 'Guardar',
+    err_permisos: 'No se han podido guardar los permisos.', carregant: 'Cargando…'
+  },
+  en: {
+    nav_inici: 'Home', nav_assajos: 'Rehearsals', nav_actuacions: 'Performances', nav_imatges: 'Images',
+    nav_plantilles: 'Templates', nav_membres: 'Members', nav_usuaris: 'Users',
+    chip_tancar: 'Log out',
+    cal_login: 'You must log in to view this page.', btn_login: 'Log in',
+    altes_pendents: 'Pending sign-ups', tots_usuaris: 'All users', el_meu_perfil: 'My profile',
+    label_nombre: 'Name', label_password_actual: 'Current password (only if you want to change it)',
+    label_password_nueva: 'New password', btn_desar: 'Save changes', desat_ok: 'Saved successfully.',
+    cap_alta_pendent: 'No pending sign-ups.', cap_usuari: 'No users.', no_carregat: 'Could not load.',
+    btn_aprovar: 'Approve', btn_rebutjar: 'Reject', confirm_rebutjar: 'Are you sure you want to reject this sign-up?',
+    btn_editar_permisos: 'Edit permissions', permisos_titulo: 'Permissions', btn_cancelar: 'Cancel', btn_guardar: 'Save',
+    err_permisos: 'Could not save permissions.', carregant: 'Loading…'
+  }
+};
+let idiomaActual = localStorage.getItem('castellers_idioma') || 'ca';
+function t(key) { return (TRADUCCIONES[idiomaActual] || TRADUCCIONES.ca)[key] || key; }
+
+function aplicarIdioma(idioma) {
+  idiomaActual = idioma;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val !== key) el.textContent = val;
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === idioma));
+  localStorage.setItem('castellers_idioma', idioma);
+  document.documentElement.lang = idioma;
+  const chip = document.getElementById('user-chip');
+  if (chip && usuarioActual) chip.textContent = `${usuarioActual.nombre} · ${t('chip_tancar')}`;
+  // el contingut dinàmic (llistes, modal) es torna a pintar perquè reculli
+  // les traduccions noves
+  render();
+}
+
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    aplicarIdioma(btn.dataset.lang);
+    if (usuarioActual) {
+      try {
+        await fetch(`${API}/api/auth/idioma`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idioma: btn.dataset.lang }) });
+      } catch (err) { console.error(err); }
+    }
+  });
+});
 
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, (c) => ({
@@ -129,12 +213,12 @@ async function cargarSesion() {
   }
 
   const chip = document.getElementById('user-chip');
-  chip.textContent = `${usuarioActual.nombre} · Tancar sessió`;
-  chip.style.cursor = 'pointer';
   chip.onclick = async () => {
     await fetch(`${API}/api/auth/logout`, { method: 'POST' });
     location.href = '/login.html';
   };
+  document.documentElement.classList.add('sessio-confirmada');
+  aplicarIdioma(usuarioActual.idioma || idiomaActual);
 }
 
 function esAdmin() {
@@ -146,8 +230,8 @@ async function render() {
   if (!usuarioActual) {
     main.innerHTML = `
       <section class="panel"><div class="panel-body" style="text-align:center; padding:40px 20px;">
-        <p>Cal iniciar sessió per veure aquesta pàgina.</p>
-        <button class="primary" onclick="location.href='/login.html'" type="button">Iniciar sessió</button>
+        <p>${t('cal_login')}</p>
+        <button class="primary" onclick="location.href='/login.html'" type="button">${t('btn_login')}</button>
       </div></section>
     `;
     return;
@@ -158,28 +242,28 @@ async function render() {
   if (esAdmin()) {
     html += `
       <section class="panel">
-        <div class="panel-head"><h2>Altes pendents</h2></div>
-        <div class="panel-body" id="pendientes-body"><p class="empty-note">Carregant…</p></div>
+        <div class="panel-head"><h2>${t('altes_pendents')}</h2></div>
+        <div class="panel-body" id="pendientes-body"><p class="empty-note">${t('carregant')}</p></div>
       </section>
       <section class="panel">
-        <div class="panel-head"><h2>Tots els usuaris</h2></div>
-        <div class="panel-body" id="usuarios-body"><p class="empty-note">Carregant…</p></div>
+        <div class="panel-head"><h2>${t('tots_usuaris')}</h2></div>
+        <div class="panel-body" id="usuarios-body"><p class="empty-note">${t('carregant')}</p></div>
       </section>
     `;
   }
 
   html += `
     <section class="panel">
-      <div class="panel-head"><h2>El meu perfil</h2></div>
+      <div class="panel-head"><h2>${t('el_meu_perfil')}</h2></div>
       <div class="panel-body">
-        <label for="perfil-nombre">Nom</label>
+        <label for="perfil-nombre">${t('label_nombre')}</label>
         <input type="text" id="perfil-nombre" value="${escapeHtml(usuarioActual.nombre)}">
-        <label for="perfil-actual">Contrasenya actual (només si vols canviar-la)</label>
+        <label for="perfil-actual">${t('label_password_actual')}</label>
         <input type="password" id="perfil-actual">
-        <label for="perfil-nueva">Contrasenya nova</label>
+        <label for="perfil-nueva">${t('label_password_nueva')}</label>
         <input type="password" id="perfil-nueva">
         <div style="margin-top:16px;">
-          <button class="primary" id="guardar-perfil-btn" type="button">Desar canvis</button>
+          <button class="primary" id="guardar-perfil-btn" type="button">${t('btn_desar')}</button>
         </div>
         <div class="msg" id="perfil-msg"></div>
       </div>
@@ -211,7 +295,7 @@ async function guardarPerfil() {
     });
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.error || 'Error desconegut');
-    msg.textContent = 'Desat correctament.';
+    msg.textContent = t('desat_ok');
     msg.className = 'msg ok';
     document.getElementById('perfil-actual').value = '';
     document.getElementById('perfil-nueva').value = '';
@@ -231,7 +315,7 @@ async function cargarPendientes() {
     const data = await res.json();
     const pendientes = data.data || [];
     if (!pendientes.length) {
-      body.innerHTML = '<p class="empty-note">Cap alta pendent.</p>';
+      body.innerHTML = `<p class="empty-note">${t('cap_alta_pendent')}</p>`;
       return;
     }
     body.innerHTML = `<ul class="lista">${pendientes.map(u => `
@@ -241,8 +325,8 @@ async function cargarPendientes() {
           <div class="u-email">${escapeHtml(u.email)}</div>
         </div>
         <div class="u-meta">
-          <button class="ghost aprobar-btn" data-id="${u.id}" type="button">Aprovar</button>
-          <button class="ghost rechazar-btn" data-id="${u.id}" type="button">Rebutjar</button>
+          <button class="ghost aprobar-btn" data-id="${u.id}" type="button">${t('btn_aprovar')}</button>
+          <button class="ghost rechazar-btn" data-id="${u.id}" type="button">${t('btn_rebutjar')}</button>
         </div>
       </li>
     `).join('')}</ul>`;
@@ -256,7 +340,7 @@ async function cargarPendientes() {
       } catch (err) { console.error(err); btn.disabled = false; }
     }));
     body.querySelectorAll('.rechazar-btn').forEach(btn => btn.addEventListener('click', async () => {
-      if (!confirm('Segur que vols rebutjar aquesta alta?')) return;
+      if (!confirm(t('confirm_rebutjar'))) return;
       btn.disabled = true;
       try {
         await fetch(`${API}/api/usuarios/${btn.dataset.id}/rechazar`, { method: 'PUT' });
@@ -266,7 +350,7 @@ async function cargarPendientes() {
     }));
   } catch (err) {
     console.error(err);
-    body.innerHTML = '<p class="empty-note">No s\'han pogut carregar.</p>';
+    body.innerHTML = `<p class="empty-note">${t('no_carregat')}</p>`;
   }
 }
 
@@ -280,7 +364,7 @@ async function cargarUsuarios() {
     const res = await fetch(`${API}/api/usuarios`);
     const data = await res.json();
     const usuarios = data.data || [];
-    if (!usuarios.length) { body.innerHTML = '<p class="empty-note">Cap usuari.</p>'; return; }
+    if (!usuarios.length) { body.innerHTML = `<p class="empty-note">${t('cap_usuari')}</p>`; return; }
 
     body.innerHTML = `<ul class="lista">${usuarios.map(u => `
       <li data-id="${u.id}">
@@ -291,7 +375,7 @@ async function cargarUsuarios() {
         <div class="u-meta">
           <span class="status-badge ${u.estado}">${u.estado}</span>
           ${(u.permisos || []).map(p => `<span class="perm-chip">${escapeHtml(p)}</span>`).join('')}
-          <button class="ghost editar-permisos-btn" data-id="${u.id}" type="button">Editar permisos</button>
+          <button class="ghost editar-permisos-btn" data-id="${u.id}" type="button">${t('btn_editar_permisos')}</button>
         </div>
       </li>
     `).join('')}</ul>`;
@@ -301,7 +385,7 @@ async function cargarUsuarios() {
     });
   } catch (err) {
     console.error(err);
-    body.innerHTML = '<p class="empty-note">No s\'han pogut carregar.</p>';
+    body.innerHTML = `<p class="empty-note">${t('no_carregat')}</p>`;
   }
 }
 
@@ -311,7 +395,7 @@ let permisosUsuarioId = null;
 function abrirEditorPermisos(usuario) {
   permisosUsuarioId = usuario.id;
   const actuales = new Set(usuario.permisos || []);
-  document.getElementById('permisos-titulo').textContent = `Permisos · ${nombreCompleto(usuario)}`;
+  document.getElementById('permisos-titulo').textContent = `${t('permisos_titulo')} · ${nombreCompleto(usuario)}`;
   document.getElementById('permisos-checks').innerHTML = PERMISOS_DISPONIBLES.map(p => `
     <label><input type="checkbox" value="${escapeHtml(p)}" ${actuales.has(p) ? 'checked' : ''}> ${escapeHtml(p)}</label>
   `).join('');
@@ -337,13 +421,12 @@ async function guardarPermisos(id, permisos) {
     await cargarUsuarios();
   } catch (err) {
     console.error(err);
-    alert('No s\'han pogut desar els permisos.');
+    alert(t('err_permisos'));
   }
 }
 
 (async function init() {
   await cargarSesion();
-  await render();
 })();
 </script>
 

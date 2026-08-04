@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
+<style>html:not(.sessio-confirmada) body { visibility: hidden; }</style>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Castellers · Gestió de membres</title>
@@ -39,6 +41,10 @@
   nav.topnav .links a.active { color:var(--ink); border-color:var(--ink); }
   nav.topnav .spacer { margin-left:auto; }
   nav.topnav .user-chip { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); border:1px solid var(--line); padding:7px 11px; border-radius:var(--radius); }
+  .lang-switcher { display:flex; gap:6px; }
+  .lang-btn { width:auto; margin:0; padding:5px 7px; background:var(--paper-card); border:1.5px solid var(--line); border-radius:var(--radius); font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .lang-btn.active { border-color: var(--ink); }
+  .lang-btn svg { display:block; border-radius:1px; }
 
   main { max-width: 1450px; margin: 0 auto; padding: 24px 28px 80px; }
 
@@ -256,15 +262,22 @@
     Castellers
   </a>
   <div class="links">
-    <a href="/">Inici</a>
-    <a href="/ensayos.html">Assajos</a>
-    <a href="/actuaciones.html">Actuacions</a>
-    <a href="/biblioteca-imagenes.html">Imatges</a>
-    <a href="/plantillas.html">Plantilles</a>
-    <a href="/miembros.html" class="active">Membres</a>
-    <a href="/usuarios.html">Usuaris</a>
+    <a href="/" data-i18n="nav_inici">Inici</a>
+    <a href="/ensayos.html" data-i18n="nav_assajos">Assajos</a>
+    <a href="/actuaciones.html" data-i18n="nav_actuacions">Actuacions</a>
+    <a href="/biblioteca-imagenes.html" data-i18n="nav_imatges">Imatges</a>
+    <a href="/plantillas.html" data-i18n="nav_plantilles">Plantilles</a>
+    <a href="/miembros.html" class="active" data-i18n="nav_membres">Membres</a>
+    <a href="/usuarios.html" data-i18n="nav_usuaris">Usuaris</a>
   </div>
   <div class="spacer"></div>
+  <div class="lang-switcher">
+    <button class="lang-btn" data-lang="ca" title="Català" type="button">
+      <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>
+    </button>
+    <button class="lang-btn" data-lang="es" title="Español" type="button">🇪🇸</button>
+    <button class="lang-btn" data-lang="en" title="English" type="button">🇬🇧</button>
+  </div>
   <span class="user-chip" id="user-chip">…</span>
 </nav>
 <script>
@@ -279,13 +292,14 @@
     window.usuarioActual = data.usuario;
     const chip = document.getElementById('user-chip');
     if (chip) {
-      chip.textContent = `${data.usuario.nombre} · Tancar sessió`;
       chip.style.cursor = 'pointer';
       chip.onclick = async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
         location.href = '/login.html';
       };
     }
+    document.documentElement.classList.add('sessio-confirmada');
+    if (window.aplicarIdioma) window.aplicarIdioma(data.usuario.idioma || localStorage.getItem('castellers_idioma') || 'ca');
   }).catch(() => { location.href = '/login.html'; });
 })();
 </script>
@@ -293,19 +307,19 @@
 
 <main>
   <div class="toolbar">
-    <label class="file-label" for="csv-input">Importar CSV</label>
+    <label class="file-label" for="csv-input" data-i18n="importar_csv">Importar CSV</label>
     <input type="file" id="csv-input" accept=".csv,text/csv" style="display:none;">
-    <button class="ghost" id="reset-btn" type="button">Buidar tots els castellers</button>
-    <span class="import-status" id="import-status">Admet el CSV de Spond (només noms) o l'exportació completa (Nom, Àlies, Posició, etc.).</span>
+    <button class="ghost" id="reset-btn" type="button" data-i18n="buidar_castellers">Buidar tots els castellers</button>
+    <span class="import-status" id="import-status" data-i18n="import_hint">Admet el CSV de Spond (només noms) o l'exportació completa (Nom, Àlies, Posició, etc.).</span>
   </div>
 
   <div class="toolbar">
-    <input type="text" id="search" placeholder="Cerca per nom, àlies o correu…">
+    <input type="text" id="search" placeholder="Cerca per nom, àlies o correu…" data-i18n-placeholder="placeholder_cerca">
     <select id="filter-posicio">
-      <option value="">Totes les posicions</option>
+      <option value="" data-i18n="totes_posicions">Totes les posicions</option>
     </select>
     <select id="filter-rol">
-      <option value="">Tots els rols de castell</option>
+      <option value="" data-i18n="tots_rols">Tots els rols de castell</option>
     </select>
     <span class="count" id="result-count">0 membres</span>
   </div>
@@ -315,29 +329,29 @@
       <thead>
         <tr>
           <th></th>
-          <th>Nom</th>
-          <th>Àlies</th>
-          <th>Cognoms</th>
-          <th>Alçada</th>
-          <th>Posició pinya</th>
-          <th>Rols de castell</th>
-          <th>Habitual</th>
-          <th>Accés APP</th>
-          <th>Correu</th>
-          <th>Mòbil</th>
-          <th>Naixement</th>
-          <th>Entrega samarreta</th>
-          <th>Revisat</th>
-          <th>Estat acollida</th>
-          <th>Permisos APP</th>
-          <th>Integrant colla</th>
-          <th>Lesionat</th>
-          <th>Formularis</th>
+          <th data-i18n="col_nom">Nom</th>
+          <th data-i18n="col_alies">Àlies</th>
+          <th data-i18n="col_cognoms">Cognoms</th>
+          <th data-i18n="col_alcada">Alçada</th>
+          <th data-i18n="col_posicio">Posició pinya</th>
+          <th data-i18n="col_rols">Rols de castell</th>
+          <th data-i18n="col_habitual">Habitual</th>
+          <th data-i18n="col_acces">Accés APP</th>
+          <th data-i18n="col_correu">Correu</th>
+          <th data-i18n="col_movil">Mòbil</th>
+          <th data-i18n="col_naixement">Naixement</th>
+          <th data-i18n="col_samarreta">Entrega samarreta</th>
+          <th data-i18n="col_revisat">Revisat</th>
+          <th data-i18n="col_acollida">Estat acollida</th>
+          <th data-i18n="col_permisos">Permisos APP</th>
+          <th data-i18n="col_integrant">Integrant colla</th>
+          <th data-i18n="col_lesionat">Lesionat</th>
+          <th data-i18n="col_formularis">Formularis</th>
           <th>ID</th>
         </tr>
       </thead>
       <tbody id="table-body">
-        <tr><td colspan="19" class="empty-note">Carregant…</td></tr>
+        <tr><td colspan="19" class="empty-note" data-i18n="carregant">Carregant…</td></tr>
       </tbody>
     </table>
   </div>
@@ -350,90 +364,90 @@
     <form id="edit-form">
       <div class="field-grid">
         <div class="full">
-          <label>Nom</label>
+          <label data-i18n="col_nom">Nom</label>
           <input type="text" id="f-nombre" required>
         </div>
         <div>
-          <label>Àlies</label>
+          <label data-i18n="col_alies">Àlies</label>
           <input type="text" id="f-apodo">
         </div>
         <div>
-          <label>Primer cognom</label>
+          <label data-i18n="primer_cognom">Primer cognom</label>
           <input type="text" id="f-primerApellido">
         </div>
         <div>
-          <label>Segon cognom</label>
+          <label data-i18n="segon_cognom">Segon cognom</label>
           <input type="text" id="f-segundoApellido">
         </div>
         <div>
-          <label>Alçada espatlles (cm)</label>
+          <label data-i18n="alcada_espatlles">Alçada espatlles (cm)</label>
           <input type="number" id="f-alturaHombros">
         </div>
         <div>
-          <label>Posició de pinya</label>
+          <label data-i18n="col_posicio">Posició de pinya</label>
           <select id="f-posicionPinyaId">
-            <option value="">— sense assignar —</option>
+            <option value="" data-i18n="sense_assignar">— sense assignar —</option>
           </select>
         </div>
         <div class="full role-btn-row">
-          <button class="ghost" type="button" id="open-roles-btn">Gestionar rols de castell →</button>
+          <button class="ghost" type="button" id="open-roles-btn" data-i18n="gestionar_rols">Gestionar rols de castell →</button>
         </div>
         <div>
-          <label>Correu</label>
+          <label data-i18n="col_correu">Correu</label>
           <input type="email" id="f-correo">
         </div>
         <div>
-          <label>Mòbil</label>
+          <label data-i18n="col_movil">Mòbil</label>
           <input type="text" id="f-movil">
         </div>
         <div>
-          <label>Data naixement</label>
+          <label data-i18n="data_naixement">Data naixement</label>
           <input type="date" id="f-fNac">
         </div>
         <div>
-          <label>Data entrega samarreta</label>
+          <label data-i18n="data_samarreta">Data entrega samarreta</label>
           <input type="date" id="f-fechaCamisa">
         </div>
         <div>
-          <label>Estat acollida</label>
+          <label data-i18n="col_acollida">Estat acollida</label>
           <select id="f-estadoAcogida">
             <option value="">—</option>
-            <option value="Perdut">Perdut</option>
-            <option value="Finalitzat">Finalitzat</option>
-            <option value="No aplica">No aplica</option>
+            <option value="Perdut" data-i18n="acollida_perdut">Perdut</option>
+            <option value="Finalitzat" data-i18n="acollida_finalitzat">Finalitzat</option>
+            <option value="No aplica" data-i18n="acollida_no_aplica">No aplica</option>
           </select>
         </div>
         <div>
-          <label>Integrant de la colla</label>
+          <label data-i18n="col_integrant">Integrant de la colla</label>
           <select id="f-integranteColla">
             <option value="">—</option>
-            <option value="true">Sí</option>
-            <option value="false">No</option>
+            <option value="true" data-i18n="si">Sí</option>
+            <option value="false" data-i18n="no">No</option>
           </select>
         </div>
         <div>
-          <label>Formularis</label>
+          <label data-i18n="col_formularis">Formularis</label>
           <input type="number" id="f-formularios">
         </div>
 
         <div class="full">
-          <label>Permisos especials APP</label>
+          <label data-i18n="permisos_especials">Permisos especials APP</label>
           <div class="check-field"><input type="checkbox" id="perm-tecnica"><label for="perm-tecnica">Tècnica</label></div>
           <div class="check-field"><input type="checkbox" id="perm-junta"><label for="perm-junta">Junta</label></div>
           <div class="check-field"><input type="checkbox" id="perm-admin"><label for="perm-admin">AdminGeneral</label></div>
         </div>
 
         <div class="full">
-          <div class="check-field"><input type="checkbox" id="f-habitual"><label for="f-habitual">Habitual</label></div>
-          <div class="check-field"><input type="checkbox" id="f-accesoAPP"><label for="f-accesoAPP">Accés APP</label></div>
-          <div class="check-field"><input type="checkbox" id="f-revisado"><label for="f-revisado">Revisat</label></div>
-          <div class="check-field"><input type="checkbox" id="f-lesionLargoPlazo"><label for="f-lesionLargoPlazo">Lesionat de llarga durada</label></div>
+          <div class="check-field"><input type="checkbox" id="f-habitual"><label for="f-habitual" data-i18n="col_habitual">Habitual</label></div>
+          <div class="check-field"><input type="checkbox" id="f-accesoAPP"><label for="f-accesoAPP" data-i18n="col_acces">Accés APP</label></div>
+          <div class="check-field"><input type="checkbox" id="f-revisado"><label for="f-revisado" data-i18n="col_revisat">Revisat</label></div>
+          <div class="check-field"><input type="checkbox" id="f-lesionLargoPlazo"><label for="f-lesionLargoPlazo" data-i18n="lesionat_llarga">Lesionat de llarga durada</label></div>
         </div>
       </div>
 
       <div class="modal-actions">
-        <button class="ghost" type="button" id="cancel-edit">Cancel·lar</button>
-        <button class="primary" type="submit" id="save-edit">Desar canvis</button>
+        <button class="ghost" type="button" id="cancel-edit" data-i18n="cancelar">Cancel·lar</button>
+        <button class="primary" type="submit" id="save-edit" data-i18n="desar_canvis">Desar canvis</button>
       </div>
     </form>
   </div>
@@ -443,11 +457,11 @@
 <div class="modal-overlay" id="roles-overlay">
   <div class="modal-box small">
     <h3 id="roles-modal-title">Rols de castell</h3>
-    <p class="hint">Marca els rols que sap fer i arrossega'ls per ordenar-los (amb el dit o el ratolí) — el de dalt de tot és el principal.</p>
+    <p class="hint" data-i18n="hint_rols">Marca els rols que sap fer i arrossega'ls per ordenar-los (amb el dit o el ratolí) — el de dalt de tot és el principal.</p>
     <ul class="roles-list" id="roles-list"></ul>
     <div class="modal-actions">
-      <button class="ghost" type="button" id="cancel-roles">Cancel·lar</button>
-      <button class="primary" type="button" id="save-roles">Desar rols</button>
+      <button class="ghost" type="button" id="cancel-roles" data-i18n="cancelar">Cancel·lar</button>
+      <button class="primary" type="button" id="save-roles" data-i18n="desar_rols">Desar rols</button>
     </div>
   </div>
 </div>
@@ -459,14 +473,135 @@ let posicionesPinya = [];
 let rolesCastillo = [];
 let editingId = null;
 
+const TRADUCCIONES = {
+  ca: {
+    nav_inici: 'Inici', nav_assajos: 'Assajos', nav_actuacions: 'Actuacions', nav_imatges: 'Imatges',
+    nav_plantilles: 'Plantilles', nav_membres: 'Membres', nav_usuaris: 'Usuaris', chip_tancar: 'Tancar sessió',
+    importar_csv: 'Importar CSV', buidar_castellers: 'Buidar tots els castellers',
+    import_hint: 'Admet el CSV de Spond (només noms) o l\'exportació completa (Nom, Àlies, Posició, etc.).',
+    placeholder_cerca: 'Cerca per nom, àlies o correu…', totes_posicions: 'Totes les posicions', tots_rols: 'Tots els rols de castell',
+    col_nom: 'Nom', col_alies: 'Àlies', col_cognoms: 'Cognoms', col_alcada: 'Alçada', col_posicio: 'Posició pinya',
+    col_rols: 'Rols de castell', col_habitual: 'Habitual', col_acces: 'Accés APP', col_correu: 'Correu', col_movil: 'Mòbil',
+    col_naixement: 'Naixement', col_samarreta: 'Entrega samarreta', col_revisat: 'Revisat', col_acollida: 'Estat acollida',
+    col_permisos: 'Permisos APP', col_integrant: 'Integrant colla', col_lesionat: 'Lesionat', col_formularis: 'Formularis',
+    primer_cognom: 'Primer cognom', segon_cognom: 'Segon cognom', alcada_espatlles: 'Alçada espatlles (cm)',
+    sense_assignar: '— sense assignar —', gestionar_rols: 'Gestionar rols de castell →',
+    data_naixement: 'Data naixement', data_samarreta: 'Data entrega samarreta',
+    acollida_perdut: 'Perdut', acollida_finalitzat: 'Finalitzat', acollida_no_aplica: 'No aplica', si: 'Sí', no: 'No',
+    permisos_especials: 'Permisos especials APP', lesionat_llarga: 'Lesionat de llarga durada',
+    cancelar: 'Cancel·lar', desar_canvis: 'Desar canvis', desar_rols: 'Desar rols', hint_rols: 'Marca els rols que sap fer i arrossega\'ls per ordenar-los (amb el dit o el ratolí) — el de dalt de tot és el principal.',
+    carregant: 'Carregant…', no_carregada_llista: 'No s\'ha pogut carregar la llista.', editar: 'Editar',
+    cap_membre_filtre: 'Cap membre coincideix amb el filtre.',
+    membre: (n) => `${n} membre${n === 1 ? '' : 's'}`, editar_titulo: (n) => `Editar · ${n}`,
+    err_nom_buit: 'El nom no pot quedar buit.', err_desar_canvi: 'No s\'ha pogut desar el canvi.',
+    rols_titulo: (n) => `Rols de castell · ${n}`, err_desar_rols: 'No s\'han pogut desar els rols.',
+    important_n: (i, tot) => `Important ${i} de ${tot}…`, catalegs_no_cargados: 'Encara no s\'han carregat els catàlegs — torna-ho a provar en un segon.',
+    fila_no_valida: 'No s\'ha trobat cap fila vàlida. Comprova el format del fitxer.',
+    importados_ajustando: (ok, tot) => `${ok} de ${tot} importats. Ajustant la seqüència d'id…`,
+    importados_ok: (ok, tot) => `${ok} de ${tot} importats correctament.`,
+    confirm_buidar: 'Això esborrarà TOTS els castellers i els seus rols assignats. Vols continuar?',
+    taula_buidada: 'Taula buidada.', err_buidar: 'No s\'ha pogut buidar la taula.'
+  },
+  es: {
+    nav_inici: 'Inicio', nav_assajos: 'Ensayos', nav_actuacions: 'Actuaciones', nav_imatges: 'Imágenes',
+    nav_plantilles: 'Plantillas', nav_membres: 'Miembros', nav_usuaris: 'Usuarios', chip_tancar: 'Cerrar sesión',
+    importar_csv: 'Importar CSV', buidar_castellers: 'Vaciar todos los castellers',
+    import_hint: 'Admite el CSV de Spond (solo nombres) o la exportación completa (Nombre, Alias, Posición, etc.).',
+    placeholder_cerca: 'Busca por nombre, alias o correo…', totes_posicions: 'Todas las posiciones', tots_rols: 'Todos los roles de castell',
+    col_nom: 'Nombre', col_alies: 'Alias', col_cognoms: 'Apellidos', col_alcada: 'Altura', col_posicio: 'Posición pinya',
+    col_rols: 'Roles de castell', col_habitual: 'Habitual', col_acces: 'Acceso APP', col_correu: 'Correo', col_movil: 'Móvil',
+    col_naixement: 'Nacimiento', col_samarreta: 'Entrega camiseta', col_revisat: 'Revisado', col_acollida: 'Estado acogida',
+    col_permisos: 'Permisos APP', col_integrant: 'Integrante colla', col_lesionat: 'Lesionado', col_formularis: 'Formularios',
+    primer_cognom: 'Primer apellido', segon_cognom: 'Segundo apellido', alcada_espatlles: 'Altura hombros (cm)',
+    sense_assignar: '— sin asignar —', gestionar_rols: 'Gestionar roles de castell →',
+    data_naixement: 'Fecha nacimiento', data_samarreta: 'Fecha entrega camiseta',
+    acollida_perdut: 'Perdido', acollida_finalitzat: 'Finalizado', acollida_no_aplica: 'No aplica', si: 'Sí', no: 'No',
+    permisos_especials: 'Permisos especiales APP', lesionat_llarga: 'Lesionado de larga duración',
+    cancelar: 'Cancelar', desar_canvis: 'Guardar cambios', desar_rols: 'Guardar roles', hint_rols: 'Marca los roles que sabe hacer y arrástralos para ordenarlos (con el dedo o el ratón) — el de arriba del todo es el principal.',
+    carregant: 'Cargando…', no_carregada_llista: 'No se ha podido cargar la lista.', editar: 'Editar',
+    cap_membre_filtre: 'Ningún miembro coincide con el filtro.',
+    membre: (n) => `${n} miembro${n === 1 ? '' : 's'}`, editar_titulo: (n) => `Editar · ${n}`,
+    err_nom_buit: 'El nombre no puede quedar vacío.', err_desar_canvi: 'No se ha podido guardar el cambio.',
+    rols_titulo: (n) => `Roles de castell · ${n}`, err_desar_rols: 'No se han podido guardar los roles.',
+    important_n: (i, tot) => `Importando ${i} de ${tot}…`, catalegs_no_cargados: 'Aún no se han cargado los catálogos — vuelve a intentarlo en un segundo.',
+    fila_no_valida: 'No se ha encontrado ninguna fila válida. Comprueba el formato del archivo.',
+    importados_ajustando: (ok, tot) => `${ok} de ${tot} importados. Ajustando la secuencia de id…`,
+    importados_ok: (ok, tot) => `${ok} de ${tot} importados correctamente.`,
+    confirm_buidar: 'Esto borrará a TODOS los castellers y sus roles asignados. ¿Quieres continuar?',
+    taula_buidada: 'Tabla vaciada.', err_buidar: 'No se ha podido vaciar la tabla.'
+  },
+  en: {
+    nav_inici: 'Home', nav_assajos: 'Rehearsals', nav_actuacions: 'Performances', nav_imatges: 'Images',
+    nav_plantilles: 'Templates', nav_membres: 'Members', nav_usuaris: 'Users', chip_tancar: 'Log out',
+    importar_csv: 'Import CSV', buidar_castellers: 'Clear all castellers',
+    import_hint: 'Accepts the Spond CSV (names only) or the full export (Name, Nickname, Position, etc.).',
+    placeholder_cerca: 'Search by name, nickname or email…', totes_posicions: 'All positions', tots_rols: 'All castell roles',
+    col_nom: 'Name', col_alies: 'Nickname', col_cognoms: 'Last names', col_alcada: 'Height', col_posicio: 'Pinya position',
+    col_rols: 'Castell roles', col_habitual: 'Regular', col_acces: 'App access', col_correu: 'Email', col_movil: 'Mobile',
+    col_naixement: 'Birth', col_samarreta: 'Shirt handover', col_revisat: 'Reviewed', col_acollida: 'Onboarding status',
+    col_permisos: 'App permissions', col_integrant: 'Colla member', col_lesionat: 'Injured', col_formularis: 'Forms',
+    primer_cognom: 'Last name', segon_cognom: 'Second last name', alcada_espatlles: 'Shoulder height (cm)',
+    sense_assignar: '— unassigned —', gestionar_rols: 'Manage castell roles →',
+    data_naixement: 'Date of birth', data_samarreta: 'Shirt handover date',
+    acollida_perdut: 'Lost', acollida_finalitzat: 'Finished', acollida_no_aplica: 'Not applicable', si: 'Yes', no: 'No',
+    permisos_especials: 'Special app permissions', lesionat_llarga: 'Long-term injury',
+    cancelar: 'Cancel', desar_canvis: 'Save changes', desar_rols: 'Save roles', hint_rols: 'Check the roles they can do and drag to order them (with finger or mouse) — the topmost is the main one.',
+    carregant: 'Loading…', no_carregada_llista: 'Could not load the list.', editar: 'Edit',
+    cap_membre_filtre: 'No member matches the filter.',
+    membre: (n) => `${n} member${n === 1 ? '' : 's'}`, editar_titulo: (n) => `Edit · ${n}`,
+    err_nom_buit: 'The name cannot be empty.', err_desar_canvi: 'Could not save the change.',
+    rols_titulo: (n) => `Castell roles · ${n}`, err_desar_rols: 'Could not save the roles.',
+    important_n: (i, tot) => `Importing ${i} of ${tot}…`, catalegs_no_cargados: 'Catalogs haven\'t loaded yet — try again in a second.',
+    fila_no_valida: 'No valid row found. Check the file format.',
+    importados_ajustando: (ok, tot) => `${ok} of ${tot} imported. Adjusting the id sequence…`,
+    importados_ok: (ok, tot) => `${ok} of ${tot} imported successfully.`,
+    confirm_buidar: 'This will delete ALL castellers and their assigned roles. Continue?',
+    taula_buidada: 'Table cleared.', err_buidar: 'Could not clear the table.'
+  }
+};
+let idiomaActual = localStorage.getItem('castellers_idioma') || 'ca';
+function t(key) { return (TRADUCCIONES[idiomaActual] || TRADUCCIONES.ca)[key] || key; }
+
+function aplicarIdioma(idioma) {
+  idiomaActual = idioma;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val !== key) el.textContent = val;
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    const val = t(key);
+    if (val !== key) el.placeholder = val;
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === idioma));
+  localStorage.setItem('castellers_idioma', idioma);
+  document.documentElement.lang = idioma;
+  const chip = document.getElementById('user-chip');
+  if (chip && window.usuarioActual) chip.textContent = `${window.usuarioActual.nombre} · ${t('chip_tancar')}`;
+  if (typeof applyFilters === 'function' && allMembers.length) applyFilters();
+}
+window.aplicarIdioma = aplicarIdioma;
+
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    aplicarIdioma(btn.dataset.lang);
+    if (window.usuarioActual) {
+      try {
+        await fetch(`${API}/api/auth/idioma`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idioma: btn.dataset.lang }) });
+      } catch (err) { console.error(err); }
+    }
+  });
+});
+
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
 }
 function yesNo(v) {
-  if (v === true) return '<span class="yes">Sí</span>';
-  if (v === false) return '<span class="no">No</span>';
+  if (v === true) return `<span class="yes">${t('si')}</span>`;
+  if (v === false) return `<span class="no">${t('no')}</span>`;
   return '<span class="empty-cell">—</span>';
 }
 function cellOr(v) {
@@ -522,7 +657,7 @@ async function fetchAll() {
     allMembers = data.data || [];
     applyFilters();
   } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="19" class="empty-note">No s\'ha pogut carregar la llista.</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="19" class="empty-note">${t('no_carregada_llista')}</td></tr>`;
     console.error(err);
   }
 }
@@ -545,14 +680,14 @@ function applyFilters() {
     return true;
   });
 
-  document.getElementById('result-count').textContent = `${filtered.length} membre${filtered.length === 1 ? '' : 's'}`;
+  document.getElementById('result-count').textContent = t('membre')(filtered.length);
   renderTable(filtered);
 }
 
 function renderTable(rows) {
   const tbody = document.getElementById('table-body');
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="19" class="empty-note">Cap membre coincideix amb el filtre.</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="19" class="empty-note">${t('cap_membre_filtre')}</td></tr>`;
     return;
   }
 
@@ -565,7 +700,7 @@ function renderTable(rows) {
     const cognoms = [m.primerApellido, m.segundoApellido].filter(Boolean).join(' ');
     return `
       <tr>
-        <td><button class="icon-btn edit-btn" data-id="${m.id}" type="button" title="Editar">${pencilSvg}</button></td>
+        <td><button class="icon-btn edit-btn" data-id="${m.id}" type="button" title="${t('editar')}">${pencilSvg}</button></td>
         <td>${cellOr(m.nombre)}</td>
         <td>${cellOr(m.apodo)}</td>
         <td>${cellOr(cognoms)}</td>
@@ -607,7 +742,7 @@ function toDateInputValue(v) {
 
 function openEdit(m) {
   editingId = m.id;
-  document.getElementById('modal-title').textContent = `Editar · ${m.nombre}`;
+  document.getElementById('modal-title').textContent = t('editar_titulo')(m.nombre);
   document.getElementById('f-nombre').value = m.nombre || '';
   document.getElementById('f-apodo').value = m.apodo || '';
   document.getElementById('f-primerApellido').value = m.primerApellido || '';
@@ -679,7 +814,7 @@ document.getElementById('edit-form').addEventListener('submit', async (e) => {
     lesionLargoPlazo: document.getElementById('f-lesionLargoPlazo').checked
   };
 
-  if (!payload.nombre) { alert('El nom no pot quedar buit.'); return; }
+  if (!payload.nombre) { alert(t('err_nom_buit')); return; }
 
   const saveBtn = document.getElementById('save-edit');
   saveBtn.disabled = true;
@@ -694,7 +829,7 @@ document.getElementById('edit-form').addEventListener('submit', async (e) => {
     await fetchAll();
   } catch (err) {
     console.error(err);
-    alert('No s\'ha pogut desar el canvi.');
+    alert(t('err_desar_canvi'));
   } finally {
     saveBtn.disabled = false;
   }
@@ -708,7 +843,7 @@ const rolesList = document.getElementById('roles-list');
 document.getElementById('open-roles-btn').addEventListener('click', () => {
   const m = allMembers.find(x => x.id === editingId);
   if (!m) return;
-  document.getElementById('roles-modal-title').textContent = `Rols de castell · ${m.nombre}`;
+  document.getElementById('roles-modal-title').textContent = t('rols_titulo')(m.nombre);
   buildRolesList(m.rolesCastell || []);
   rolesOverlay.classList.add('open');
 });
@@ -797,7 +932,7 @@ document.getElementById('save-roles').addEventListener('click', async () => {
     await fetchAll();
   } catch (err) {
     console.error(err);
-    alert('No s\'han pogut desar els rols.');
+    alert(t('err_desar_rols'));
   } finally {
     btn.disabled = false;
   }
@@ -952,7 +1087,7 @@ async function importInBatches(payloads, statusEl) {
   let ok = 0;
   for (let i = 0; i < payloads.length; i += BATCH_SIZE) {
     const batch = payloads.slice(i, i + BATCH_SIZE);
-    statusEl.textContent = `Important ${Math.min(i + BATCH_SIZE, payloads.length)} de ${payloads.length}…`;
+    statusEl.textContent = t('important_n')(Math.min(i + BATCH_SIZE, payloads.length), payloads.length);
     const results = await Promise.allSettled(batch.map(payload =>
       fetch(`${API}/api/castellers`, {
         method: 'POST',
@@ -971,7 +1106,7 @@ document.getElementById('csv-input').addEventListener('change', async (e) => {
   if (!file) return;
 
   if (!posicionesPinya.length) {
-    statusEl.textContent = 'Encara no s\'han carregat els catàlegs — torna-ho a provar en un segon.';
+    statusEl.textContent = t('catalegs_no_cargados');
     return;
   }
 
@@ -980,13 +1115,13 @@ document.getElementById('csv-input').addEventListener('change', async (e) => {
   const payloads = buildPayloads(header, rows);
 
   if (!payloads.length) {
-    statusEl.textContent = 'No s\'ha trobat cap fila vàlida. Comprova el format del fitxer.';
+    statusEl.textContent = t('fila_no_valida');
     e.target.value = '';
     return;
   }
 
   const ok = await importInBatches(payloads, statusEl);
-  statusEl.textContent = `${ok} de ${payloads.length} importats. Ajustant la seqüència d'id…`;
+  statusEl.textContent = t('importados_ajustando')(ok, payloads.length);
 
   try {
     await fetch(`${API}/api/fix-id-sequence`);
@@ -994,24 +1129,24 @@ document.getElementById('csv-input').addEventListener('change', async (e) => {
     console.error(err);
   }
 
-  statusEl.textContent = `${ok} de ${payloads.length} importats correctament.`;
+  statusEl.textContent = t('importados_ok')(ok, payloads.length);
   e.target.value = '';
   await fetchAll();
 });
 
 document.getElementById('reset-btn').addEventListener('click', async () => {
-  if (!confirm('Això esborrarà TOTS els castellers i els seus rols assignats. Vols continuar?')) return;
+  if (!confirm(t('confirm_buidar'))) return;
   const btn = document.getElementById('reset-btn');
   const statusEl = document.getElementById('import-status');
   btn.disabled = true;
   try {
     const res = await fetch(`${API}/api/reset-miembros?confirm=si`);
     const data = await res.json();
-    statusEl.textContent = data.success ? (data.aviso || 'Taula buidada.') : (data.aviso || data.error);
+    statusEl.textContent = data.success ? (data.aviso || t('taula_buidada')) : (data.aviso || data.error);
     await fetchAll();
   } catch (err) {
     console.error(err);
-    statusEl.textContent = 'No s\'ha pogut buidar la taula.';
+    statusEl.textContent = t('err_buidar');
   } finally {
     btn.disabled = false;
   }

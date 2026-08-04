@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
+<style>html:not(.sessio-confirmada) body { visibility: hidden; }</style>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Castellers · Editor de castells</title>
@@ -22,6 +24,11 @@
   nav.topnav .links a { font-family:'IBM Plex Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; padding:8px 12px; border-radius:var(--radius); text-decoration:none; color:var(--ink-soft); border:1px solid transparent; }
   nav.topnav .links a:hover { border-color:var(--line); color:var(--ink); }
   nav.topnav .spacer { margin-left:auto; }
+  .lang-switcher { display:flex; gap:6px; }
+  .lang-btn { width:auto; margin:0; padding:5px 7px; background:var(--paper-card); border:1.5px solid var(--line); border-radius:var(--radius); font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .lang-btn.active { border-color: var(--ink); }
+  .lang-btn svg { display:block; border-radius:1px; }
+  .user-chip { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); border:1px solid var(--line); padding:7px 11px; border-radius:var(--radius); cursor:pointer; background:none; }
 
   header.ctx { padding: 16px 28px; border-bottom: 1px solid var(--line); display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
   header.ctx h1 { font-family:'Fraunces',serif; font-weight:700; font-size:22px; margin:0; }
@@ -117,11 +124,18 @@
     Castellers
   </a>
   <div class="links">
-    <a href="/">Inici</a>
-    <a href="/biblioteca-imagenes.html">Imatges</a>
-    <a href="/plantillas.html">Plantilles</a>
+    <a href="/" data-i18n="nav_inici">Inici</a>
+    <a href="/biblioteca-imagenes.html" data-i18n="nav_imatges">Imatges</a>
+    <a href="/plantillas.html" data-i18n="nav_plantilles">Plantilles</a>
   </div>
   <div class="spacer"></div>
+  <div class="lang-switcher">
+    <button class="lang-btn" data-lang="ca" title="Català" type="button">
+      <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>
+    </button>
+    <button class="lang-btn" data-lang="es" title="Español" type="button">🇪🇸</button>
+    <button class="lang-btn" data-lang="en" title="English" type="button">🇬🇧</button>
+  </div>
   <span class="user-chip" id="user-chip">…</span>
 </nav>
 <script>
@@ -136,56 +150,57 @@
     window.usuarioActual = data.usuario;
     const chip = document.getElementById('user-chip');
     if (chip) {
-      chip.textContent = `${data.usuario.nombre} · Tancar sessió`;
       chip.style.cursor = 'pointer';
       chip.onclick = async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
         location.href = '/login.html';
       };
     }
+    document.documentElement.classList.add('sessio-confirmada');
+    if (window.aplicarIdioma) window.aplicarIdioma(data.usuario.idioma || localStorage.getItem('castellers_idioma') || 'ca');
   }).catch(() => { location.href = '/login.html'; });
 })();
 </script>
 
 
 <header class="ctx">
-  <h1>Editor de castells</h1>
+  <h1 data-i18n="titulo">Editor de castells</h1>
   <select id="tipo-select">
     <option value="2d6">2d6</option>
     <option value="3d7">3d7</option>
     <option value="4d7">4d7</option>
     <option value="5d7">5d7</option>
   </select>
-  <a class="back" href="/plantillas.html">← Tornar a plantilles</a>
+  <a class="back" href="/plantillas.html" data-i18n="tornar_plantilles">← Tornar a plantilles</a>
 </header>
 
 <main>
   <section class="panel">
-    <div class="panel-head"><h2>Nivells del tronc</h2></div>
+    <div class="panel-head"><h2 data-i18n="nivells_tronc">Nivells del tronc</h2></div>
     <div class="panel-body">
-      <p class="hint" style="margin:0 0 12px;">
+      <p class="hint" id="hint-niveles" data-i18n-html="hint_niveles" style="margin:0 0 12px;">
         Arrossega pel ganxo per reordenar. <strong>El primer nivell de la llista rep els membres més baixos</strong>
         (normalment Enxaneta) i <strong>l'últim els més alts</strong> (normalment Baix) — la quantitat és quantes
         persones ocupen aquest nivell.
       </p>
       <ul class="niveles-editor" id="niveles-list"></ul>
-      <button class="ghost" id="add-nivel-btn" type="button" style="margin-top:0;">+ Afegir nivell</button>
-      <button class="primary" id="save-btn" type="button" style="margin-top:16px;">Desar estructura</button>
+      <button class="ghost" id="add-nivel-btn" type="button" style="margin-top:0;" data-i18n="afegir_nivell">+ Afegir nivell</button>
+      <button class="primary" id="save-btn" type="button" style="margin-top:16px;" data-i18n="desar_estructura">Desar estructura</button>
     </div>
   </section>
 
   <section class="panel">
     <div class="panel-head">
       <div class="tabs">
-        <button class="tab-btn active" id="tab-imagen-btn" type="button">1. Imatge de referència</button>
-        <button class="tab-btn" id="tab-etiquetas-btn" type="button">2. Etiquetes</button>
+        <button class="tab-btn active" id="tab-imagen-btn" type="button" data-i18n="tab_imatge">1. Imatge de referència</button>
+        <button class="tab-btn" id="tab-etiquetas-btn" type="button" data-i18n="tab_etiquetes">2. Etiquetes</button>
       </div>
     </div>
     <div class="panel-body">
       <p class="hint" id="tab-hint" style="margin:0 0 10px;"></p>
 
       <div id="sidebar-imagen" style="margin-bottom:12px;">
-        <button class="ghost" id="open-picker-btn" type="button" style="width:auto;">Triar imatge de fons</button>
+        <button class="ghost" id="open-picker-btn" type="button" style="width:auto;" data-i18n="triar_imatge">Triar imatge de fons</button>
       </div>
 
       <div id="canvas-wrap">
@@ -201,14 +216,14 @@
         </div>
       </div>
       <div id="zoom-row">
-        <label for="opacidad-range">Opacitat de la imatge</label>
+        <label for="opacidad-range" data-i18n="opacitat">Opacitat de la imatge</label>
         <input type="range" id="opacidad-range" min="0.1" max="1" step="0.05" value="0.85">
-        <label for="zoom-range">Zoom de la imatge</label>
+        <label for="zoom-range" data-i18n="zoom_imatge">Zoom de la imatge</label>
         <input type="range" id="zoom-range" min="0.1" max="3" step="0.02" value="1">
-        <label for="escala-range">Escala de vista (només per treballar còmode)</label>
+        <label for="escala-range" data-i18n="escala_vista">Escala de vista (només per treballar còmode)</label>
         <input type="range" id="escala-range" min="0.3" max="1.5" step="0.05" value="0.55">
       </div>
-      <button class="ghost" id="regenerar-btn" type="button" style="margin-top:14px;">Regenerar etiquetes des dels nivells</button>
+      <button class="ghost" id="regenerar-btn" type="button" style="margin-top:14px;" data-i18n="regenerar_etiquetes">Regenerar etiquetes des dels nivells</button>
     </div>
   </section>
 </main>
@@ -246,6 +261,86 @@ let imagenActualId = null;
 let etiquetas = []; // { slot, slotIndex, x, y, w, h }
 const tipoSelect = document.getElementById('tipo-select');
 
+const TRADUCCIONES = {
+  ca: {
+    nav_inici: 'Inici', nav_imatges: 'Imatges', nav_plantilles: 'Plantilles', chip_tancar: 'Tancar sessió',
+    titulo: 'Editor de castells', tornar_plantilles: '← Tornar a plantilles',
+    nivells_tronc: 'Nivells del tronc',
+    hint_niveles: 'Arrossega pel ganxo per reordenar. <strong>El primer nivell de la llista rep els membres més baixos</strong> (normalment Enxaneta) i <strong>l\'últim els més alts</strong> (normalment Baix) — la quantitat és quantes persones ocupen aquest nivell.',
+    afegir_nivell: '+ Afegir nivell', desar_estructura: 'Desar estructura',
+    tab_imatge: '1. Imatge de referència', tab_etiquetes: '2. Etiquetes', triar_imatge: 'Triar imatge de fons',
+    opacitat: 'Opacitat de la imatge', zoom_imatge: 'Zoom de la imatge', escala_vista: 'Escala de vista (només per treballar còmode)',
+    regenerar_etiquetes: 'Regenerar etiquetes des dels nivells', ex_nivel: 'Ex. Segon',
+    hint_tab_imagen: 'Arrossega la imatge per moure-la, i les cantonades per ajustar-ne la mida (sense deformar-la).',
+    hint_tab_etiquetas: 'Arrossega cada etiqueta fins al lloc correcte al costat de la imatge. Les etiquetes es generen soles a partir dels nivells.',
+    err_nivell_buit: 'Afegeix almenys un nivell amb nom.', estructura_desada: 'Estructura desada.',
+    err_desar: 'No s\'ha pogut desar: ', err_etiquetes: 'Els nivells s\'han desat, però NO les etiquetes de la imatge: '
+  },
+  es: {
+    nav_inici: 'Inicio', nav_imatges: 'Imágenes', nav_plantilles: 'Plantillas', chip_tancar: 'Cerrar sesión',
+    titulo: 'Editor de castells', tornar_plantilles: '← Volver a plantillas',
+    nivells_tronc: 'Niveles del tronco',
+    hint_niveles: 'Arrastra por el gancho para reordenar. <strong>El primer nivel de la lista recibe a los miembros más bajos</strong> (normalmente Enxaneta) y <strong>el último a los más altos</strong> (normalmente Baix) — la cantidad es cuántas personas ocupan ese nivel.',
+    afegir_nivell: '+ Añadir nivel', desar_estructura: 'Guardar estructura',
+    tab_imatge: '1. Imagen de referencia', tab_etiquetes: '2. Etiquetas', triar_imatge: 'Elegir imagen de fondo',
+    opacitat: 'Opacidad de la imagen', zoom_imatge: 'Zoom de la imagen', escala_vista: 'Escala de vista (solo para trabajar cómodo)',
+    regenerar_etiquetes: 'Regenerar etiquetas desde los niveles', ex_nivel: 'Ej. Segon',
+    hint_tab_imagen: 'Arrastra la imagen para moverla, y las esquinas para ajustar su tamaño (sin deformarla).',
+    hint_tab_etiquetas: 'Arrastra cada etiqueta hasta el sitio correcto junto a la imagen. Las etiquetas se generan solas a partir de los niveles.',
+    err_nivell_buit: 'Añade al menos un nivel con nombre.', estructura_desada: 'Estructura guardada.',
+    err_desar: 'No se ha podido guardar: ', err_etiquetes: 'Los niveles se han guardado, pero NO las etiquetas de la imagen: '
+  },
+  en: {
+    nav_inici: 'Home', nav_imatges: 'Images', nav_plantilles: 'Templates', chip_tancar: 'Log out',
+    titulo: 'Castell editor', tornar_plantilles: '← Back to templates',
+    nivells_tronc: 'Trunk levels',
+    hint_niveles: 'Drag the handle to reorder. <strong>The first level in the list gets the shortest members</strong> (usually Enxaneta) and <strong>the last one the tallest</strong> (usually Baix) — the quantity is how many people occupy that level.',
+    afegir_nivell: '+ Add level', desar_estructura: 'Save structure',
+    tab_imatge: '1. Reference image', tab_etiquetes: '2. Labels', triar_imatge: 'Choose background image',
+    opacitat: 'Image opacity', zoom_imatge: 'Image zoom', escala_vista: 'View scale (just for comfort while working)',
+    regenerar_etiquetes: 'Regenerate labels from levels', ex_nivel: 'E.g. Segon',
+    hint_tab_imagen: 'Drag the image to move it, and the corners to resize it (without distorting it).',
+    hint_tab_etiquetas: 'Drag each label to the right spot next to the image. Labels are generated automatically from the levels.',
+    err_nivell_buit: 'Add at least one named level.', estructura_desada: 'Structure saved.',
+    err_desar: 'Could not save: ', err_etiquetes: 'Levels were saved, but NOT the image labels: '
+  }
+};
+let idiomaActual = localStorage.getItem('castellers_idioma') || 'ca';
+function t(key) { return (TRADUCCIONES[idiomaActual] || TRADUCCIONES.ca)[key] || key; }
+
+function aplicarIdioma(idioma) {
+  idiomaActual = idioma;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val !== key) el.textContent = val;
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.getAttribute('data-i18n-html');
+    const val = t(key);
+    if (val !== key) el.innerHTML = val;
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === idioma));
+  localStorage.setItem('castellers_idioma', idioma);
+  document.documentElement.lang = idioma;
+  const chip = document.getElementById('user-chip');
+  if (chip && window.usuarioActual) chip.textContent = `${window.usuarioActual.nombre} · ${t('chip_tancar')}`;
+  if (typeof renderNiveles === 'function' && niveles.length) renderNiveles();
+  if (typeof actualizarHintTab === 'function') actualizarHintTab();
+}
+window.aplicarIdioma = aplicarIdioma;
+
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    aplicarIdioma(btn.dataset.lang);
+    if (window.usuarioActual) {
+      try {
+        await fetch(`${API}/api/auth/idioma`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idioma: btn.dataset.lang }) });
+      } catch (err) { console.error(err); }
+    }
+  });
+});
+
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -259,7 +354,7 @@ function renderNiveles() {
   list.innerHTML = niveles.map((n, i) => `
     <li data-idx="${i}">
       <span class="drag-handle">☰</span>
-      <input type="text" class="n-nombre" value="${escapeHtml(n.nombre)}" placeholder="Ex. Segon">
+      <input type="text" class="n-nombre" value="${escapeHtml(n.nombre)}" placeholder="${escapeHtml(t('ex_nivel'))}">
       <input type="number" class="n-cantidad" value="${n.cantidad}" min="1">
       <button class="del-nivel" data-idx="${i}" type="button">×</button>
     </li>
@@ -353,7 +448,7 @@ async function cargarImagenActual(id) {
 document.getElementById('save-btn').addEventListener('click', async () => {
   const tipo = tipoSelect.value;
   const validos = niveles.filter(n => n.nombre.trim());
-  if (!validos.length) { alert('Afegeix almenys un nivell amb nom.'); return; }
+  if (!validos.length) { alert(t('err_nivell_buit')); return; }
 
   const btn = document.getElementById('save-btn');
   btn.disabled = true;
@@ -365,10 +460,10 @@ document.getElementById('save-btn').addEventListener('click', async () => {
     });
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.error || `Estat ${res.status}`);
-    alert('Estructura desada.');
+    alert(t('estructura_desada'));
   } catch (err) {
     console.error(err);
-    alert('No s\'ha pogut desar: ' + err.message);
+    alert(t('err_desar') + err.message);
   } finally {
     btn.disabled = false;
   }
@@ -437,13 +532,15 @@ document.getElementById('escala-range').addEventListener('input', (e) => {
   layoutStage();
 });
 
+function actualizarHintTab() {
+  document.getElementById('tab-hint').textContent = activeTab === 'imagen' ? t('hint_tab_imagen') : t('hint_tab_etiquetas');
+}
+
 function setActiveTab(tab) {
   activeTab = tab;
   document.getElementById('tab-imagen-btn').classList.toggle('active', tab === 'imagen');
   document.getElementById('tab-etiquetas-btn').classList.toggle('active', tab === 'etiquetas');
-  document.getElementById('tab-hint').textContent = tab === 'imagen'
-    ? 'Arrossega la imatge per moure-la, i les cantonades per ajustar-ne la mida (sense deformar-la).'
-    : 'Arrossega cada etiqueta fins al lloc correcte al costat de la imatge. Les etiquetes es generen soles a partir dels nivells.';
+  actualizarHintTab();
   document.getElementById('sidebar-imagen').style.display = tab === 'imagen' ? 'block' : 'none';
   document.getElementById('regenerar-btn').style.display = tab === 'etiquetas' ? 'block' : 'none';
   bgImage.style.pointerEvents = 'none';
@@ -642,7 +739,7 @@ oldSaveBtnListener.addEventListener('click', async () => {
     }
   } catch (err) {
     console.error(err);
-    alert('Els nivells s\'han desat, però NO les etiquetes de la imatge: ' + err.message);
+    alert(t('err_etiquetes') + err.message);
   }
 });
 

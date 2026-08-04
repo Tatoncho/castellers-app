@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
+<style>html:not(.sessio-confirmada) body { visibility: hidden; }</style>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Castellers · Constructor de pinya</title>
@@ -24,6 +26,11 @@
   nav.topnav .links a:hover { border-color:var(--line); color:var(--ink); }
   nav.topnav .links a.active { color:var(--ink); border-color:var(--ink); }
   nav.topnav .spacer { margin-left:auto; }
+  .lang-switcher { display:flex; gap:6px; }
+  .lang-btn { width:auto; margin:0; padding:5px 7px; background:var(--paper-card); border:1.5px solid var(--line); border-radius:var(--radius); font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .lang-btn.active { border-color: var(--ink); }
+  .lang-btn svg { display:block; border-radius:1px; }
+  .user-chip { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); border:1px solid var(--line); padding:7px 11px; border-radius:var(--radius); cursor:pointer; background:none; }
 
   header.ctx { padding: 16px 28px; border-bottom: 1px solid var(--line); display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
   header.ctx h1 { font-family:'Fraunces',serif; font-weight:700; font-size:22px; margin:0; }
@@ -108,15 +115,22 @@
     Castellers
   </a>
   <div class="links">
-    <a href="/">Inici</a>
-    <a href="/ensayos.html" class="active">Assajos</a>
-    <a href="/actuaciones.html">Actuacions</a>
-    <a href="/plantillas.html">Plantilles</a>
-    <a href="/biblioteca-imagenes.html">Imatges</a>
-    <a href="/miembros.html">Membres</a>
-    <a href="/usuarios.html">Usuaris</a>
+    <a href="/" data-i18n="nav_inici">Inici</a>
+    <a href="/ensayos.html" class="active" data-i18n="nav_assajos">Assajos</a>
+    <a href="/actuaciones.html" data-i18n="nav_actuacions">Actuacions</a>
+    <a href="/plantillas.html" data-i18n="nav_plantilles">Plantilles</a>
+    <a href="/biblioteca-imagenes.html" data-i18n="nav_imatges">Imatges</a>
+    <a href="/miembros.html" data-i18n="nav_membres">Membres</a>
+    <a href="/usuarios.html" data-i18n="nav_usuaris">Usuaris</a>
   </div>
   <div class="spacer"></div>
+  <div class="lang-switcher">
+    <button class="lang-btn" data-lang="ca" title="Català" type="button">
+      <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>
+    </button>
+    <button class="lang-btn" data-lang="es" title="Español" type="button">🇪🇸</button>
+    <button class="lang-btn" data-lang="en" title="English" type="button">🇬🇧</button>
+  </div>
   <span class="user-chip" id="user-chip">…</span>
 </nav>
 <script>
@@ -131,13 +145,14 @@
     window.usuarioActual = data.usuario;
     const chip = document.getElementById('user-chip');
     if (chip) {
-      chip.textContent = `${data.usuario.nombre} · Tancar sessió`;
       chip.style.cursor = 'pointer';
       chip.onclick = async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
         location.href = '/login.html';
       };
     }
+    document.documentElement.classList.add('sessio-confirmada');
+    if (window.aplicarIdioma) window.aplicarIdioma(data.usuario.idioma || localStorage.getItem('castellers_idioma') || 'ca');
   }).catch(() => { location.href = '/login.html'; });
 })();
 </script>
@@ -152,20 +167,20 @@
 
 <main>
   <section class="panel">
-    <div class="panel-head"><h2>Presents sense posició</h2></div>
+    <div class="panel-head"><h2 data-i18n="presents_sense_posicio">Presents sense posició</h2></div>
     <div class="panel-body">
-      <input type="text" id="pool-search" placeholder="Cerca per nom o àlies…">
+      <input type="text" id="pool-search" placeholder="Cerca per nom o àlies…" data-i18n-placeholder="cerca_nom_alies">
       <select id="pool-filter-posicio">
-        <option value="">Totes les posicions habituals</option>
+        <option value="" data-i18n="totes_posicions_habituals">Totes les posicions habituals</option>
       </select>
       <ul id="pool-list"></ul>
     </div>
   </section>
 
   <section class="panel">
-    <div class="panel-head"><h2>Planta de la pinya</h2></div>
+    <div class="panel-head"><h2 data-i18n="planta_pinya">Planta de la pinya</h2></div>
     <div class="panel-body">
-      <p style="font-size:12px;color:var(--ink-soft);margin:0 0 10px;">
+      <p style="font-size:12px;color:var(--ink-soft);margin:0 0 10px;" data-i18n="hint_arrossega">
         Arrossega algú de la llista fins a una posició, o arrossega dues posicions entre elles per intercanviar-les.
         També pots fer-ho a cops de clic: clica un origen i després un destí.
       </p>
@@ -173,7 +188,7 @@
         <div id="canvas"></div>
       </div>
       <div class="actions-row">
-        <button class="ghost" id="reset-selection-btn" type="button">Cancel·lar selecció</button>
+        <button class="ghost" id="reset-selection-btn" type="button" data-i18n="cancelar_seleccio">Cancel·lar selecció</button>
       </div>
     </div>
   </section>
@@ -186,7 +201,7 @@
         <div id="castell-labels" style="position:absolute; inset:0;"></div>
       </div>
       <div id="tower"></div>
-      <button class="ghost" id="exportar-btn" type="button" style="width:100%; margin-top:14px;">Exportar imatge de l'assaig</button>
+      <button class="ghost" id="exportar-btn" type="button" style="width:100%; margin-top:14px;" data-i18n="exportar_imatge">Exportar imatge de l'assaig</button>
     </div>
   </section>
 </main>
@@ -209,6 +224,74 @@ function escapeHtml(str) {
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
 }
+
+const TRADUCCIONES = {
+  ca: {
+    nav_inici: 'Inici', nav_assajos: 'Assajos', nav_actuacions: 'Actuacions', nav_plantilles: 'Plantilles',
+    nav_imatges: 'Imatges', nav_membres: 'Membres', nav_usuaris: 'Usuaris', chip_tancar: 'Tancar sessió',
+    presents_sense_posicio: 'Presents sense posició', cerca_nom_alies: 'Cerca per nom o àlies…',
+    totes_posicions_habituals: 'Totes les posicions habituals', planta_pinya: 'Planta de la pinya',
+    hint_arrossega: 'Arrossega algú de la llista fins a una posició, o arrossega dues posicions entre elles per intercanviar-les. També pots fer-ho a cops de clic: clica un origen i després un destí.',
+    cancelar_seleccio: 'Cancel·lar selecció', castell: 'Castell', exportar_imatge: 'Exportar imatge de l\'assaig',
+    ningu_disponible: 'Ningú disponible amb aquest filtre.', err_desar_canvi: 'No s\'ha pogut desar el canvi.',
+    err_exportar: 'No s\'ha pogut exportar la imatge.'
+  },
+  es: {
+    nav_inici: 'Inicio', nav_assajos: 'Ensayos', nav_actuacions: 'Actuaciones', nav_plantilles: 'Plantillas',
+    nav_imatges: 'Imágenes', nav_membres: 'Miembros', nav_usuaris: 'Usuarios', chip_tancar: 'Cerrar sesión',
+    presents_sense_posicio: 'Presentes sin posición', cerca_nom_alies: 'Busca por nombre o alias…',
+    totes_posicions_habituals: 'Todas las posiciones habituales', planta_pinya: 'Planta de la pinya',
+    hint_arrossega: 'Arrastra a alguien de la lista hasta una posición, o arrastra dos posiciones entre ellas para intercambiarlas. También puedes hacerlo a golpe de clic: clica un origen y después un destino.',
+    cancelar_seleccio: 'Cancelar selección', castell: 'Castell', exportar_imatge: 'Exportar imagen del ensayo',
+    ningu_disponible: 'Nadie disponible con ese filtro.', err_desar_canvi: 'No se ha podido guardar el cambio.',
+    err_exportar: 'No se ha podido exportar la imagen.'
+  },
+  en: {
+    nav_inici: 'Home', nav_assajos: 'Rehearsals', nav_actuacions: 'Performances', nav_plantilles: 'Templates',
+    nav_imatges: 'Images', nav_membres: 'Members', nav_usuaris: 'Users', chip_tancar: 'Log out',
+    presents_sense_posicio: 'Present without a position', cerca_nom_alies: 'Search by name or nickname…',
+    totes_posicions_habituals: 'All usual positions', planta_pinya: 'Pinya floor plan',
+    hint_arrossega: 'Drag someone from the list onto a position, or drag two positions onto each other to swap them. You can also do it click by click: click an origin, then a destination.',
+    cancelar_seleccio: 'Cancel selection', castell: 'Castell', exportar_imatge: 'Export rehearsal image',
+    ningu_disponible: 'No one available with that filter.', err_desar_canvi: 'Could not save the change.',
+    err_exportar: 'Could not export the image.'
+  }
+};
+let idiomaActual = localStorage.getItem('castellers_idioma') || 'ca';
+function t(key) { return (TRADUCCIONES[idiomaActual] || TRADUCCIONES.ca)[key] || key; }
+
+function aplicarIdioma(idioma) {
+  idiomaActual = idioma;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val !== key) el.textContent = val;
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    const val = t(key);
+    if (val !== key) el.placeholder = val;
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === idioma));
+  localStorage.setItem('castellers_idioma', idioma);
+  document.documentElement.lang = idioma;
+  const chip = document.getElementById('user-chip');
+  if (chip && window.usuarioActual) chip.textContent = `${window.usuarioActual.nombre} · ${t('chip_tancar')}`;
+  if (estructura) document.getElementById('castell-titulo').textContent = `${t('castell')} · ${estructura.tipo}`;
+  if (typeof renderPool === 'function' && allMembers.length) renderPool();
+}
+window.aplicarIdioma = aplicarIdioma;
+
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    aplicarIdioma(btn.dataset.lang);
+    if (window.usuarioActual) {
+      try {
+        await fetch(`${API}/api/auth/idioma`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idioma: btn.dataset.lang }) });
+      } catch (err) { console.error(err); }
+    }
+  });
+});
 
 /* ---------------- Plantilla (aproximada) per tipus ---------------- */
 
@@ -318,7 +401,7 @@ async function init() {
   });
   todasLasPosiciones = posicionesGuardadas;
 
-  document.getElementById('castell-titulo').textContent = `Castell · ${estructura.tipo}`;
+  document.getElementById('castell-titulo').textContent = `${t('castell')} · ${estructura.tipo}`;
   await cargarInfoCastell(estructura.tipo);
   renderTower();
   populatePosicionFilter();
@@ -477,7 +560,7 @@ function renderPool() {
   const list = document.getElementById('pool-list');
   const pool = getPoolMembers();
   if (!pool.length) {
-    list.innerHTML = '<li class="empty-note">Ningú disponible amb aquest filtre.</li>';
+    list.innerHTML = `<li class="empty-note">${t('ningu_disponible')}</li>`;
     return;
   }
   list.innerHTML = pool.map(m => {
@@ -622,7 +705,7 @@ async function resolveMove(a, b) {
     await reloadPosiciones();
   } catch (err) {
     console.error(err);
-    alert('No s\'ha pogut desar el canvi.');
+    alert(t('err_desar_canvi'));
   }
 }
 
@@ -649,7 +732,7 @@ document.getElementById('exportar-btn').addEventListener('click', async () => {
     await exportarImagenUnificada();
   } catch (err) {
     console.error(err);
-    alert('No s\'ha pogut exportar la imatge.');
+    alert(t('err_exportar'));
   } finally {
     btn.disabled = false;
   }
@@ -725,7 +808,7 @@ async function exportarImagenUnificada() {
     ctx.fillStyle = '#20241F';
     ctx.textAlign = 'left';
     ctx.font = '700 20px Georgia, serif';
-    ctx.fillText('Castell', offsetX + 20, 50);
+    ctx.fillText(t('castell'), offsetX + 20, 50);
     const tower = document.getElementById('tower');
     const niveles = [...tower.querySelectorAll('.tower-level')];
     let y = 90;

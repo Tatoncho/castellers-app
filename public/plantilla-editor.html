@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
+<style>html:not(.sessio-confirmada) body { visibility: hidden; }</style>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Castellers · Editor de plantilles</title>
@@ -22,6 +24,11 @@
   nav.topnav .links a { font-family:'IBM Plex Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; padding:8px 12px; border-radius:var(--radius); text-decoration:none; color:var(--ink-soft); border:1px solid transparent; }
   nav.topnav .links a:hover { border-color:var(--line); color:var(--ink); }
   nav.topnav .spacer { margin-left:auto; }
+  .lang-switcher { display:flex; gap:6px; }
+  .lang-btn { width:auto; margin:0; padding:5px 7px; background:var(--paper-card); border:1.5px solid var(--line); border-radius:var(--radius); font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .lang-btn.active { border-color: var(--ink); }
+  .lang-btn svg { display:block; border-radius:1px; }
+  .user-chip { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); border:1px solid var(--line); padding:7px 11px; border-radius:var(--radius); cursor:pointer; background:none; }
 
   main { max-width: 1400px; margin: 0 auto; padding: 22px 28px 80px; display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
   @media (max-width: 980px) { main { grid-template-columns: 1fr; } }
@@ -157,12 +164,19 @@
     Castellers
   </a>
   <div class="links">
-    <a href="/">Inici</a>
-    <a href="/ensayos.html">Assajos</a>
-    <a href="/plantillas.html">Plantilles</a>
-    <a href="/biblioteca-imagenes.html">Imatges</a>
+    <a href="/" data-i18n="nav_inici">Inici</a>
+    <a href="/ensayos.html" data-i18n="nav_assajos">Assajos</a>
+    <a href="/plantillas.html" data-i18n="nav_plantilles">Plantilles</a>
+    <a href="/biblioteca-imagenes.html" data-i18n="nav_imatges">Imatges</a>
   </div>
   <div class="spacer"></div>
+  <div class="lang-switcher">
+    <button class="lang-btn" data-lang="ca" title="Català" type="button">
+      <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>
+    </button>
+    <button class="lang-btn" data-lang="es" title="Español" type="button">🇪🇸</button>
+    <button class="lang-btn" data-lang="en" title="English" type="button">🇬🇧</button>
+  </div>
   <span class="user-chip" id="user-chip">…</span>
 </nav>
 <script>
@@ -177,13 +191,14 @@
     window.usuarioActual = data.usuario;
     const chip = document.getElementById('user-chip');
     if (chip) {
-      chip.textContent = `${data.usuario.nombre} · Tancar sessió`;
       chip.style.cursor = 'pointer';
       chip.onclick = async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
         location.href = '/login.html';
       };
     }
+    document.documentElement.classList.add('sessio-confirmada');
+    if (window.aplicarIdioma) window.aplicarIdioma(data.usuario.idioma || localStorage.getItem('castellers_idioma') || 'ca');
   }).catch(() => { location.href = '/login.html'; });
 })();
 </script>
@@ -191,9 +206,9 @@
 
 <main>
   <section class="panel">
-    <div class="panel-head"><h2>Editor de plantilla</h2></div>
+    <div class="panel-head"><h2 data-i18n="editor_plantilla">Editor de plantilla</h2></div>
     <div class="panel-body">
-      <label for="tipo-select">Tipus de castell</label>
+      <label for="tipo-select" data-i18n="tipus_castell">Tipus de castell</label>
       <select id="tipo-select">
         <option value="2d6">2d6</option>
         <option value="3d7">3d7</option>
@@ -202,63 +217,63 @@
       </select>
 
       <div id="sidebar-imagen">
-        <label>Imatge de referència</label>
-        <button class="ghost" id="open-picker-btn" type="button" style="width:100%; margin-bottom:8px;">Triar imatge de fons</button>
-        <p class="hint" style="margin-top:0;">De la biblioteca, d'una URL, o del teu dispositiu. Es guarda per poder-la reutilitzar.</p>
+        <label data-i18n="imatge_referencia">Imatge de referència</label>
+        <button class="ghost" id="open-picker-btn" type="button" style="width:100%; margin-bottom:8px;" data-i18n="triar_imatge">Triar imatge de fons</button>
+        <p class="hint" style="margin-top:0;" data-i18n="hint_biblioteca">De la biblioteca, d'una URL, o del teu dispositiu. Es guarda per poder-la reutilitzar.</p>
 
-        <label for="opacidad-range">Opacitat de la imatge</label>
+        <label for="opacidad-range" data-i18n="opacitat">Opacitat de la imatge</label>
         <input type="range" id="opacidad-range" min="0.1" max="1" step="0.05" value="0.6">
 
-        <p class="hint">Arrossega la imatge pel mig per moure-la, i pels quadrats de les cantonades per ajustar-ne la mida — així pots enquadrar només la part de l'esquema que et interessa.</p>
+        <p class="hint" data-i18n="hint_arrossega_imatge">Arrossega la imatge pel mig per moure-la, i pels quadrats de les cantonades per ajustar-ne la mida — així pots enquadrar només la part de l'esquema que et interessa.</p>
       </div>
 
       <div id="sidebar-posicions" style="display:none;">
         <div class="add-form">
           <div>
-            <label for="nuevo-slot">Nom posició</label>
-            <input type="text" id="nuevo-slot" placeholder="Ex. Lateral">
+            <label for="nuevo-slot" data-i18n="nom_posicio">Nom posició</label>
+            <input type="text" id="nuevo-slot" placeholder="Ex. Lateral" data-i18n-placeholder="ex_lateral">
           </div>
           <div>
-            <label for="nuevo-index">Índex</label>
+            <label for="nuevo-index" data-i18n="index">Índex</label>
             <input type="number" id="nuevo-index" value="1" min="1">
           </div>
         </div>
 
-        <label>Blocs — arrossega'ls al llenç</label>
+        <label data-i18n="blocs_arrossega">Blocs — arrossega'ls al llenç</label>
         <div class="blocks-palette">
           <div class="block-sample" data-shape="rect">
             <div class="sample-box rect"></div>
-            <span>Rectangle</span>
+            <span data-i18n="rectangle">Rectangle</span>
           </div>
           <div class="block-sample" data-shape="round">
             <div class="sample-box round"></div>
-            <span>Cantons rodons</span>
+            <span data-i18n="cantons_rodons">Cantons rodons</span>
           </div>
           <div class="block-sample" data-shape="diamond">
             <div class="sample-box diamond"></div>
-            <span>Cantons en diagonal</span>
+            <span data-i18n="cantons_diagonal">Cantons en diagonal</span>
           </div>
         </div>
-        <p class="hint">Omple el nom (opcional) i arrossega el bloc que necessitis fins al llenç.</p>
+        <p class="hint" data-i18n="hint_omple_nom">Omple el nom (opcional) i arrossega el bloc que necessitis fins al llenç.</p>
 
-        <p class="hint">
+        <p class="hint" data-i18n-html="hint_seleccio_multiple">
           <strong>Selecció múltiple:</strong> arrossega sobre el fons del llenç per seleccionar diversos blocs — després
           pots moure'ls o redimensionar-los junts. <strong>Ctrl+C / Ctrl+V</strong> per copiar i enganxar la selecció,
           <strong>Supr</strong> per eliminar-la.
         </p>
       </div>
 
-      <button class="primary" id="save-btn" type="button">Desar plantilla</button>
-      <button class="ghost" id="reload-btn" type="button">Recarregar la desada</button>
-      <p class="hint">Mida del llenç: 960×760 — és exactament la mateixa que fa servir el constructor de pinya, així que el que dissenyis aquí es veurà igual allà.</p>
+      <button class="primary" id="save-btn" type="button" data-i18n="desar_plantilla">Desar plantilla</button>
+      <button class="ghost" id="reload-btn" type="button" data-i18n="recarregar_desada">Recarregar la desada</button>
+      <p class="hint" data-i18n="hint_mida_llenc">Mida del llenç: 960×760 — és exactament la mateixa que fa servir el constructor de pinya, així que el que dissenyis aquí es veurà igual allà.</p>
     </div>
   </section>
 
   <section class="panel">
     <div class="panel-head">
       <div class="tabs">
-        <button class="tab-btn active" id="tab-imagen-btn" type="button">1. Imatge de referència</button>
-        <button class="tab-btn" id="tab-posicions-btn" type="button">2. Posicions</button>
+        <button class="tab-btn active" id="tab-imagen-btn" type="button" data-i18n="tab_imatge">1. Imatge de referència</button>
+        <button class="tab-btn" id="tab-posicions-btn" type="button" data-i18n="tab_posicions">2. Posicions</button>
       </div>
     </div>
     <div class="panel-body">
@@ -276,9 +291,9 @@
         </div>
       </div>
       <div id="zoom-row">
-        <label for="zoom-range" style="margin:10px 0 4px;">Zoom de la imatge</label>
+        <label for="zoom-range" style="margin:10px 0 4px;" data-i18n="zoom_imatge">Zoom de la imatge</label>
         <input type="range" id="zoom-range" min="0.1" max="3" step="0.02" value="1">
-        <label for="escala-range" style="margin:10px 0 4px;">Escala de vista (només per treballar còmode, no afecta el resultat)</label>
+        <label for="escala-range" style="margin:10px 0 4px;" data-i18n="escala_vista">Escala de vista (només per treballar còmode, no afecta el resultat)</label>
         <input type="range" id="escala-range" min="0.3" max="1.5" step="0.05" value="0.55">
       </div>
     </div>
@@ -393,6 +408,105 @@ function escapeHtml(str) {
   }[c]));
 }
 
+const TRADUCCIONES = {
+  ca: {
+    nav_inici: 'Inici', nav_assajos: 'Assajos', nav_plantilles: 'Plantilles', nav_imatges: 'Imatges', chip_tancar: 'Tancar sessió',
+    editor_plantilla: 'Editor de plantilla', tipus_castell: 'Tipus de castell', imatge_referencia: 'Imatge de referència',
+    triar_imatge: 'Triar imatge de fons', hint_biblioteca: 'De la biblioteca, d\'una URL, o del teu dispositiu. Es guarda per poder-la reutilitzar.',
+    opacitat: 'Opacitat de la imatge',
+    hint_arrossega_imatge: 'Arrossega la imatge pel mig per moure-la, i pels quadrats de les cantonades per ajustar-ne la mida — així pots enquadrar només la part de l\'esquema que et interessa.',
+    nom_posicio: 'Nom posició', ex_lateral: 'Ex. Lateral', index: 'Índex', blocs_arrossega: 'Blocs — arrossega\'ls al llenç',
+    rectangle: 'Rectangle', cantons_rodons: 'Cantons rodons', cantons_diagonal: 'Cantons en diagonal',
+    hint_omple_nom: 'Omple el nom (opcional) i arrossega el bloc que necessitis fins al llenç.',
+    hint_seleccio_multiple: '<strong>Selecció múltiple:</strong> arrossega sobre el fons del llenç per seleccionar diversos blocs — després pots moure\'ls o redimensionar-los junts. <strong>Ctrl+C / Ctrl+V</strong> per copiar i enganxar la selecció, <strong>Supr</strong> per eliminar-la.',
+    desar_plantilla: 'Desar plantilla', recarregar_desada: 'Recarregar la desada',
+    hint_mida_llenc: 'Mida del llenç: 960×760 — és exactament la mateixa que fa servir el constructor de pinya, així que el que dissenyis aquí es veurà igual allà.',
+    tab_imatge: '1. Imatge de referència', tab_posicions: '2. Posicions', zoom_imatge: 'Zoom de la imatge',
+    escala_vista: 'Escala de vista (només per treballar còmode, no afecta el resultat)',
+    hint_tab_imagen: 'Arrossega la imatge per moure-la, i les cantonades per ajustar-ne la mida i l\'enquadrament. Quan estigui ben col·locada, passa a la pestanya 2.',
+    hint_tab_posicions: 'La imatge ha quedat fixada com a base per calcar-hi les posicions. Arrossega blocs des de la paleta, i mou/redimensiona/gira les caselles com necessitis.',
+    prompt_nom_posicio: 'Nom de la posició:', prompt_index: 'Índex (per a repeticions com Crossa-1, Crossa-2…):',
+    plantilla_desada: 'Plantilla desada.', err_desar: 'No s\'ha pogut desar: '
+  },
+  es: {
+    nav_inici: 'Inicio', nav_assajos: 'Ensayos', nav_plantilles: 'Plantillas', nav_imatges: 'Imágenes', chip_tancar: 'Cerrar sesión',
+    editor_plantilla: 'Editor de plantilla', tipus_castell: 'Tipo de castell', imatge_referencia: 'Imagen de referencia',
+    triar_imatge: 'Elegir imagen de fondo', hint_biblioteca: 'De la biblioteca, de una URL, o de tu dispositivo. Se guarda para poder reutilizarla.',
+    opacitat: 'Opacidad de la imagen',
+    hint_arrossega_imatge: 'Arrastra la imagen por el medio para moverla, y por los cuadrados de las esquinas para ajustar su tamaño — así puedes encuadrar solo la parte del esquema que te interesa.',
+    nom_posicio: 'Nombre posición', ex_lateral: 'Ej. Lateral', index: 'Índice', blocs_arrossega: 'Bloques — arrástralos al lienzo',
+    rectangle: 'Rectángulo', cantons_rodons: 'Esquinas redondas', cantons_diagonal: 'Esquinas en diagonal',
+    hint_omple_nom: 'Rellena el nombre (opcional) y arrastra el bloque que necesites hasta el lienzo.',
+    hint_seleccio_multiple: '<strong>Selección múltiple:</strong> arrastra sobre el fondo del lienzo para seleccionar varios bloques — después puedes moverlos o redimensionarlos juntos. <strong>Ctrl+C / Ctrl+V</strong> para copiar y pegar la selección, <strong>Supr</strong> para eliminarla.',
+    desar_plantilla: 'Guardar plantilla', recarregar_desada: 'Recargar la guardada',
+    hint_mida_llenc: 'Tamaño del lienzo: 960×760 — es exactamente el mismo que usa el constructor de pinya, así que lo que diseñes aquí se verá igual allí.',
+    tab_imatge: '1. Imagen de referencia', tab_posicions: '2. Posiciones', zoom_imatge: 'Zoom de la imagen',
+    escala_vista: 'Escala de vista (solo para trabajar cómodo, no afecta al resultado)',
+    hint_tab_imagen: 'Arrastra la imagen para moverla, y las esquinas para ajustar su tamaño y encuadre. Cuando esté bien colocada, pasa a la pestaña 2.',
+    hint_tab_posicions: 'La imagen ha quedado fijada como base para calcar las posiciones. Arrastra bloques desde la paleta, y muévelos/redimensiónalos/gíralos como necesites.',
+    prompt_nom_posicio: 'Nombre de la posición:', prompt_index: 'Índice (para repeticiones como Crossa-1, Crossa-2…):',
+    plantilla_desada: 'Plantilla guardada.', err_desar: 'No se ha podido guardar: '
+  },
+  en: {
+    nav_inici: 'Home', nav_assajos: 'Rehearsals', nav_plantilles: 'Templates', nav_imatges: 'Images', chip_tancar: 'Log out',
+    editor_plantilla: 'Template editor', tipus_castell: 'Castell type', imatge_referencia: 'Reference image',
+    triar_imatge: 'Choose background image', hint_biblioteca: 'From the library, a URL, or your device. It\'s saved so you can reuse it.',
+    opacitat: 'Image opacity',
+    hint_arrossega_imatge: 'Drag the image from the middle to move it, and the corner squares to resize it — so you can frame just the part of the diagram you need.',
+    nom_posicio: 'Position name', ex_lateral: 'E.g. Lateral', index: 'Index', blocs_arrossega: 'Blocks — drag them onto the canvas',
+    rectangle: 'Rectangle', cantons_rodons: 'Rounded corners', cantons_diagonal: 'Diagonal corners',
+    hint_omple_nom: 'Fill in the name (optional) and drag the block you need onto the canvas.',
+    hint_seleccio_multiple: '<strong>Multiple selection:</strong> drag over the canvas background to select several blocks — then move or resize them together. <strong>Ctrl+C / Ctrl+V</strong> to copy and paste the selection, <strong>Del</strong> to remove it.',
+    desar_plantilla: 'Save template', recarregar_desada: 'Reload the saved one',
+    hint_mida_llenc: 'Canvas size: 960×760 — exactly the same as the pinya builder uses, so what you design here will look the same there.',
+    tab_imatge: '1. Reference image', tab_posicions: '2. Positions', zoom_imatge: 'Image zoom',
+    escala_vista: 'View scale (just for comfort while working, doesn\'t affect the result)',
+    hint_tab_imagen: 'Drag the image to move it, and the corners to resize and frame it. Once it\'s well placed, move to tab 2.',
+    hint_tab_posicions: 'The image is now fixed as the base to trace positions onto. Drag blocks from the palette, and move/resize/rotate the boxes as needed.',
+    prompt_nom_posicio: 'Position name:', prompt_index: 'Index (for repeats like Crossa-1, Crossa-2…):',
+    plantilla_desada: 'Template saved.', err_desar: 'Could not save: '
+  }
+};
+let idiomaActual = localStorage.getItem('castellers_idioma') || 'ca';
+function t(key) { return (TRADUCCIONES[idiomaActual] || TRADUCCIONES.ca)[key] || key; }
+
+function aplicarIdioma(idioma) {
+  idiomaActual = idioma;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val !== key) el.textContent = val;
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.getAttribute('data-i18n-html');
+    const val = t(key);
+    if (val !== key) el.innerHTML = val;
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    const val = t(key);
+    if (val !== key) el.placeholder = val;
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === idioma));
+  localStorage.setItem('castellers_idioma', idioma);
+  document.documentElement.lang = idioma;
+  const chip = document.getElementById('user-chip');
+  if (chip && window.usuarioActual) chip.textContent = `${window.usuarioActual.nombre} · ${t('chip_tancar')}`;
+  if (typeof actualizarHintTab === 'function') actualizarHintTab();
+}
+window.aplicarIdioma = aplicarIdioma;
+
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    aplicarIdioma(btn.dataset.lang);
+    if (window.usuarioActual) {
+      try {
+        await fetch(`${API}/api/auth/idioma`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idioma: btn.dataset.lang }) });
+      } catch (err) { console.error(err); }
+    }
+  });
+});
+
 function lockIcon(locked) {
   if (locked) {
     return `<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="1.5" fill="currentColor"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="2.2" fill="none"/></svg>`;
@@ -429,13 +543,15 @@ function renderImageLayer() {
   });
 }
 
+function actualizarHintTab() {
+  document.getElementById('tab-hint').textContent = activeTab === 'imagen' ? t('hint_tab_imagen') : t('hint_tab_posicions');
+}
+
 function setActiveTab(tab) {
   activeTab = tab;
   document.getElementById('tab-imagen-btn').classList.toggle('active', tab === 'imagen');
   document.getElementById('tab-posicions-btn').classList.toggle('active', tab === 'posicions');
-  document.getElementById('tab-hint').textContent = tab === 'imagen'
-    ? 'Arrossega la imatge per moure-la, i les cantonades per ajustar-ne la mida i l\'enquadrament. Quan estigui ben col·locada, passa a la pestanya 2.'
-    : 'La imatge ha quedat fixada com a base per calcar-hi les posicions. Arrossega blocs des de la paleta, i mou/redimensiona/gira les caselles com necessitis.';
+  actualizarHintTab();
 
   document.getElementById('sidebar-imagen').style.display = tab === 'imagen' ? 'block' : 'none';
   document.getElementById('sidebar-posicions').style.display = tab === 'posicions' ? 'block' : 'none';
@@ -705,9 +821,9 @@ function onBoxDblClick(e) {
   const idx = Number(e.currentTarget.dataset.idx);
   const p = posiciones[idx];
   if (p.locked) return;
-  const nuevoSlot = prompt('Nom de la posició:', p.slot);
+  const nuevoSlot = prompt(t('prompt_nom_posicio'), p.slot);
   if (nuevoSlot === null) return;
-  const nuevoIndex = prompt('Índex (per a repeticions com Crossa-1, Crossa-2…):', p.slotIndex);
+  const nuevoIndex = prompt(t('prompt_index'), p.slotIndex);
   if (nuevoIndex === null) return;
   p.slot = nuevoSlot.trim() || p.slot;
   p.slotIndex = Number(nuevoIndex) || 1;
@@ -988,10 +1104,10 @@ document.getElementById('save-btn').addEventListener('click', async () => {
     if (!res.ok || !data.success) {
       throw new Error(data.error || `El servidor ha respost amb estat ${res.status}`);
     }
-    alert('Plantilla desada.');
+    alert(t('plantilla_desada'));
   } catch (err) {
     console.error(err);
-    alert('No s\'ha pogut desar: ' + err.message);
+    alert(t('err_desar') + err.message);
   } finally {
     btn.disabled = false;
   }

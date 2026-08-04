@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
+<style>html:not(.sessio-confirmada) body { visibility: hidden; }</style>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Castellers · Actuacions</title>
@@ -20,6 +22,10 @@
   nav.topnav .links a.active { color:var(--ink); border-color:var(--ink); }
   nav.topnav .spacer { margin-left:auto; }
   nav.topnav .user-chip { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); border:1px solid var(--line); padding:7px 11px; border-radius:var(--radius); }
+  .lang-switcher { display:flex; gap:6px; }
+  .lang-btn { width:auto; margin:0; padding:5px 7px; background:var(--paper-card); border:1.5px solid var(--line); border-radius:var(--radius); font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .lang-btn.active { border-color: var(--ink); }
+  .lang-btn svg { display:block; border-radius:1px; }
 
   main { max-width: 900px; margin: 0 auto; padding: 60px 28px 100px; text-align: center; }
   .badge { display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--gold); border:1px solid var(--gold); padding:4px 12px; border-radius:20px; margin-bottom:18px; }
@@ -41,20 +47,89 @@
     Castellers
   </a>
   <div class="links">
-    <a href="/">Inici</a>
-    <a href="/ensayos.html">Assajos</a>
-    <a href="/actuaciones.html" class="active">Actuacions</a>
-    <a href="/biblioteca-imagenes.html">Imatges</a>
-    <a href="/plantillas.html">Plantilles</a>
-    <a href="/miembros.html">Membres</a>
-    <a href="/usuarios.html">Usuaris</a>
+    <a href="/" data-i18n="nav_inici">Inici</a>
+    <a href="/ensayos.html" data-i18n="nav_assajos">Assajos</a>
+    <a href="/actuaciones.html" class="active" data-i18n="nav_actuacions">Actuacions</a>
+    <a href="/biblioteca-imagenes.html" data-i18n="nav_imatges">Imatges</a>
+    <a href="/plantillas.html" data-i18n="nav_plantilles">Plantilles</a>
+    <a href="/miembros.html" data-i18n="nav_membres">Membres</a>
+    <a href="/usuarios.html" data-i18n="nav_usuaris">Usuaris</a>
   </div>
   <div class="spacer"></div>
+  <div class="lang-switcher">
+    <button class="lang-btn" data-lang="ca" title="Català" type="button">
+      <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>
+    </button>
+    <button class="lang-btn" data-lang="es" title="Español" type="button">🇪🇸</button>
+    <button class="lang-btn" data-lang="en" title="English" type="button">🇬🇧</button>
+  </div>
   <span class="user-chip" id="user-chip">…</span>
 </nav>
 <script>
+const TRADUCCIONES = {
+  ca: {
+    nav_inici: 'Inici', nav_assajos: 'Assajos', nav_actuacions: 'Actuacions', nav_imatges: 'Imatges',
+    nav_plantilles: 'Plantilles', nav_membres: 'Membres', nav_usuaris: 'Usuaris',
+    badge_properament: 'Properament', titulo: 'Actuacions',
+    lead: 'Aquí es programaran les actuacions en plaça, seleccionant les estructures que ja s\'hagin ensajat i validat al mòdul d\'Assajos. El calendari serà el protagonista d\'aquest mòdul.',
+    preview_titulo: 'El que hi haurà aquí',
+    preview_1: 'Calendari mensual amb les actuacions programades',
+    preview_2: 'Selecció d\'estructures ja ensajades per portar-les a plaça',
+    preview_3: 'Confirmació d\'assistència per actuació (com als assajos)',
+    preview_4: 'Historial d\'actuacions passades',
+    chip_tancar: 'Tancar sessió'
+  },
+  es: {
+    nav_inici: 'Inicio', nav_assajos: 'Ensayos', nav_actuacions: 'Actuaciones', nav_imatges: 'Imágenes',
+    nav_plantilles: 'Plantillas', nav_membres: 'Miembros', nav_usuaris: 'Usuarios',
+    badge_properament: 'Próximamente', titulo: 'Actuaciones',
+    lead: 'Aquí se programarán las actuaciones en plaza, seleccionando las estructuras que ya se hayan ensayado y validado en el módulo de Ensayos. El calendario será el protagonista de este módulo.',
+    preview_titulo: 'Lo que habrá aquí',
+    preview_1: 'Calendario mensual con las actuaciones programadas',
+    preview_2: 'Selección de estructuras ya ensayadas para llevarlas a plaza',
+    preview_3: 'Confirmación de asistencia por actuación (como en los ensayos)',
+    preview_4: 'Historial de actuaciones pasadas',
+    chip_tancar: 'Cerrar sesión'
+  },
+  en: {
+    nav_inici: 'Home', nav_assajos: 'Rehearsals', nav_actuacions: 'Performances', nav_imatges: 'Images',
+    nav_plantilles: 'Templates', nav_membres: 'Members', nav_usuaris: 'Users',
+    badge_properament: 'Coming soon', titulo: 'Performances',
+    lead: 'Public performances will be scheduled here, picking structures already rehearsed and approved in the Rehearsals module. A calendar will be the centerpiece of this module.',
+    preview_titulo: 'What will be here',
+    preview_1: 'Monthly calendar with scheduled performances',
+    preview_2: 'Selection of already-rehearsed structures to bring to the square',
+    preview_3: 'Attendance confirmation per performance (like rehearsals)',
+    preview_4: 'History of past performances',
+    chip_tancar: 'Log out'
+  }
+};
+
+function aplicarIdioma(idioma) {
+  const t = TRADUCCIONES[idioma] || TRADUCCIONES.ca;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (t[key] !== undefined) el.textContent = t[key];
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === idioma));
+  localStorage.setItem('castellers_idioma', idioma);
+  document.documentElement.lang = idioma;
+  const chip = document.getElementById('user-chip');
+  if (chip && window.usuarioActual) chip.textContent = `${window.usuarioActual.nombre} · ${t.chip_tancar}`;
+}
+
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    aplicarIdioma(btn.dataset.lang);
+    if (window.usuarioActual) {
+      try {
+        await fetch('/api/auth/idioma', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idioma: btn.dataset.lang }) });
+      } catch (err) { console.error(err); }
+    }
+  });
+});
+
 // Guardia de sessió: si no has iniciat sessió, et redirigeix a /login.html.
-// S'executa abans que la resta del contingut de la pàgina es carregui.
 (function() {
   fetch('/api/auth/me').then(r => r.json()).then(data => {
     if (!data.usuario) {
@@ -64,29 +139,30 @@
     window.usuarioActual = data.usuario;
     const chip = document.getElementById('user-chip');
     if (chip) {
-      chip.textContent = `${data.usuario.nombre} · Tancar sessió`;
       chip.style.cursor = 'pointer';
       chip.onclick = async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
         location.href = '/login.html';
       };
     }
+    aplicarIdioma(data.usuario.idioma || localStorage.getItem('castellers_idioma') || 'ca');
+    document.documentElement.classList.add('sessio-confirmada');
   }).catch(() => { location.href = '/login.html'; });
 })();
 </script>
 
 
 <main>
-  <span class="badge">Properament</span>
-  <h1>Actuacions</h1>
-  <p class="lead">Aquí es programaran les actuacions en plaça, seleccionant les estructures que ja s'hagin ensajat i validat al mòdul d'Assajos. El calendari serà el protagonista d'aquest mòdul.</p>
+  <span class="badge" data-i18n="badge_properament">Properament</span>
+  <h1 data-i18n="titulo">Actuacions</h1>
+  <p class="lead" data-i18n="lead">Aquí es programaran les actuacions en plaça, seleccionant les estructures que ja s'hagin ensajat i validat al mòdul d'Assajos. El calendari serà el protagonista d'aquest mòdul.</p>
   <div class="preview">
-    <h3>El que hi haurà aquí</h3>
+    <h3 data-i18n="preview_titulo">El que hi haurà aquí</h3>
     <ul>
-      <li>Calendari mensual amb les actuacions programades</li>
-      <li>Selecció d'estructures ja ensajades per portar-les a plaça</li>
-      <li>Confirmació d'assistència per actuació (com als assajos)</li>
-      <li>Historial d'actuacions passades</li>
+      <li data-i18n="preview_1">Calendari mensual amb les actuacions programades</li>
+      <li data-i18n="preview_2">Selecció d'estructures ja ensajades per portar-les a plaça</li>
+      <li data-i18n="preview_3">Confirmació d'assistència per actuació (com als assajos)</li>
+      <li data-i18n="preview_4">Historial d'actuacions passades</li>
     </ul>
   </div>
 </main>

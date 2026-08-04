@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
+<style>html:not(.sessio-confirmada) body { visibility: hidden; }</style>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Castellers · Assajos</title>
@@ -24,7 +26,11 @@
   nav.topnav .links a:hover { border-color:var(--line); color:var(--ink); }
   nav.topnav .links a.active { color:var(--ink); border-color:var(--ink); }
   nav.topnav .spacer { margin-left:auto; }
-  nav.topnav .user-chip { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); border:1px solid var(--line); padding:7px 11px; border-radius:var(--radius); }
+  nav.topnav .user-chip { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); border:1px solid var(--line); padding:7px 11px; border-radius:var(--radius); cursor:pointer; background:none; }
+  .lang-switcher { display:flex; gap:6px; }
+  .lang-btn { width:auto; margin:0; padding:5px 7px; background:var(--paper-card); border:1.5px solid var(--line); border-radius:var(--radius); font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .lang-btn.active { border-color: var(--ink); }
+  .lang-btn svg { display:block; border-radius:1px; }
 
   main { max-width: 1300px; margin: 0 auto; padding: 28px 28px 80px; }
   .top-row { display: grid; grid-template-columns: 380px 1fr; gap: 22px; align-items: start; margin-bottom: 22px; }
@@ -155,15 +161,22 @@
     Castellers
   </a>
   <div class="links">
-    <a href="/">Inici</a>
-    <a href="/ensayos.html" class="active">Assajos</a>
-    <a href="/actuaciones.html">Actuacions</a>
-    <a href="/biblioteca-imagenes.html">Imatges</a>
-    <a href="/plantillas.html">Plantilles</a>
-    <a href="/miembros.html">Membres</a>
-    <a href="/usuarios.html">Usuaris</a>
+    <a href="/" data-i18n="nav_inici">Inici</a>
+    <a href="/ensayos.html" class="active" data-i18n="nav_assajos">Assajos</a>
+    <a href="/actuaciones.html" data-i18n="nav_actuacions">Actuacions</a>
+    <a href="/biblioteca-imagenes.html" data-i18n="nav_imatges">Imatges</a>
+    <a href="/plantillas.html" data-i18n="nav_plantilles">Plantilles</a>
+    <a href="/miembros.html" data-i18n="nav_membres">Membres</a>
+    <a href="/usuarios.html" data-i18n="nav_usuaris">Usuaris</a>
   </div>
   <div class="spacer"></div>
+  <div class="lang-switcher">
+    <button class="lang-btn" data-lang="ca" title="Català" type="button">
+      <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>
+    </button>
+    <button class="lang-btn" data-lang="es" title="Español" type="button">🇪🇸</button>
+    <button class="lang-btn" data-lang="en" title="English" type="button">🇬🇧</button>
+  </div>
   <span class="user-chip" id="user-chip">…</span>
 </nav>
 <script>
@@ -178,13 +191,14 @@
     window.usuarioActual = data.usuario;
     const chip = document.getElementById('user-chip');
     if (chip) {
-      chip.textContent = `${data.usuario.nombre} · Tancar sessió`;
       chip.style.cursor = 'pointer';
       chip.onclick = async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
         location.href = '/login.html';
       };
     }
+    document.documentElement.classList.add('sessio-confirmada');
+    if (window.aplicarIdioma) window.aplicarIdioma(data.usuario.idioma || localStorage.getItem('castellers_idioma') || 'ca');
   }).catch(() => { location.href = '/login.html'; });
 })();
 </script>
@@ -194,39 +208,39 @@
 <div class="top-row">
   <section class="panel">
     <div class="panel-head">
-      <h2>Nou assaig</h2>
+      <h2 data-i18n="nou_assaig">Nou assaig</h2>
       <span class="count" id="assajos-count">0 assajos</span>
     </div>
     <div class="panel-body">
       <form class="crear-assaig" id="crear-form">
         <div class="full">
-          <label for="fecha">Data</label>
+          <label for="fecha" data-i18n="data">Data</label>
           <input type="date" id="fecha" required>
         </div>
         <div>
-          <label for="horaInicio">Hora inici</label>
+          <label for="horaInicio" data-i18n="hora_inici">Hora inici</label>
           <input type="time" id="horaInicio">
         </div>
         <div>
-          <label for="horaFin">Hora fi</label>
+          <label for="horaFin" data-i18n="hora_fi">Hora fi</label>
           <input type="time" id="horaFin">
         </div>
         <div class="full">
-          <label for="notas">Notes</label>
-          <textarea id="notas" placeholder="Ex. Assaig de 3d7 abans de la plaça"></textarea>
+          <label for="notas" data-i18n="notes">Notes</label>
+          <textarea id="notas" placeholder="Ex. Assaig de 3d7 abans de la plaça" data-i18n-placeholder="ex_notas"></textarea>
         </div>
-        <button class="primary" type="submit">Crear assaig</button>
+        <button class="primary" type="submit" data-i18n="crear_assaig">Crear assaig</button>
       </form>
 
       <ul class="assajos-list" id="assajos-list">
-        <li class="empty-note" style="border:none;">Carregant…</li>
+        <li class="empty-note" style="border:none;" data-i18n="carregant">Carregant…</li>
       </ul>
     </div>
   </section>
 
   <section class="panel">
     <div class="panel-head">
-      <h2>Calendari</h2>
+      <h2 data-i18n="calendari">Calendari</h2>
       <div style="display:flex; align-items:center; gap:8px;">
         <button class="ghost small" id="cal-prev" type="button">←</button>
         <span id="cal-mes-label" style="font-family:'Fraunces',serif; font-weight:600; min-width:120px; text-align:center; display:inline-block;"></span>
@@ -234,74 +248,14 @@
       </div>
     </div>
     <div class="panel-body">
-      <div class="cal-dow">
-        <span>Dl</span><span>Dt</span><span>Dc</span><span>Dj</span><span>Dv</span><span>Ds</span><span>Dg</span>
+      <div class="cal-dow" id="cal-dow">
+        <span data-i18n="dl">Dl</span><span data-i18n="dt">Dt</span><span data-i18n="dc">Dc</span><span data-i18n="dj">Dj</span><span data-i18n="dv">Dv</span><span data-i18n="ds">Ds</span><span data-i18n="dg">Dg</span>
       </div>
       <div class="cal-grid" id="cal-grid"></div>
     </div>
   </section>
 </div>
 
-<div class="detail-row">
-  <section class="panel" id="detalle-panel">
-    <div class="panel-head">
-      <div class="detalle-head">
-        <h2 id="detalle-titulo">Assaig</h2>
-        <span class="status-badge" id="detalle-status">Esborrany</span>
-        <div class="detalle-actions solo-tecnica">
-          <button class="ghost small" id="publicar-btn" type="button">Publicar assaig</button>
-        </div>
-      </div>
-    </div>
-    <div class="panel-body">
-
-      <!-- Vista completa: Tècnica, o qualsevol un cop l'assaig ja és públic -->
-      <div id="vista-completa">
-        <p class="hint" style="font-size:12px;color:var(--ink-soft);margin:0 0 4px;">
-          Marca qui assisteix a aquest assaig.
-        </p>
-
-        <div class="attendance-search">
-          <input type="text" id="attendance-search" placeholder="Cerca per nom, àlies o cognoms…">
-        </div>
-        <ul class="attendance-list" id="attendance-list"></ul>
-
-        <div class="gen-actions solo-tecnica">
-          <button class="ghost" id="open-propuestas-btn" type="button">Generar propostes de castells</button>
-          <button class="ghost" id="open-pinya-btn" type="button">Generar pinya</button>
-        </div>
-
-        <div style="margin-top:20px;">
-          <div class="panel-head" style="padding:0 0 10px; border-bottom:1px solid var(--line); margin-bottom:10px;">
-            <h2 style="font-size:15px;">Estructures guardades d'aquest assaig</h2>
-          </div>
-          <ul class="assajos-list" id="estructuras-list">
-            <li class="empty-note" style="border:none;">Encara no s'ha desat cap estructura.</li>
-          </ul>
-        </div>
-      </div>
-
-      <!-- Vista d'auto-inscripció: no-Tècnica mentre l'assaig és esborrany -->
-      <div id="vista-autoinscripcio" style="display:none;">
-        <p class="hint" style="font-size:12px;color:var(--gold);margin:0 0 14px; border:1px solid var(--gold); padding:8px 10px; border-radius:3px;">
-          Aquest assaig encara és un esborrany — de moment només pots apuntar-t'hi. La resta de detalls (qui més ve, els castells...) es veuran quan es publiqui.
-        </p>
-        <div id="autoinscripcio-notas" style="font-size:13px; margin-bottom:16px;"></div>
-
-        <label style="display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); margin-bottom:6px;">Qui ets? (provisional, sense login)</label>
-        <input type="text" id="jo-search" placeholder="Cerca el teu nom o àlies…" style="width:100%; padding:9px 10px; border:1px solid var(--line); background:var(--paper); border-radius:3px; margin-bottom:8px;">
-        <ul class="assajos-list" id="jo-resultados" style="max-height:220px; overflow-y:auto;"></ul>
-
-        <div id="jo-seleccionado" style="display:none; margin-top:16px; padding:14px; background:var(--paper); border:1px solid var(--line); border-radius:3px;">
-          <div style="font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin-bottom:10px;" id="jo-nombre"></div>
-          <button class="ghost" id="jo-toggle-btn" type="button" style="width:100%;"></button>
-          <button class="ghost" id="jo-canviar-btn" type="button" style="width:100%; margin-top:8px;">No sóc jo — canviar</button>
-        </div>
-      </div>
-
-    </div>
-  </section>
-</div>
 </main>
 
 <div class="modal-overlay" id="dia-overlay">
@@ -309,112 +263,15 @@
     <h3 id="dia-titulo">Assajos del dia</h3>
     <div id="dia-contenido"></div>
     <div class="modal-actions">
-      <button class="ghost" id="close-dia" type="button">Tancar</button>
+      <button class="ghost" id="close-dia" type="button" data-i18n="tancar">Tancar</button>
     </div>
   </div>
 </div>
 
-<div class="modal-overlay" id="imagen-estructura-overlay">
-  <div class="modal-box" style="max-width:960px;">
-    <h3 id="imagen-estructura-titulo">Castell</h3>
-    <div class="preview-grid">
-      <div class="preview-half">
-        <div class="preview-label">Castell</div>
-        <div id="ie-castell" class="preview-box"></div>
-      </div>
-      <div class="preview-half">
-        <div class="preview-label">Pinya</div>
-        <div id="ie-pinya" class="preview-box"></div>
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button class="ghost" id="close-imagen-estructura" type="button">Tancar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: propostes de castells -->
-<div class="modal-overlay" id="propuestas-overlay">
-  <div class="modal-box">
-    <h3>Propostes de castells</h3>
-    <div class="criterio-row">
-      <label for="criterio-select" style="margin:0;">Criteri de selecció</label>
-      <select id="criterio-select">
-        <option value="ninguno">Cap criteri (només compta caps)</option>
-        <option value="altura">Alçada (suggereix pom i base)</option>
-      </select>
-      <button class="ghost small" id="calcular-propuestas-btn" type="button">Generar</button>
-    </div>
-    <div class="propuestas-grid" id="propuestas-grid">
-      <p class="empty-note">Encara no s'ha generat cap proposta.</p>
-    </div>
-    <div class="modal-actions">
-      <button class="ghost" id="close-propuestas" type="button">Tancar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: generar pinya en blanco -->
-<div class="modal-overlay" id="pinya-overlay">
-  <div class="modal-box">
-    <h3>Generar pinya</h3>
-    <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 14px;">
-      Crea una pinya en blanc per a aquest assaig i col·loca-hi la gent al constructor (arrossegant o a cops de clic).
-    </p>
-    <div class="criterio-row">
-      <label for="pinya-tipo-select" style="margin:0;">Tipus de castell</label>
-      <select id="pinya-tipo-select">
-        <option value="2d6">2d6</option>
-        <option value="3d7">3d7</option>
-        <option value="4d7">4d7</option>
-        <option value="5d7">5d7</option>
-      </select>
-      <button class="ghost small" id="crear-pinya-btn" type="button">Crear i obrir constructor</button>
-    </div>
-    <div class="modal-actions">
-      <button class="ghost" id="close-pinya" type="button">Tancar</button>
-    </div>
-  </div>
-</div>
 
 <script>
 const API = '';
-let allMembers = [];
 let ensayosList = [];
-let currentEnsayoId = null;
-let currentEnsayoObj = null;
-
-// ⚠️ PROVISIONAL: sense login real, "qui ets" és només una selecció que es
-// guarda al navegador — no verifica identitat de veritat.
-let joMateixId = localStorage.getItem('castellers_jo_mateix_id')
-  ? Number(localStorage.getItem('castellers_jo_mateix_id'))
-  : null;
-let asistentesSet = new Set();
-
-// Permisos reals de la sessió (substitueix el simulador provisional).
-let isTecnica = false;
-let usuarioActual = null;
-
-async function cargarPermisosReales() {
-  try {
-    const res = await fetch(`${API}/api/auth/me`);
-    const data = await res.json();
-    usuarioActual = data.usuario;
-    const permisos = usuarioActual ? (usuarioActual.permisos || []) : [];
-    isTecnica = permisos.includes('Tècnica') || permisos.includes('AdminGeneral');
-  } catch (err) {
-    console.error(err);
-    isTecnica = false;
-  }
-  aplicarPermisos();
-}
-
-function aplicarPermisos() {
-  document.querySelectorAll('.solo-tecnica').forEach(el => {
-    el.style.display = isTecnica ? '' : 'none';
-  });
-  document.querySelectorAll('.attend-check').forEach(el => { el.disabled = !isTecnica; });
-}
 
 let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth();
@@ -424,6 +281,140 @@ function escapeHtml(str) {
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
 }
+
+const TRADUCCIONES = {
+  ca: {
+    nav_inici: 'Inici', nav_assajos: 'Assajos', nav_actuacions: 'Actuacions', nav_imatges: 'Imatges',
+    nav_plantilles: 'Plantilles', nav_membres: 'Membres', nav_usuaris: 'Usuaris', chip_tancar: 'Tancar sessió',
+    nou_assaig: 'Nou assaig', data: 'Data', hora_inici: 'Hora inici', hora_fi: 'Hora fi', notes: 'Notes',
+    ex_notas: 'Ex. Assaig de 3d7 abans de la plaça', crear_assaig: 'Crear assaig', carregant: 'Carregant…',
+    calendari: 'Calendari', dl: 'Dl', dt: 'Dt', dc: 'Dc', dj: 'Dj', dv: 'Dv', ds: 'Ds', dg: 'Dg',
+    publicar_assaig: 'Publicar assaig', ja_publicat: 'Ja publicat',
+    marca_qui_assisteix: 'Marca qui assisteix a aquest assaig.', cerca_nom_alies_cognoms: 'Cerca per nom, àlies o cognoms…',
+    generar_propostes: 'Generar propostes de castells', generar_pinya: 'Generar pinya',
+    estructures_guardades: 'Estructures guardades d\'aquest assaig', cap_estructura: 'Encara no s\'ha desat cap estructura.',
+    aviso_esborrany: 'Aquest assaig encara és un esborrany — de moment només pots apuntar-t\'hi. La resta de detalls (qui més ve, els castells...) es veuran quan es publiqui.',
+    qui_ets: 'Qui ets? (provisional, sense login)', cerca_teu_nom: 'Cerca el teu nom o àlies…', no_sc_jo: 'No sóc jo — canviar',
+    tancar: 'Tancar', castell: 'Castell', pinya: 'Pinya',
+    propostes_castells: 'Propostes de castells', criteri_seleccio: 'Criteri de selecció',
+    cap_criteri: 'Cap criteri (només compta caps)', criteri_alcada: 'Alçada (suggereix pom i base)',
+    generar: 'Generar', cap_proposta: 'Encara no s\'ha generat cap proposta.',
+    generar_pinya_titulo: 'Generar pinya', hint_pinya_blanc: 'Crea una pinya en blanc per a aquest assaig i col·loca-hi la gent al constructor (arrossegant o a cops de clic).',
+    tipus_castell: 'Tipus de castell', crear_obrir: 'Crear i obrir constructor',
+    err_crear_assaig: 'No s\'ha pogut crear l\'assaig: ', assaig_titulo: (f) => `Assaig · ${f}`,
+    err_obrir_assaig: 'No s\'ha pogut obrir l\'assaig.', err_desar: 'No s\'ha pogut desar.', err_publicar: 'No s\'ha pogut publicar.',
+    cap_assaig_creat: 'Encara no hi ha cap assaig creat.', cap_assaig_publicat: 'Encara no hi ha cap assaig publicat.',
+    publicat: 'Publicat', esborrany: 'Esborrany', assistent: (n) => `${n} assistent${n === 1 ? '' : 's'}`,
+    gestionar: 'Gestionar', veure_assaig: 'Veure l\'assaig', veure_imatge: 'Veure imatge',
+    cap_castell_creat: 'Encara no hi ha cap castell creat en aquest assaig.',
+    calculant: 'Calculant…', no_calcular: 'No s\'ha pogut calcular.', error_calcular: 'Error calculant les propostes.',
+    desant: 'Desant…', desada_ok: 'Desada ✓', desar_proposta: 'Desar aquesta proposta',
+    confirm_eliminar_estructura: 'Vols eliminar aquesta estructura desada?', err_eliminar: 'No s\'ha pogut eliminar.',
+    err_crear_pinya: 'No s\'ha pogut crear la pinya: ', posicions_assignades: (a, t) => `${a}/${t || '?'} posicions assignades`,
+    obrir_constructor: 'Obrir constructor', eliminar: 'Eliminar', posicions: 'posicions',
+    sense_disseny_castell: 'Aquest castell encara no té disseny visual.', sense_disseny_pinya: 'Aquest castell encara no té planta de pinya.', no_carregat: 'Error carregant.',
+    mesos: ['Gener','Febrer','Març','Abril','Maig','Juny','Juliol','Agost','Setembre','Octubre','Novembre','Desembre']
+  },
+  es: {
+    nav_inici: 'Inicio', nav_assajos: 'Ensayos', nav_actuacions: 'Actuaciones', nav_imatges: 'Imágenes',
+    nav_plantilles: 'Plantillas', nav_membres: 'Miembros', nav_usuaris: 'Usuarios', chip_tancar: 'Cerrar sesión',
+    nou_assaig: 'Nuevo ensayo', data: 'Fecha', hora_inici: 'Hora inicio', hora_fi: 'Hora fin', notes: 'Notas',
+    ex_notas: 'Ej. Ensayo de 3d7 antes de la plaza', crear_assaig: 'Crear ensayo', carregant: 'Cargando…',
+    calendari: 'Calendario', dl: 'Lu', dt: 'Ma', dc: 'Mi', dj: 'Ju', dv: 'Vi', ds: 'Sá', dg: 'Do',
+    publicar_assaig: 'Publicar ensayo', ja_publicat: 'Ya publicado',
+    marca_qui_assisteix: 'Marca quién asiste a este ensayo.', cerca_nom_alies_cognoms: 'Busca por nombre, alias o apellidos…',
+    generar_propostes: 'Generar propuestas de castells', generar_pinya: 'Generar pinya',
+    estructures_guardades: 'Estructuras guardadas de este ensayo', cap_estructura: 'Aún no se ha guardado ninguna estructura.',
+    aviso_esborrany: 'Este ensayo todavía es un borrador — de momento solo puedes apuntarte. El resto de detalles (quién más viene, los castells...) se verán cuando se publique.',
+    qui_ets: '¿Quién eres? (provisional, sin login)', cerca_teu_nom: 'Busca tu nombre o alias…', no_sc_jo: 'No soy yo — cambiar',
+    tancar: 'Cerrar', castell: 'Castell', pinya: 'Pinya',
+    propostes_castells: 'Propuestas de castells', criteri_seleccio: 'Criterio de selección',
+    cap_criteri: 'Ningún criterio (solo cuenta cabezas)', criteri_alcada: 'Altura (sugiere pom y base)',
+    generar: 'Generar', cap_proposta: 'Aún no se ha generado ninguna propuesta.',
+    generar_pinya_titulo: 'Generar pinya', hint_pinya_blanc: 'Crea una pinya en blanco para este ensayo y coloca a la gente en el constructor (arrastrando o a golpe de clic).',
+    tipus_castell: 'Tipo de castell', crear_obrir: 'Crear y abrir constructor',
+    err_crear_assaig: 'No se ha podido crear el ensayo: ', assaig_titulo: (f) => `Ensayo · ${f}`,
+    err_obrir_assaig: 'No se ha podido abrir el ensayo.', err_desar: 'No se ha podido guardar.', err_publicar: 'No se ha podido publicar.',
+    cap_assaig_creat: 'Aún no hay ningún ensayo creado.', cap_assaig_publicat: 'Aún no hay ningún ensayo publicado.',
+    publicat: 'Publicado', esborrany: 'Borrador', assistent: (n) => `${n} asistente${n === 1 ? '' : 's'}`,
+    gestionar: 'Gestionar', veure_assaig: 'Ver el ensayo', veure_imatge: 'Ver imagen',
+    cap_castell_creat: 'Aún no hay ningún castell creado en este ensayo.',
+    calculant: 'Calculando…', no_calcular: 'No se ha podido calcular.', error_calcular: 'Error calculando las propuestas.',
+    desant: 'Guardando…', desada_ok: 'Guardada ✓', desar_proposta: 'Guardar esta propuesta',
+    confirm_eliminar_estructura: '¿Quieres eliminar esta estructura guardada?', err_eliminar: 'No se ha podido eliminar.',
+    err_crear_pinya: 'No se ha podido crear la pinya: ', posicions_assignades: (a, t) => `${a}/${t || '?'} posiciones asignadas`,
+    obrir_constructor: 'Abrir constructor', eliminar: 'Eliminar', posicions: 'posiciones',
+    sense_disseny_castell: 'Este castell aún no tiene diseño visual.', sense_disseny_pinya: 'Este castell aún no tiene planta de pinya.', no_carregat: 'Error al cargar.',
+    mesos: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+  },
+  en: {
+    nav_inici: 'Home', nav_assajos: 'Rehearsals', nav_actuacions: 'Performances', nav_imatges: 'Images',
+    nav_plantilles: 'Templates', nav_membres: 'Members', nav_usuaris: 'Users', chip_tancar: 'Log out',
+    nou_assaig: 'New rehearsal', data: 'Date', hora_inici: 'Start time', hora_fi: 'End time', notes: 'Notes',
+    ex_notas: 'E.g. 3d7 rehearsal before the square', crear_assaig: 'Create rehearsal', carregant: 'Loading…',
+    calendari: 'Calendar', dl: 'Mo', dt: 'Tu', dc: 'We', dj: 'Th', dv: 'Fr', ds: 'Sa', dg: 'Su',
+    publicar_assaig: 'Publish rehearsal', ja_publicat: 'Already published',
+    marca_qui_assisteix: 'Mark who is attending this rehearsal.', cerca_nom_alies_cognoms: 'Search by name, nickname or last names…',
+    generar_propostes: 'Generate castell proposals', generar_pinya: 'Generate pinya',
+    estructures_guardades: 'Structures saved for this rehearsal', cap_estructura: 'No structure saved yet.',
+    aviso_esborrany: 'This rehearsal is still a draft — for now you can only sign up. The rest of the details (who else is coming, the castells...) will show once it\'s published.',
+    qui_ets: 'Who are you? (provisional, no login)', cerca_teu_nom: 'Search your name or nickname…', no_sc_jo: 'Not me — change',
+    tancar: 'Close', castell: 'Castell', pinya: 'Pinya',
+    propostes_castells: 'Castell proposals', criteri_seleccio: 'Selection criteria',
+    cap_criteri: 'No criteria (only counts heads)', criteri_alcada: 'Height (suggests pom and base)',
+    generar: 'Generate', cap_proposta: 'No proposal generated yet.',
+    generar_pinya_titulo: 'Generate pinya', hint_pinya_blanc: 'Create a blank pinya for this rehearsal and place people in the builder (dragging or by click).',
+    tipus_castell: 'Castell type', crear_obrir: 'Create and open builder',
+    err_crear_assaig: 'Could not create the rehearsal: ', assaig_titulo: (f) => `Rehearsal · ${f}`,
+    err_obrir_assaig: 'Could not open the rehearsal.', err_desar: 'Could not save.', err_publicar: 'Could not publish.',
+    cap_assaig_creat: 'No rehearsal created yet.', cap_assaig_publicat: 'No rehearsal published yet.',
+    publicat: 'Published', esborrany: 'Draft', assistent: (n) => `${n} attendee${n === 1 ? '' : 's'}`,
+    gestionar: 'Manage', veure_assaig: 'View rehearsal', veure_imatge: 'View image',
+    cap_castell_creat: 'No castell created for this rehearsal yet.',
+    calculant: 'Calculating…', no_calcular: 'Could not calculate.', error_calcular: 'Error calculating proposals.',
+    desant: 'Saving…', desada_ok: 'Saved ✓', desar_proposta: 'Save this proposal',
+    confirm_eliminar_estructura: 'Delete this saved structure?', err_eliminar: 'Could not delete.',
+    err_crear_pinya: 'Could not create the pinya: ', posicions_assignades: (a, t) => `${a}/${t || '?'} positions assigned`,
+    obrir_constructor: 'Open builder', eliminar: 'Delete', posicions: 'positions',
+    sense_disseny_castell: 'This castell has no visual design yet.', sense_disseny_pinya: 'This castell has no pinya floor plan yet.', no_carregat: 'Loading error.',
+    mesos: ['January','February','March','April','May','June','July','August','September','October','November','December']
+  }
+};
+let idiomaActual = localStorage.getItem('castellers_idioma') || 'ca';
+function t(key) { return (TRADUCCIONES[idiomaActual] || TRADUCCIONES.ca)[key] || key; }
+
+function aplicarIdioma(idioma) {
+  idiomaActual = idioma;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val !== key) el.textContent = val;
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    const val = t(key);
+    if (val !== key) el.placeholder = val;
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === idioma));
+  localStorage.setItem('castellers_idioma', idioma);
+  document.documentElement.lang = idioma;
+  const chip = document.getElementById('user-chip');
+  if (chip && window.usuarioActual) chip.textContent = `${window.usuarioActual.nombre} · ${t('chip_tancar')}`;
+  if (typeof renderEnsayosList === 'function') renderEnsayosList();
+  if (typeof renderCalendario === 'function') renderCalendario();
+}
+window.aplicarIdioma = aplicarIdioma;
+
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    aplicarIdioma(btn.dataset.lang);
+    if (window.usuarioActual) {
+      try {
+        await fetch(`${API}/api/auth/idioma`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idioma: btn.dataset.lang }) });
+      } catch (err) { console.error(err); }
+    }
+  });
+});
 function formatFecha(iso) {
   const d = new Date(iso);
   if (isNaN(d)) return iso;
@@ -437,17 +428,6 @@ function fechaISOSinHora(iso) {
 }
 
 /* ---------------- Carga inicial ---------------- */
-
-async function fetchMembers() {
-  try {
-    const res = await fetch(`${API}/api/castellers`);
-    const data = await res.json();
-    allMembers = data.data || [];
-  } catch (err) {
-    console.error('No se pudieron cargar los miembros:', err);
-    allMembers = [];
-  }
-}
 
 async function fetchEnsayos() {
   const list = document.getElementById('assajos-list');
@@ -466,10 +446,8 @@ async function fetchEnsayos() {
 
 /* ---------------- Calendari ---------------- */
 
-const MESOS = ['Gener','Febrer','Març','Abril','Maig','Juny','Juliol','Agost','Setembre','Octubre','Novembre','Desembre'];
-
 function renderCalendario() {
-  document.getElementById('cal-mes-label').textContent = `${MESOS[calMonth]} ${calYear}`;
+  document.getElementById('cal-mes-label').textContent = `${t('mesos')[calMonth]} ${calYear}`;
   const grid = document.getElementById('cal-grid');
 
   const primerDiaMes = new Date(Date.UTC(calYear, calMonth, 1));
@@ -530,7 +508,7 @@ async function mostrarDia(key, ensayosDelDia) {
   const [y, m, d] = key.split('-');
   document.getElementById('dia-titulo').textContent = `${d}/${m}/${y}`;
   const contenido = document.getElementById('dia-contenido');
-  contenido.innerHTML = '<p class="empty-note">Carregant…</p>';
+  contenido.innerHTML = `<p class="empty-note">${t('carregant')}</p>`;
   diaOverlay.classList.add('open');
 
   const items = await Promise.all(ensayosDelDia.map(async (e) => {
@@ -546,21 +524,21 @@ async function mostrarDia(key, ensayosDelDia) {
   contenido.innerHTML = items.map(({ ensayo, estructuras }) => `
     <div class="dia-item">
       <div class="dia-meta">
-        ${ensayo.horaInicio ? escapeHtml(ensayo.horaInicio.slice(0,5)) + 'h · ' : ''}${ensayo.numAsistentes} assistents ·
-        <span class="status-badge ${ensayo.publicado ? 'publicado' : ''}">${ensayo.publicado ? 'Publicat' : 'Esborrany'}</span>
+        ${ensayo.horaInicio ? escapeHtml(ensayo.horaInicio.slice(0,5)) + 'h · ' : ''}${t('assistent')(ensayo.numAsistentes)} ·
+        <span class="status-badge ${ensayo.publicado ? 'publicado' : ''}">${ensayo.publicado ? t('publicat') : t('esborrany')}</span>
       </div>
       ${ensayo.notas ? `<div style="font-size:12.5px; margin-bottom:8px;">${escapeHtml(ensayo.notas)}</div>` : ''}
       ${estructuras.length
         ? estructuras.map(est => `
             <div class="estructura-mini">
               <span>${escapeHtml(est.tipo)}</span>
-              <span>${est.posicionesAsignadas}/${est.totalPosiciones || '?'} posicions</span>
+              <span>${est.posicionesAsignadas}/${est.totalPosiciones || '?'} ${t('posicions')}</span>
             </div>
           `).join('')
-        : '<p class="empty-note" style="padding:8px 0;">Encara no hi ha cap castell creat en aquest assaig.</p>'
+        : `<p class="empty-note" style="padding:8px 0;">${t('cap_castell_creat')}</p>`
       }
       <div class="dia-actions">
-        <button class="ghost small veure-assaig-btn" data-id="${ensayo.id}" type="button">Veure l'assaig</button>
+        <button class="ghost small veure-assaig-btn" data-id="${ensayo.id}" type="button">${t('veure_assaig')}</button>
       </div>
     </div>
   `).join('');
@@ -568,8 +546,7 @@ async function mostrarDia(key, ensayosDelDia) {
   contenido.querySelectorAll('.veure-assaig-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       diaOverlay.classList.remove('open');
-      openEnsayo(Number(btn.dataset.id));
-      document.getElementById('detalle-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      window.open(`/ensayo-detalle.html?id=${btn.dataset.id}`, '_blank');
     });
   });
 }
@@ -585,17 +562,17 @@ function renderEnsayosList() {
   const list = document.getElementById('assajos-list');
   const visibles = ensayosVisibles();
   if (!visibles.length) {
-    list.innerHTML = `<li class="empty-note" style="border:none;">${isTecnica ? 'Encara no hi ha cap assaig creat.' : 'Encara no hi ha cap assaig publicat.'}</li>`;
+    list.innerHTML = `<li class="empty-note" style="border:none;">${t('cap_assaig_creat')}</li>`;
     return;
   }
   list.innerHTML = visibles.map(e => `
-    <li class="${e.id === currentEnsayoId ? 'selected' : ''}" data-id="${e.id}">
+    <li data-id="${e.id}">
       <span class="fecha-box">${formatFecha(e.fecha)}</span>
       <span class="meta">
-        ${e.horaInicio ? escapeHtml(e.horaInicio.slice(0,5)) + 'h · ' : ''}${e.numAsistentes} assistent${e.numAsistentes === 1 ? '' : 's'}
-        <span class="status-badge ${e.publicado ? 'publicado' : ''}">${e.publicado ? 'Publicat' : 'Esborrany'}</span>
+        ${e.horaInicio ? escapeHtml(e.horaInicio.slice(0,5)) + 'h · ' : ''}${t('assistent')(e.numAsistentes)}
+        <span class="status-badge ${e.publicado ? 'publicado' : ''}">${e.publicado ? t('publicat') : t('esborrany')}</span>
       </span>
-      <button class="ghost small gestionar-btn" data-id="${e.id}" type="button">Gestionar</button>
+      <button class="ghost small gestionar-btn" data-id="${e.id}" type="button">${t('gestionar')}</button>
     </li>
   `).join('');
 }
@@ -624,7 +601,7 @@ document.getElementById('crear-form').addEventListener('submit', async (e) => {
     await fetchEnsayos();
   } catch (err) {
     console.error(err);
-    alert('No s\'ha pogut crear l\'assaig: ' + err.message);
+    alert(t('err_crear_assaig') + err.message);
   } finally {
     btn.disabled = false;
   }
@@ -633,437 +610,10 @@ document.getElementById('crear-form').addEventListener('submit', async (e) => {
 document.getElementById('assajos-list').addEventListener('click', (e) => {
   const btn = e.target.closest('.gestionar-btn');
   if (!btn) return;
-  openEnsayo(Number(btn.dataset.id));
-  document.getElementById('detalle-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
-});
-
-/* ---------------- Detalle: asistencia ---------------- */
-
-async function openEnsayo(id) {
-  try {
-    const res = await fetch(`${API}/api/ensayos/${id}`);
-    const data = await res.json();
-
-    currentEnsayoId = id;
-    currentEnsayoObj = data.ensayo;
-    asistentesSet = new Set(data.asistentesIds || []);
-
-    document.getElementById('detalle-titulo').textContent = `Assaig · ${formatFecha(data.ensayo.fecha)}`;
-    const statusEl = document.getElementById('detalle-status');
-    statusEl.textContent = data.ensayo.publicado ? 'Publicat' : 'Esborrany';
-    statusEl.className = `status-badge ${data.ensayo.publicado ? 'publicado' : ''}`;
-    document.getElementById('publicar-btn').disabled = !!data.ensayo.publicado;
-    document.getElementById('publicar-btn').textContent = data.ensayo.publicado ? 'Ja publicat' : 'Publicar assaig';
-
-    document.getElementById('detalle-panel').style.display = 'block';
-
-    // La vista d'auto-inscripció queda de moment aparcada — es retomarà quan
-    // el sistema de login real estigui connectat aquí, en comptes del
-    // simulador provisional.
-    document.getElementById('vista-completa').style.display = 'block';
-    document.getElementById('vista-autoinscripcio').style.display = 'none';
-
-    document.getElementById('attendance-search').value = '';
-    renderAttendanceList();
-    await fetchEstructuras();
-    renderEnsayosList();
-  } catch (err) {
-    console.error(err);
-    alert('No s\'ha pogut obrir l\'assaig.');
-  }
-}
-
-function renderAttendanceList() {
-  const q = document.getElementById('attendance-search').value.trim().toLowerCase();
-  const list = document.getElementById('attendance-list');
-
-  const filtrados = allMembers.filter(m => {
-    if (!q) return true;
-    const haystack = `${m.nombre || ''} ${m.apodo || ''} ${m.primerApellido || ''} ${m.segundoApellido || ''}`.toLowerCase();
-    return haystack.includes(q);
-  }).sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
-
-  if (!filtrados.length) {
-    list.innerHTML = '<li class="empty-note" style="border:none;">Cap membre coincideix amb la cerca.</li>';
-    return;
-  }
-
-  list.innerHTML = filtrados.map(m => `
-    <li>
-      <input type="checkbox" class="attend-check" data-id="${m.id}" ${asistentesSet.has(m.id) ? 'checked' : ''}>
-      <span class="m-name">${escapeHtml(m.nombre)}${m.apodo ? ' · ' + escapeHtml(m.apodo) : ''}</span>
-      <span class="m-meta">${escapeHtml(m.posicionPinyaNombre || '')}</span>
-    </li>
-  `).join('');
-  aplicarPermisos();
-}
-
-document.getElementById('attendance-search').addEventListener('input', renderAttendanceList);
-
-/* ---------------- Auto-inscripció (esborrany, no-Tècnica) ---------------- */
-
-function iniciarAutoinscripcio() {
-  document.getElementById('jo-search').value = '';
-  const yaSeleccionado = joMateixId && allMembers.find(m => m.id === joMateixId);
-  if (yaSeleccionado) {
-    mostrarJoSeleccionado(yaSeleccionado);
-  } else {
-    document.getElementById('jo-seleccionado').style.display = 'none';
-    renderJoResultados('');
-  }
-}
-
-function renderJoResultados(q) {
-  const cont = document.getElementById('jo-resultados');
-  const texto = q.trim().toLowerCase();
-  if (!texto) { cont.innerHTML = ''; return; }
-
-  const encontrados = allMembers
-    .filter(m => `${m.nombre || ''} ${m.apodo || ''}`.toLowerCase().includes(texto))
-    .slice(0, 20);
-
-  if (!encontrados.length) {
-    cont.innerHTML = '<li class="empty-note" style="border:none;">Ningú coincideix amb aquesta cerca.</li>';
-    return;
-  }
-  cont.innerHTML = encontrados.map(m => `
-    <li data-id="${m.id}" style="cursor:pointer;">
-      <span class="fecha-box" style="font-size:14px;">${escapeHtml(m.nombre)}${m.apodo ? ' · ' + escapeHtml(m.apodo) : ''}</span>
-    </li>
-  `).join('');
-  cont.querySelectorAll('li[data-id]').forEach(li => {
-    li.addEventListener('click', () => {
-      const m = allMembers.find(x => x.id === Number(li.dataset.id));
-      if (!m) return;
-      joMateixId = m.id;
-      localStorage.setItem('castellers_jo_mateix_id', String(m.id));
-      mostrarJoSeleccionado(m);
-    });
-  });
-}
-
-document.getElementById('jo-search').addEventListener('input', (e) => renderJoResultados(e.target.value));
-
-function mostrarJoSeleccionado(m) {
-  document.getElementById('jo-resultados').innerHTML = '';
-  document.getElementById('jo-search').value = '';
-  document.getElementById('jo-seleccionado').style.display = 'block';
-  document.getElementById('jo-nombre').textContent = `${m.nombre}${m.apodo ? ' · ' + m.apodo : ''}`;
-  actualizarBotonJoToggle();
-}
-
-function actualizarBotonJoToggle() {
-  const btn = document.getElementById('jo-toggle-btn');
-  const hiVaig = asistentesSet.has(joMateixId);
-  btn.textContent = hiVaig ? '✓ Hi aniré — clica per treure\'t' : 'Apunta\'m a aquest assaig';
-}
-
-document.getElementById('jo-toggle-btn').addEventListener('click', async () => {
-  if (!currentEnsayoId || !joMateixId) return;
-  const nuevoEstado = !asistentesSet.has(joMateixId);
-  const btn = document.getElementById('jo-toggle-btn');
-  btn.disabled = true;
-  try {
-    await fetch(`${API}/api/ensayos/${currentEnsayoId}/asistencia`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ castellerId: joMateixId, asiste: nuevoEstado })
-    });
-    if (nuevoEstado) asistentesSet.add(joMateixId); else asistentesSet.delete(joMateixId);
-    actualizarBotonJoToggle();
-    await fetchEnsayos();
-  } catch (err) {
-    console.error(err);
-    alert('No s\'ha pogut desar.');
-  } finally {
-    btn.disabled = false;
-  }
-});
-
-document.getElementById('jo-canviar-btn').addEventListener('click', () => {
-  joMateixId = null;
-  localStorage.removeItem('castellers_jo_mateix_id');
-  document.getElementById('jo-seleccionado').style.display = 'none';
-  document.getElementById('jo-search').value = '';
-  document.getElementById('jo-resultados').innerHTML = '';
-});
-
-document.getElementById('attendance-list').addEventListener('change', async (e) => {
-  const checkbox = e.target.closest('.attend-check');
-  if (!checkbox || !currentEnsayoId) return;
-  const castellerId = Number(checkbox.dataset.id);
-  const asiste = checkbox.checked;
-
-  if (asiste) asistentesSet.add(castellerId); else asistentesSet.delete(castellerId);
-
-  try {
-    await fetch(`${API}/api/ensayos/${currentEnsayoId}/asistencia`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ castellerId, asiste })
-    });
-    await fetchEnsayos(); // refresca el contador de asistentes en la lista
-  } catch (err) {
-    console.error(err);
-    checkbox.checked = !asiste;
-    if (asiste) asistentesSet.delete(castellerId); else asistentesSet.add(castellerId);
-  }
-});
-
-document.getElementById('publicar-btn').addEventListener('click', async () => {
-  if (!currentEnsayoId) return;
-  const btn = document.getElementById('publicar-btn');
-  btn.disabled = true;
-  try {
-    await fetch(`${API}/api/ensayos/${currentEnsayoId}/publicar`, { method: 'PUT' });
-    await openEnsayo(currentEnsayoId);
-    await fetchEnsayos();
-  } catch (err) {
-    console.error(err);
-    alert('No s\'ha pogut publicar.');
-    btn.disabled = false;
-  }
-});
-
-/* ---------------- Modal: propostes de castells ---------------- */
-
-/* ---------------- Vista prèvia amb noms reals d'una estructura ---------------- */
-
-const imagenEstructuraOverlay = document.getElementById('imagen-estructura-overlay');
-document.getElementById('close-imagen-estructura').addEventListener('click', () => imagenEstructuraOverlay.classList.remove('open'));
-imagenEstructuraOverlay.addEventListener('click', (e) => { if (e.target === imagenEstructuraOverlay) imagenEstructuraOverlay.classList.remove('open'); });
-
-async function mostrarImagenEstructura(estructuraId, tipo) {
-  document.getElementById('imagen-estructura-titulo').textContent = `Castell · ${tipo}`;
-  const boxCastell = document.getElementById('ie-castell');
-  const boxPinya = document.getElementById('ie-pinya');
-  boxCastell.innerHTML = '<div class="preview-empty">Carregant…</div>';
-  boxPinya.innerHTML = '<div class="preview-empty">Carregant…</div>';
-  imagenEstructuraOverlay.classList.add('open');
-
-  try {
-    const estRes = await fetch(`${API}/api/estructuras/${estructuraId}`);
-    const estData = await estRes.json();
-    const posiciones = estData.posiciones || [];
-
-    const nombrePara = (slot, slotIndex) => {
-      const fila = posiciones.find(p => p.slot === slot && p.slotIndex === slotIndex && p.castellerId);
-      return fila ? fila.castellerNombre : null;
-    };
-
-    // --- Castell ---
-    const castellEstRes = await fetch(`${API}/api/castells-estructura/${tipo}`);
-    const castellEstData = await castellEstRes.json();
-    const imagenId = castellEstData.estructura ? castellEstData.estructura.imagenId : null;
-
-    const etiRes = await fetch(`${API}/api/castell-plantilla/${tipo}`);
-    const etiData = await etiRes.json();
-    const etiquetas = etiData.data || [];
-
-    let dataUrl = null;
-    if (imagenId) {
-      const imgsRes = await fetch(`${API}/api/imagenes?categoria=Castells`);
-      const imgsData = await imgsRes.json();
-      const img = (imgsData.data || []).find(i => i.id === imagenId);
-      if (img) dataUrl = img.dataUrl;
-    }
-
-    if (dataUrl && etiquetas.length) {
-      boxCastell.innerHTML = `<img src="${escapeHtml(dataUrl)}" alt="">` + etiquetas.map(e => {
-        const leftPct = (e.x / 960) * 100, topPct = (e.y / 760) * 100;
-        const wPct = (e.w / 960) * 100, hPct = (e.h / 760) * 100;
-        const nombre = nombrePara(e.slot, e.slotIndex);
-        return `<div class="p-box" style="left:${leftPct}%; top:${topPct}%; width:${wPct}%; height:${hPct}%; transform:translate(-50%,-50%); font-family:'Fraunces',serif; font-weight:600; font-size:11px;">${nombre ? escapeHtml(nombre) : '—'}</div>`;
-      }).join('');
-    } else {
-      boxCastell.innerHTML = '<div class="preview-empty">Aquest castell encara no té disseny visual.</div>';
-    }
-
-    // --- Pinya ---
-    const pinRes = await fetch(`${API}/api/plantillas/${tipo}`);
-    const pinData = await pinRes.json();
-    const floorSlots = pinData.data || [];
-
-    if (floorSlots.length) {
-      boxPinya.innerHTML = floorSlots.map(p => {
-        const leftPct = (p.x / 960) * 100, topPct = (p.y / 760) * 100;
-        const wPct = (p.w / 960) * 100, hPct = (p.h / 760) * 100;
-        const rot = Number(p.rotacion) || 0;
-        const nombre = nombrePara(p.slot, p.slotIndex);
-        return `<div class="p-box" style="left:${leftPct}%; top:${topPct}%; width:${wPct}%; height:${hPct}%; transform:translate(-50%,-50%) rotate(${rot}deg);">${nombre ? escapeHtml(nombre) : '—'}</div>`;
-      }).join('');
-    } else {
-      boxPinya.innerHTML = '<div class="preview-empty">Aquest castell encara no té planta de pinya.</div>';
-    }
-  } catch (err) {
-    console.error(err);
-    boxCastell.innerHTML = '<div class="preview-empty">Error carregant.</div>';
-    boxPinya.innerHTML = '<div class="preview-empty">Error carregant.</div>';
-  }
-}
-
-const propuestasOverlay = document.getElementById('propuestas-overlay');
-
-document.getElementById('open-propuestas-btn').addEventListener('click', () => {
-  document.getElementById('propuestas-grid').innerHTML = '<p class="empty-note">Encara no s\'ha generat cap proposta.</p>';
-  propuestasOverlay.classList.add('open');
-});
-document.getElementById('close-propuestas').addEventListener('click', () => propuestasOverlay.classList.remove('open'));
-propuestasOverlay.addEventListener('click', (e) => { if (e.target === propuestasOverlay) propuestasOverlay.classList.remove('open'); });
-
-document.getElementById('calcular-propuestas-btn').addEventListener('click', async () => {
-  if (!currentEnsayoId) return;
-  const criterio = document.getElementById('criterio-select').value;
-  const grid = document.getElementById('propuestas-grid');
-  grid.innerHTML = '<p class="empty-note">Calculant…</p>';
-
-  try {
-    const res = await fetch(`${API}/api/ensayos/${currentEnsayoId}/propuestas?criterio=${criterio}`);
-    const data = await res.json();
-    const propuestas = data.propuestas || [];
-    if (!propuestas.length) {
-      grid.innerHTML = '<p class="empty-note">No s\'ha pogut calcular.</p>';
-      return;
-    }
-    grid.innerHTML = propuestas.map(renderPropuestaCard).join('');
-  } catch (err) {
-    console.error(err);
-    grid.innerHTML = '<p class="empty-note">Error calculant les propostes.</p>';
-  }
-});
-
-function renderPropuestaCard(p) {
-  let sugerenciaHtml = '';
-  if (p.sugerencia) {
-    sugerenciaHtml = `
-      <div class="sugerencia">
-        <div class="fila"><span class="lbl">Pom (més baixos):</span> ${p.sugerencia.pom_mas_bajos.map(x => escapeHtml(x.nombre)).join(', ') || '—'}</div>
-        <div class="fila"><span class="lbl">Base (més alts):</span> ${p.sugerencia.base_mas_altos.map(x => escapeHtml(x.nombre)).join(', ') || '—'}</div>
-        ${p.sugerencia.sinAlturaRegistrada > 0 ? `<div class="fila" style="color:var(--ink-soft);">${p.sugerencia.sinAlturaRegistrada} presents sense alçada registrada</div>` : ''}
-      </div>
-    `;
-  }
-  const desarBtn = p.viable
-    ? `<button class="ghost small guardar-estructura-btn" data-tipo="${escapeHtml(p.tipo)}" type="button" style="margin-top:10px;">Desar aquesta proposta</button>`
-    : '';
-  return `
-    <div class="prop-card ${p.viable ? '' : 'no-viable'}">
-      <div class="tipo">${escapeHtml(p.tipo)}</div>
-      <div class="viab ${p.viable ? 'si' : 'no'}">${p.viable ? '🟢 Viable' : '🔴 No viable'} · ${p.presentes}/${p.requerido}</div>
-      ${sugerenciaHtml}
-      ${desarBtn}
-    </div>
-  `;
-}
-
-document.getElementById('propuestas-grid').addEventListener('click', async (e) => {
-  const btn = e.target.closest('.guardar-estructura-btn');
-  if (!btn || !currentEnsayoId) return;
-  btn.disabled = true;
-  btn.textContent = 'Desant…';
-  try {
-    await fetch(`${API}/api/ensayos/${currentEnsayoId}/estructuras`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tipo: btn.dataset.tipo })
-    });
-    await fetchEstructuras();
-    btn.textContent = 'Desada ✓';
-  } catch (err) {
-    console.error(err);
-    btn.disabled = false;
-    btn.textContent = 'Desar aquesta proposta';
-    alert('No s\'ha pogut desar.');
-  }
-});
-
-/* ---------------- Estructures guardades de l'assaig ---------------- */
-
-async function fetchEstructuras() {
-  if (!currentEnsayoId) return;
-  const list = document.getElementById('estructuras-list');
-  try {
-    const res = await fetch(`${API}/api/ensayos/${currentEnsayoId}/estructuras`);
-    const data = await res.json();
-    const estructuras = data.data || [];
-    if (!estructuras.length) {
-      list.innerHTML = '<li class="empty-note" style="border:none;">Encara no s\'ha desat cap estructura.</li>';
-      return;
-    }
-    list.innerHTML = estructuras.map(e => `
-      <li data-id="${e.id}">
-        <span class="fecha-box">${escapeHtml(e.tipo)}</span>
-        <span class="meta">${e.posicionesAsignadas}/${e.totalPosiciones || '?'} posicions assignades</span>
-        <button class="ghost small ver-imagen-btn" data-id="${e.id}" data-tipo="${escapeHtml(e.tipo)}" type="button">Veure imatge</button>
-        <button class="ghost small abrir-constructor-btn solo-tecnica" data-id="${e.id}" type="button">Obrir constructor</button>
-        <button class="ghost small eliminar-estructura-btn solo-tecnica" data-id="${e.id}" type="button">Eliminar</button>
-      </li>
-    `).join('');
-    aplicarPermisos();
-  } catch (err) {
-    console.error(err);
-    list.innerHTML = '<li class="empty-note" style="border:none;">No s\'han pogut carregar les estructures.</li>';
-  }
-}
-
-document.getElementById('estructuras-list').addEventListener('click', async (e) => {
-  const abrirBtn = e.target.closest('.abrir-constructor-btn');
-  const eliminarBtn = e.target.closest('.eliminar-estructura-btn');
-  const verBtn = e.target.closest('.ver-imagen-btn');
-
-  if (verBtn) {
-    mostrarImagenEstructura(Number(verBtn.dataset.id), verBtn.dataset.tipo);
-    return;
-  }
-
-  if (abrirBtn) {
-    location.href = `/pinya.html?id=${abrirBtn.dataset.id}`;
-    return;
-  }
-
-  if (eliminarBtn) {
-    if (!confirm('Vols eliminar aquesta estructura desada?')) return;
-    try {
-      await fetch(`${API}/api/estructuras/${eliminarBtn.dataset.id}`, { method: 'DELETE' });
-      await fetchEstructuras();
-    } catch (err) {
-      console.error(err);
-      alert('No s\'ha pogut eliminar.');
-    }
-  }
-});
-
-/* ---------------- Modal: generar pinya en blanco ---------------- */
-
-const pinyaOverlay = document.getElementById('pinya-overlay');
-document.getElementById('open-pinya-btn').addEventListener('click', () => pinyaOverlay.classList.add('open'));
-document.getElementById('close-pinya').addEventListener('click', () => pinyaOverlay.classList.remove('open'));
-pinyaOverlay.addEventListener('click', (e) => { if (e.target === pinyaOverlay) pinyaOverlay.classList.remove('open'); });
-
-document.getElementById('crear-pinya-btn').addEventListener('click', async () => {
-  if (!currentEnsayoId) return;
-  const tipo = document.getElementById('pinya-tipo-select').value;
-  const btn = document.getElementById('crear-pinya-btn');
-  btn.disabled = true;
-  try {
-    const res = await fetch(`${API}/api/ensayos/${currentEnsayoId}/estructuras`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tipo, notas: 'Pinya en blanc' })
-    });
-    const data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data.error || 'Error creant la pinya');
-    location.href = `/pinya.html?id=${data.estructura.id}`;
-  } catch (err) {
-    console.error(err);
-    alert('No s\'ha pogut crear la pinya: ' + err.message);
-    btn.disabled = false;
-  }
+  window.open(`/ensayo-detalle.html?id=${btn.dataset.id}`, '_blank');
 });
 
 (async function init() {
-  await cargarPermisosReales();
-  await fetchMembers();
   await fetchEnsayos();
 })();
 </script>

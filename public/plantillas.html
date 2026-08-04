@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
+<style>html:not(.sessio-confirmada) body { visibility: hidden; }</style>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Castellers · Plantilles</title>
@@ -24,6 +26,10 @@
   nav.topnav .links a.active { color:var(--ink); border-color:var(--ink); }
   nav.topnav .spacer { margin-left:auto; }
   nav.topnav .user-chip { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); border:1px solid var(--line); padding:7px 11px; border-radius:var(--radius); }
+  .lang-switcher { display:flex; gap:6px; }
+  .lang-btn { width:auto; margin:0; padding:5px 7px; background:var(--paper-card); border:1.5px solid var(--line); border-radius:var(--radius); font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .lang-btn.active { border-color: var(--ink); }
+  .lang-btn svg { display:block; border-radius:1px; }
 
   main { max-width: 1100px; margin: 0 auto; padding: 34px 28px 80px; }
   .selector-row { display:flex; align-items:center; gap:12px; margin-bottom: 26px; }
@@ -87,15 +93,22 @@
     Castellers
   </a>
   <div class="links">
-    <a href="/">Inici</a>
-    <a href="/ensayos.html">Assajos</a>
-    <a href="/actuaciones.html">Actuacions</a>
-    <a href="/biblioteca-imagenes.html">Imatges</a>
-    <a href="/plantillas.html" class="active">Plantilles</a>
-    <a href="/miembros.html">Membres</a>
-    <a href="/usuarios.html">Usuaris</a>
+    <a href="/" data-i18n="nav_inici">Inici</a>
+    <a href="/ensayos.html" data-i18n="nav_assajos">Assajos</a>
+    <a href="/actuaciones.html" data-i18n="nav_actuacions">Actuacions</a>
+    <a href="/biblioteca-imagenes.html" data-i18n="nav_imatges">Imatges</a>
+    <a href="/plantillas.html" class="active" data-i18n="nav_plantilles">Plantilles</a>
+    <a href="/miembros.html" data-i18n="nav_membres">Membres</a>
+    <a href="/usuarios.html" data-i18n="nav_usuaris">Usuaris</a>
   </div>
   <div class="spacer"></div>
+  <div class="lang-switcher">
+    <button class="lang-btn" data-lang="ca" title="Català" type="button">
+      <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>
+    </button>
+    <button class="lang-btn" data-lang="es" title="Español" type="button">🇪🇸</button>
+    <button class="lang-btn" data-lang="en" title="English" type="button">🇬🇧</button>
+  </div>
   <span class="user-chip" id="user-chip">…</span>
 </nav>
 <script>
@@ -110,13 +123,14 @@
     window.usuarioActual = data.usuario;
     const chip = document.getElementById('user-chip');
     if (chip) {
-      chip.textContent = `${data.usuario.nombre} · Tancar sessió`;
       chip.style.cursor = 'pointer';
       chip.onclick = async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
         location.href = '/login.html';
       };
     }
+    document.documentElement.classList.add('sessio-confirmada');
+    if (window.aplicarIdioma) window.aplicarIdioma(data.usuario.idioma || localStorage.getItem('castellers_idioma') || 'ca');
   }).catch(() => { location.href = '/login.html'; });
 })();
 </script>
@@ -124,7 +138,7 @@
 
 <main>
   <div class="selector-row">
-    <label for="tipo-select">Castell</label>
+    <label for="tipo-select" data-i18n="label_castell">Castell</label>
     <select id="tipo-select">
       <option value="2d6">2d6</option>
       <option value="3d7" selected>3d7</option>
@@ -135,26 +149,26 @@
 
   <div class="grid">
     <section class="panel">
-      <div class="panel-head"><h2>Estructura del castell (tronc)</h2></div>
+      <div class="panel-head"><h2 data-i18n="titulo_castell">Estructura del castell (tronc)</h2></div>
       <div class="panel-body" id="castell-body">Carregant…</div>
     </section>
 
     <section class="panel">
-      <div class="panel-head"><h2>Planta de la pinya</h2></div>
+      <div class="panel-head"><h2 data-i18n="titulo_pinya">Planta de la pinya</h2></div>
       <div class="panel-body" id="pinya-body">Carregant…</div>
     </section>
   </div>
 
   <section class="panel" style="margin-top:22px;">
-    <div class="panel-head"><h2>Vista prèvia combinada</h2></div>
+    <div class="panel-head"><h2 data-i18n="titulo_preview">Vista prèvia combinada</h2></div>
     <div class="panel-body">
       <div class="preview-grid">
         <div class="preview-half">
-          <div class="preview-label">Castell</div>
+          <div class="preview-label" data-i18n="label_castell_corto">Castell</div>
           <div id="preview-castell" class="preview-box"></div>
         </div>
         <div class="preview-half">
-          <div class="preview-label">Pinya</div>
+          <div class="preview-label" data-i18n="label_pinya_corto">Pinya</div>
           <div id="preview-pinya" class="preview-box"></div>
         </div>
       </div>
@@ -172,6 +186,80 @@ function escapeHtml(str) {
   }[c]));
 }
 
+const TRADUCCIONES = {
+  ca: {
+    nav_inici: 'Inici', nav_assajos: 'Assajos', nav_actuacions: 'Actuacions', nav_imatges: 'Imatges',
+    nav_plantilles: 'Plantilles', nav_membres: 'Membres', nav_usuaris: 'Usuaris', chip_tancar: 'Tancar sessió',
+    label_castell: 'Castell', titulo_castell: 'Estructura del castell (tronc)', titulo_pinya: 'Planta de la pinya',
+    titulo_preview: 'Vista prèvia combinada', label_castell_corto: 'Castell', label_pinya_corto: 'Pinya',
+    carregant: 'Carregant…', sense_plantilla: 'Sense plantilla', no_carregat: 'No s\'ha pogut carregar.',
+    no_estructura: (tipo) => `Encara no hi ha una estructura definida per al castell ${tipo}.`,
+    crear_estructura: 'Crear l\'estructura del castell', editar_estructura: 'Editar l\'estructura',
+    estructura_def: (n) => `Estructura definida — ${n} nivell${n === 1 ? '' : 's'}`,
+    no_pinya: (tipo) => `Encara no hi ha una planta de pinya dissenyada per al castell ${tipo}.`,
+    crear_pinya: 'Crear la planta de pinya', editar_pinya: 'Editar la planta',
+    planta_def: (n, r) => `Planta definida — ${n} posicions (${r} rols)`,
+    sense_disseny_castell: 'Encara no hi ha disseny visual del castell.', sense_disseny_pinya: 'Encara no hi ha planta de pinya dissenyada.'
+  },
+  es: {
+    nav_inici: 'Inicio', nav_assajos: 'Ensayos', nav_actuacions: 'Actuaciones', nav_imatges: 'Imágenes',
+    nav_plantilles: 'Plantillas', nav_membres: 'Miembros', nav_usuaris: 'Usuarios', chip_tancar: 'Cerrar sesión',
+    label_castell: 'Castell', titulo_castell: 'Estructura del castell (tronco)', titulo_pinya: 'Planta de la pinya',
+    titulo_preview: 'Vista previa combinada', label_castell_corto: 'Castell', label_pinya_corto: 'Pinya',
+    carregant: 'Cargando…', sense_plantilla: 'Sin plantilla', no_carregat: 'No se ha podido cargar.',
+    no_estructura: (tipo) => `Aún no hay una estructura definida para el castell ${tipo}.`,
+    crear_estructura: 'Crear la estructura del castell', editar_estructura: 'Editar la estructura',
+    estructura_def: (n) => `Estructura definida — ${n} nivel${n === 1 ? '' : 'es'}`,
+    no_pinya: (tipo) => `Aún no hay una planta de pinya diseñada para el castell ${tipo}.`,
+    crear_pinya: 'Crear la planta de pinya', editar_pinya: 'Editar la planta',
+    planta_def: (n, r) => `Planta definida — ${n} posiciones (${r} roles)`,
+    sense_disseny_castell: 'Aún no hay diseño visual del castell.', sense_disseny_pinya: 'Aún no hay planta de pinya diseñada.'
+  },
+  en: {
+    nav_inici: 'Home', nav_assajos: 'Rehearsals', nav_actuacions: 'Performances', nav_imatges: 'Images',
+    nav_plantilles: 'Templates', nav_membres: 'Members', nav_usuaris: 'Users', chip_tancar: 'Log out',
+    label_castell: 'Castell', titulo_castell: 'Castell structure (trunk)', titulo_pinya: 'Pinya floor plan',
+    titulo_preview: 'Combined preview', label_castell_corto: 'Castell', label_pinya_corto: 'Pinya',
+    carregant: 'Loading…', sense_plantilla: 'No template', no_carregat: 'Could not load.',
+    no_estructura: (tipo) => `There is no structure defined yet for the ${tipo} castell.`,
+    crear_estructura: 'Create the castell structure', editar_estructura: 'Edit structure',
+    estructura_def: (n) => `Structure defined — ${n} level${n === 1 ? '' : 's'}`,
+    no_pinya: (tipo) => `There is no pinya floor plan designed yet for the ${tipo} castell.`,
+    crear_pinya: 'Create the pinya floor plan', editar_pinya: 'Edit floor plan',
+    planta_def: (n, r) => `Floor plan defined — ${n} position${n === 1 ? '' : 's'} (${r} role${r === 1 ? '' : 's'})`,
+    sense_disseny_castell: 'No visual design for the castell yet.', sense_disseny_pinya: 'No pinya floor plan designed yet.'
+  }
+};
+let idiomaActual = localStorage.getItem('castellers_idioma') || 'ca';
+function t(key) { return (TRADUCCIONES[idiomaActual] || TRADUCCIONES.ca)[key] || key; }
+
+function aplicarIdioma(idioma) {
+  idiomaActual = idioma;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val !== key) el.textContent = val;
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === idioma));
+  localStorage.setItem('castellers_idioma', idioma);
+  document.documentElement.lang = idioma;
+  const chip = document.getElementById('user-chip');
+  if (chip && window.usuarioActual) chip.textContent = `${window.usuarioActual.nombre} · ${t('chip_tancar')}`;
+  cargarTodo();
+}
+window.aplicarIdioma = aplicarIdioma;
+
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    aplicarIdioma(btn.dataset.lang);
+    if (window.usuarioActual) {
+      try {
+        await fetch(`${API}/api/auth/idioma`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idioma: btn.dataset.lang }) });
+      } catch (err) { console.error(err); }
+    }
+  });
+});
+
 // Normalitza un nom de posició per agrupar-lo pel seu rol base: treu
 // direccions (izq/der/esquerra/dreta) i ordinals (1r, 2n, 3r, 1eres, etc.)
 // perquè "Crossa izq", "Crossa Der", "Crossa der" comptin totes com "Crossa".
@@ -186,7 +274,7 @@ function normalizarRol(slot) {
 
 async function cargarCastell(tipo) {
   const body = document.getElementById('castell-body');
-  body.innerHTML = 'Carregant…';
+  body.innerHTML = t('carregant');
   try {
     const res = await fetch(`${API}/api/castells-estructura/${tipo}`);
     const data = await res.json();
@@ -195,9 +283,9 @@ async function cargarCastell(tipo) {
     if (!estructura) {
       body.innerHTML = `
         <div class="empty-state">
-          <span class="badge">Sense plantilla</span>
-          <p>Encara no hi ha una estructura definida per al castell ${escapeHtml(tipo)}.</p>
-          <button class="primary" id="crear-castell-btn" type="button">Crear l'estructura del castell</button>
+          <span class="badge">${t('sense_plantilla')}</span>
+          <p>${t('no_estructura')(escapeHtml(tipo))}</p>
+          <button class="primary" id="crear-castell-btn" type="button">${t('crear_estructura')}</button>
         </div>
       `;
       document.getElementById('crear-castell-btn').addEventListener('click', () => {
@@ -208,24 +296,24 @@ async function cargarCastell(tipo) {
 
     const niveles = estructura.niveles || [];
     body.innerHTML = `
-      <div class="status-line"><span class="dot"></span> Estructura definida — ${niveles.length} nivell${niveles.length === 1 ? '' : 's'}</div>
+      <div class="status-line"><span class="dot"></span> ${t('estructura_def')(niveles.length)}</div>
       <ul class="niveles-list">
         ${niveles.map(n => `<li><span class="n-nombre">${escapeHtml(n.nombre)}</span><span class="n-cant">${n.cantidad}</span></li>`).join('')}
       </ul>
-      <button class="ghost" id="editar-castell-btn" type="button">Editar l'estructura</button>
+      <button class="ghost" id="editar-castell-btn" type="button">${t('editar_estructura')}</button>
     `;
     document.getElementById('editar-castell-btn').addEventListener('click', () => {
       location.href = `/castell-editor.html?tipo=${tipo}`;
     });
   } catch (err) {
     console.error(err);
-    body.innerHTML = '<p>No s\'ha pogut carregar.</p>';
+    body.innerHTML = `<p>${t('no_carregat')}</p>`;
   }
 }
 
 async function cargarPinya(tipo) {
   const body = document.getElementById('pinya-body');
-  body.innerHTML = 'Carregant…';
+  body.innerHTML = t('carregant');
   try {
     const res = await fetch(`${API}/api/plantillas/${tipo}`);
     const data = await res.json();
@@ -234,9 +322,9 @@ async function cargarPinya(tipo) {
     if (!posiciones.length) {
       body.innerHTML = `
         <div class="empty-state">
-          <span class="badge">Sense plantilla</span>
-          <p>Encara no hi ha una planta de pinya dissenyada per al castell ${escapeHtml(tipo)}.</p>
-          <button class="primary" id="crear-pinya-btn" type="button">Crear la planta de pinya</button>
+          <span class="badge">${t('sense_plantilla')}</span>
+          <p>${t('no_pinya')(escapeHtml(tipo))}</p>
+          <button class="primary" id="crear-pinya-btn" type="button">${t('crear_pinya')}</button>
         </div>
       `;
       document.getElementById('crear-pinya-btn').addEventListener('click', () => {
@@ -255,26 +343,26 @@ async function cargarPinya(tipo) {
     const roles = Object.keys(recuentos).sort();
 
     body.innerHTML = `
-      <div class="status-line"><span class="dot"></span> Planta definida — ${posiciones.length} posicions (${roles.length} rols)</div>
+      <div class="status-line"><span class="dot"></span> ${t('planta_def')(posiciones.length, roles.length)}</div>
       <ul class="niveles-list">
         ${roles.map(r => `<li><span class="n-nombre">${escapeHtml(r)}</span><span class="n-cant">${recuentos[r]}</span></li>`).join('')}
       </ul>
-      <button class="ghost" id="editar-pinya-btn" type="button">Editar la planta</button>
+      <button class="ghost" id="editar-pinya-btn" type="button">${t('editar_pinya')}</button>
     `;
     document.getElementById('editar-pinya-btn').addEventListener('click', () => {
       location.href = `/plantilla-editor.html?tipo=${tipo}`;
     });
   } catch (err) {
     console.error(err);
-    body.innerHTML = '<p>No s\'ha pogut carregar.</p>';
+    body.innerHTML = `<p>${t('no_carregat')}</p>`;
   }
 }
 
 async function cargarPreview(tipo) {
   const boxCastell = document.getElementById('preview-castell');
   const boxPinya = document.getElementById('preview-pinya');
-  boxCastell.innerHTML = '<div class="preview-empty">Carregant…</div>';
-  boxPinya.innerHTML = '<div class="preview-empty">Carregant…</div>';
+  boxCastell.innerHTML = `<div class="preview-empty">${t('carregant')}</div>`;
+  boxPinya.innerHTML = `<div class="preview-empty">${t('carregant')}</div>`;
 
   // --- Castell ---
   try {
@@ -303,11 +391,11 @@ async function cargarPreview(tipo) {
         return `<div class="p-box" style="left:${leftPct}%; top:${topPct}%; width:${wPct}%; height:${hPct}%; transform:translate(-50%,-50%);">${escapeHtml(texto)}</div>`;
       }).join('');
     } else {
-      boxCastell.innerHTML = '<div class="preview-empty">Encara no hi ha disseny visual del castell.</div>';
+      boxCastell.innerHTML = `<div class="preview-empty">${t('sense_disseny_castell')}</div>`;
     }
   } catch (err) {
     console.error(err);
-    boxCastell.innerHTML = '<div class="preview-empty">No s\'ha pogut carregar.</div>';
+    boxCastell.innerHTML = `<div class="preview-empty">${t('no_carregat')}</div>`;
   }
 
   // --- Pinya ---
@@ -326,11 +414,11 @@ async function cargarPreview(tipo) {
         return `<div class="p-box" style="left:${leftPct}%; top:${topPct}%; width:${wPct}%; height:${hPct}%; transform:translate(-50%,-50%) rotate(${rot}deg);">${escapeHtml(texto)}</div>`;
       }).join('');
     } else {
-      boxPinya.innerHTML = '<div class="preview-empty">Encara no hi ha planta de pinya dissenyada.</div>';
+      boxPinya.innerHTML = `<div class="preview-empty">${t('sense_disseny_pinya')}</div>`;
     }
   } catch (err) {
     console.error(err);
-    boxPinya.innerHTML = '<div class="preview-empty">No s\'ha pogut carregar.</div>';
+    boxPinya.innerHTML = `<div class="preview-empty">${t('no_carregat')}</div>`;
   }
 }
 
