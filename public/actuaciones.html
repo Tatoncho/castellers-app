@@ -60,7 +60,8 @@
     <a href="/biblioteca-imagenes.html" data-i18n="nav_imatges">Imatges</a>
     <a href="/plantillas.html" data-i18n="nav_plantilles">Plantilles</a>
     <a href="/miembros.html" data-i18n="nav_membres">Membres</a>
-    <a href="/usuarios.html" data-i18n="nav_usuaris">Usuaris</a>
+    <a href="/perfil.html" data-i18n="nav_perfil">El meu perfil</a>
+    <a href="/usuarios.html" id="nav-usuaris" style="display:none;" data-i18n="nav_usuaris">Usuaris</a>
   </div>
   <div class="spacer"></div>
   <div class="lang-dropdown">
@@ -105,7 +106,7 @@ const FLAGS_SVG = {
 const TRADUCCIONES = {
   ca: {
     nav_inici: 'Inici', nav_assajos: 'Assajos', nav_actuacions: 'Actuacions', nav_imatges: 'Imatges',
-    nav_plantilles: 'Plantilles', nav_membres: 'Membres', nav_usuaris: 'Usuaris',
+    nav_plantilles: 'Plantilles', nav_membres: 'Membres', nav_perfil: 'El meu perfil', nav_usuaris: 'Usuaris',
     badge_properament: 'Properament', titulo: 'Actuacions',
     lead: 'Aquí es programaran les actuacions en plaça, seleccionant les estructures que ja s\'hagin ensajat i validat al mòdul d\'Assajos. El calendari serà el protagonista d\'aquest mòdul.',
     preview_titulo: 'El que hi haurà aquí',
@@ -117,7 +118,7 @@ const TRADUCCIONES = {
   },
   es: {
     nav_inici: 'Inicio', nav_assajos: 'Ensayos', nav_actuacions: 'Actuaciones', nav_imatges: 'Imágenes',
-    nav_plantilles: 'Plantillas', nav_membres: 'Miembros', nav_usuaris: 'Usuarios',
+    nav_plantilles: 'Plantillas', nav_membres: 'Miembros', nav_perfil: 'Mi perfil', nav_usuaris: 'Usuarios',
     badge_properament: 'Próximamente', titulo: 'Actuaciones',
     lead: 'Aquí se programarán las actuaciones en plaza, seleccionando las estructuras que ya se hayan ensayado y validado en el módulo de Ensayos. El calendario será el protagonista de este módulo.',
     preview_titulo: 'Lo que habrá aquí',
@@ -129,7 +130,7 @@ const TRADUCCIONES = {
   },
   en: {
     nav_inici: 'Home', nav_assajos: 'Rehearsals', nav_actuacions: 'Performances', nav_imatges: 'Images',
-    nav_plantilles: 'Templates', nav_membres: 'Members', nav_usuaris: 'Users',
+    nav_plantilles: 'Templates', nav_membres: 'Members', nav_perfil: 'My profile', nav_usuaris: 'Users',
     badge_properament: 'Coming soon', titulo: 'Performances',
     lead: 'Public performances will be scheduled here, picking structures already rehearsed and approved in the Rehearsals module. A calendar will be the centerpiece of this module.',
     preview_titulo: 'What will be here',
@@ -184,6 +185,10 @@ document.querySelectorAll('.lang-btn').forEach(btn => {
       return;
     }
     window.usuarioActual = data.usuario;
+    if ((data.usuario.permisos || []).includes('AdminGeneral')) {
+      const navUsuaris = document.getElementById('nav-usuaris');
+      if (navUsuaris) navUsuaris.style.display = '';
+    }
     const chip = document.getElementById('user-chip');
     if (chip) {
       chip.style.cursor = 'pointer';

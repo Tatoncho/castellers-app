@@ -1612,6 +1612,7 @@ app.get('/api/migrate-usuarios', async (req, res) => {
     await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "segundoApellido" TEXT`);
     await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "apodo" TEXT`);
     await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "idioma" TEXT NOT NULL DEFAULT 'ca'`);
+    await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "fotoPerfil" TEXT`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS registros_pendientes (
         "id" SERIAL PRIMARY KEY,
@@ -1823,7 +1824,7 @@ app.post('/api/auth/login', async (req, res) => {
     req.session.usuarioId = usuario.id;
     res.json({
       success: true,
-      usuario: { id: usuario.id, email: usuario.email, nombre: usuario.nombre, primerApellido: usuario.primerApellido, segundoApellido: usuario.segundoApellido, apodo: usuario.apodo, idioma: usuario.idioma, permisos: usuario.permisos, castellerId: usuario.castellerId }
+      usuario: { id: usuario.id, email: usuario.email, nombre: usuario.nombre, primerApellido: usuario.primerApellido, segundoApellido: usuario.segundoApellido, apodo: usuario.apodo, idioma: usuario.idioma, permisos: usuario.permisos, castellerId: usuario.castellerId, fotoPerfil: usuario.fotoPerfil }
     });
   } catch (error) {
     errorHandler(res, error);
@@ -1844,7 +1845,7 @@ app.get('/api/auth/me', async (req, res) => {
       return res.json({ success: true, usuario: null });
     }
     const u = result.rows[0];
-    res.json({ success: true, usuario: { id: u.id, email: u.email, nombre: u.nombre, primerApellido: u.primerApellido, segundoApellido: u.segundoApellido, apodo: u.apodo, idioma: u.idioma, permisos: u.permisos, castellerId: u.castellerId } });
+    res.json({ success: true, usuario: { id: u.id, email: u.email, nombre: u.nombre, primerApellido: u.primerApellido, segundoApellido: u.segundoApellido, apodo: u.apodo, idioma: u.idioma, permisos: u.permisos, castellerId: u.castellerId, fotoPerfil: u.fotoPerfil } });
   } catch (error) {
     errorHandler(res, error);
   }
@@ -1939,12 +1940,50 @@ app.put('/api/auth/idioma', async (req, res) => {
   }
 });
 
+// Foto de perfil (base64). La comprimim/redimensionem al navegador abans
+// d'enviar-la per no carregar la base de dades amb imatges grans.
+app.put('/api/auth/foto', async (req, res) => {
+  try {
+    const { fotoPerfil } = req.body;
+    await pool.query('UPDATE usuarios SET "fotoPerfil" = $1 WHERE "id" = $2', [fotoPerfil || null, req.usuarioActual.id]);
+    res.json({ success: true });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Si el compte està vinculat a una fitxa de casteller (castellerId), retorna
+// la seva posició de pinya i els rols de castell, per mostrar-ho al perfil.
+app.get('/api/auth/mi-casteller', async (req, res) => {
+  try {
+    if (!req.usuarioActual.castellerId) return res.json({ success: true, casteller: null });
+    const result = await pool.query(
+      `SELECT c.*, p."nombre" AS "posicionPinyaNombre"
+       FROM castellers c
+       LEFT JOIN posiciones_pinya p ON p."id" = c."posicionPinyaId"
+       WHERE c."id" = $1`,
+      [req.usuarioActual.castellerId]
+    );
+    if (result.rows.length === 0) return res.json({ success: true, casteller: null });
+    const rolesResult = await pool.query(
+      `SELECT r."nombre", cr."orden" FROM casteller_roles cr
+       JOIN roles_castillo r ON r."id" = cr."rolId"
+       WHERE cr."castellerId" = $1 ORDER BY cr."orden"`,
+      [req.usuarioActual.castellerId]
+    );
+    res.json({ success: true, casteller: { ...result.rows[0], roles: rolesResult.rows } });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
 app.put('/api/auth/perfil', async (req, res) => {
   try {
     const { nombre, passwordActual, passwordNueva } = req.body;
     const updates = [];
     const valores = [];
     let idx = 1;
+    let cambioContrasenya = false;
 
     if (nombre && nombre.trim()) { updates.push(`"nombre" = $${idx++}`); valores.push(nombre.trim()); }
 
@@ -1955,12 +1994,28 @@ app.put('/api/auth/perfil', async (req, res) => {
       if (passwordNueva.length < 6) return res.status(400).json({ success: false, error: 'La contrasenya nova ha de tenir almenys 6 caràcters' });
       const nuevoHash = await bcrypt.hash(passwordNueva, 10);
       updates.push(`"passwordHash" = $${idx++}`); valores.push(nuevoHash);
+      cambioContrasenya = true;
     }
 
     if (!updates.length) return res.json({ success: true });
 
     valores.push(req.usuarioActual.id);
     await pool.query(`UPDATE usuarios SET ${updates.join(', ')} WHERE "id" = $${idx}`, valores);
+
+    if (cambioContrasenya) {
+      try {
+        await enviarCorreo({
+          to: req.usuarioActual.email,
+          subject: 'La teva contrasenya ha canviat — Castellers',
+          html: `<p>Hola ${escaparHtmlCorreo(req.usuarioActual.nombre)},</p>
+                 <p>T'avisem que la contrasenya del teu compte (${escaparHtmlCorreo(req.usuarioActual.email)}) s'acaba de canviar.</p>
+                 <p>Si no has estat tu, contacta amb un administrador de seguida.</p>`
+        });
+      } catch (errCorreo) {
+        console.error('Error enviant confirmació de canvi de contrasenya:', errCorreo);
+      }
+    }
+
     res.json({ success: true });
   } catch (error) {
     errorHandler(res, error);

@@ -128,7 +128,8 @@
     <a href="/plantillas.html" data-i18n="nav_plantilles">Plantilles</a>
     <a href="/biblioteca-imagenes.html" data-i18n="nav_imatges">Imatges</a>
     <a href="/miembros.html" data-i18n="nav_membres">Membres</a>
-    <a href="/usuarios.html" data-i18n="nav_usuaris">Usuaris</a>
+    <a href="/perfil.html" data-i18n="nav_perfil">El meu perfil</a>
+    <a href="/usuarios.html" id="nav-usuaris" style="display:none;" data-i18n="nav_usuaris">Usuaris</a>
   </div>
   <div class="spacer"></div>
   <div class="lang-dropdown">
@@ -174,6 +175,10 @@
       return;
     }
     window.usuarioActual = data.usuario;
+    if ((data.usuario.permisos || []).includes('AdminGeneral')) {
+      const navUsuaris = document.getElementById('nav-usuaris');
+      if (navUsuaris) navUsuaris.style.display = '';
+    }
     const chip = document.getElementById('user-chip');
     if (chip) {
       chip.style.cursor = 'pointer';
@@ -264,7 +269,7 @@ const FLAGS_SVG = {
 const TRADUCCIONES = {
   ca: {
     nav_inici: 'Inici', nav_assajos: 'Assajos', nav_actuacions: 'Actuacions', nav_plantilles: 'Plantilles',
-    nav_imatges: 'Imatges', nav_membres: 'Membres', nav_usuaris: 'Usuaris', chip_tancar: 'Tancar sessió',
+    nav_imatges: 'Imatges', nav_membres: 'Membres', nav_perfil: 'El meu perfil', nav_usuaris: 'Usuaris', chip_tancar: 'Tancar sessió',
     presents_sense_posicio: 'Presents sense posició', cerca_nom_alies: 'Cerca per nom o àlies…',
     totes_posicions_habituals: 'Totes les posicions habituals', planta_pinya: 'Planta de la pinya',
     hint_arrossega: 'Arrossega algú de la llista fins a una posició, o arrossega dues posicions entre elles per intercanviar-les. També pots fer-ho a cops de clic: clica un origen i després un destí.',
@@ -274,7 +279,7 @@ const TRADUCCIONES = {
   },
   es: {
     nav_inici: 'Inicio', nav_assajos: 'Ensayos', nav_actuacions: 'Actuaciones', nav_plantilles: 'Plantillas',
-    nav_imatges: 'Imágenes', nav_membres: 'Miembros', nav_usuaris: 'Usuarios', chip_tancar: 'Cerrar sesión',
+    nav_imatges: 'Imágenes', nav_membres: 'Miembros', nav_perfil: 'Mi perfil', nav_usuaris: 'Usuarios', chip_tancar: 'Cerrar sesión',
     presents_sense_posicio: 'Presentes sin posición', cerca_nom_alies: 'Busca por nombre o alias…',
     totes_posicions_habituals: 'Todas las posiciones habituales', planta_pinya: 'Planta de la pinya',
     hint_arrossega: 'Arrastra a alguien de la lista hasta una posición, o arrastra dos posiciones entre ellas para intercambiarlas. También puedes hacerlo a golpe de clic: clica un origen y después un destino.',
@@ -284,7 +289,7 @@ const TRADUCCIONES = {
   },
   en: {
     nav_inici: 'Home', nav_assajos: 'Rehearsals', nav_actuacions: 'Performances', nav_plantilles: 'Templates',
-    nav_imatges: 'Images', nav_membres: 'Members', nav_usuaris: 'Users', chip_tancar: 'Log out',
+    nav_imatges: 'Images', nav_membres: 'Members', nav_perfil: 'My profile', nav_usuaris: 'Users', chip_tancar: 'Log out',
     presents_sense_posicio: 'Present without a position', cerca_nom_alies: 'Search by name or nickname…',
     totes_posicions_habituals: 'All usual positions', planta_pinya: 'Pinya floor plan',
     hint_arrossega: 'Drag someone from the list onto a position, or drag two positions onto each other to swap them. You can also do it click by click: click an origin, then a destination.',
