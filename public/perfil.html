@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Castellers · Mi Perfil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EAE6DA; --paper-card: #F1EEE4; --ink: #20241F; --ink-soft: #4B5049;
+    --thread: #9E2B3B; --gold: #B8893D; --line: #C7C2B0; --ok:#3E7A4E; --radius: 3px;
+  }
+  * { box-sizing: border-box; }
+  html:not(.sessio-confirmada) body { visibility: hidden; }
+  body { margin:0; background: linear-gradient(var(--line) 1px, transparent 1px) 0 0/100% 34px, var(--paper); color:var(--ink); font-family:'Work Sans',sans-serif; font-size:14.5px; line-height:1.5; }
+  a { color: var(--thread); }
+
+  nav.topnav { display:flex; align-items:center; gap:22px; padding:18px 28px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  nav.topnav .brand { display:flex; align-items:center; gap:10px; font-family:'Fraunces',serif; font-weight:700; font-size:18px; text-decoration:none; color:var(--ink); font-variant:small-caps; }
+  nav.topnav .links { display:flex; gap:4px; flex-wrap:wrap; }
+  nav.topnav .links a { font-family:'IBM Plex Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; padding:8px 12px; border-radius:var(--radius); text-decoration:none; color:var(--ink-soft); border:1px solid transparent; }
+  nav.topnav .links a:hover { border-color:var(--line); color:var(--ink); }
+  nav.topnav .links a.active { color:var(--ink); border-color:var(--ink); }
+  nav.topnav .spacer { margin-left:auto; }
+  .user-chip { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); border:1px solid var(--line); padding:7px 11px; border-radius:var(--radius); cursor:pointer; background:none; }
+
+  .lang-dropdown { position:relative; }
+  .lang-dropdown-toggle { width:auto; margin:0; display:flex; align-items:center; gap:7px; background:var(--paper-card); border:1.5px solid var(--line); border-radius:var(--radius); padding:7px 10px; cursor:pointer; color:var(--ink); }
+  .lang-dropdown-toggle:hover { border-color: var(--ink); }
+  .lang-dropdown-toggle svg.lang-icon { flex-shrink:0; color: var(--ink-soft); }
+  .lang-current-flag svg { display:block; border-radius:1px; }
+  .lang-dropdown-menu { display:none; position:absolute; top:calc(100% + 6px); right:0; min-width:160px; background:var(--paper-card); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; box-shadow: 0 6px 16px rgba(32,36,31,0.18); z-index:60; }
+  .lang-dropdown-menu.open { display:block; }
+  .lang-btn { width:100%; margin:0; display:flex; align-items:center; gap:9px; background:none; border:none; padding:10px 12px; cursor:pointer; font-family:'Work Sans',sans-serif; font-size:13px; font-weight:400; text-transform:none; letter-spacing:0; color: var(--ink); text-align:left; }
+  .lang-btn:hover { background: var(--paper); }
+  .lang-btn.active { font-weight:600; background: var(--paper); }
+  .lang-btn svg { display:block; border-radius:1px; flex-shrink:0; }
+
+  main { max-width: 760px; margin: 0 auto; padding: 34px 28px 80px; }
+  section.panel { background: var(--paper-card); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 22px; }
+  .panel-head { padding: 15px 18px 12px; border-bottom: 1px solid var(--line); }
+  .panel-head h2 { font-family:'Fraunces',serif; font-weight:600; font-size:17px; margin:0; }
+  .panel-body { padding: 20px; }
+
+  .perfil-top { display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
+  .avatar-wrap { position:relative; width:96px; height:96px; flex-shrink:0; }
+  .avatar-box {
+    width:96px; height:96px; border-radius:50%; overflow:hidden; background:var(--paper);
+    border:2px solid var(--line); display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .avatar-box img { width:100%; height:100%; object-fit:cover; display:block; }
+  .avatar-box svg { color: var(--ink-soft); }
+  .avatar-edit-badge {
+    position:absolute; bottom:0; right:0; width:28px; height:28px; border-radius:50%;
+    background: var(--thread); color: var(--paper-card); display:flex; align-items:center; justify-content:center;
+    border: 2px solid var(--paper-card); cursor:pointer;
+  }
+  .perfil-datos { flex:1; min-width:200px; }
+  .perfil-nombre { font-family:'Fraunces',serif; font-weight:700; font-size:22px; margin:0 0 4px; }
+  .perfil-alies { color: var(--ink-soft); font-size:13.5px; margin:0 0 10px; }
+  .perfil-rols { font-size:13px; }
+  .perfil-rols .rol-chip { display:inline-block; background:var(--paper); border:1px solid var(--line); border-radius:20px; padding:3px 10px; margin:2px 4px 2px 0; font-size:11.5px; }
+  .perfil-sense-vincular { color: var(--ink-soft); font-style:italic; font-size:13px; }
+
+  .perm-chip { display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:11px; background:var(--paper); border:1px solid var(--gold); color: var(--gold); border-radius:20px; padding:4px 12px; margin:3px 6px 3px 0; }
+  .empty-note { color: var(--ink-soft); font-style: italic; }
+
+  label { display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); margin:14px 0 4px; }
+  label:first-of-type { margin-top:0; }
+  input[type="password"] { width:100%; max-width:340px; padding:9px 10px; border:1px solid var(--line); background:var(--paper); border-radius:var(--radius); }
+
+  button { cursor:pointer; border:none; border-radius:var(--radius); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.04em; text-transform:uppercase; padding:10px 16px; }
+  button.primary { background: var(--thread); color: var(--paper-card); }
+  button.primary:hover { background:#862432; }
+  button.ghost { background: transparent; border:1px solid var(--ink); color: var(--ink); }
+  button.ghost:hover { background: var(--ink); color: var(--paper-card); }
+  button:disabled { opacity:0.5; cursor:default; }
+
+  .msg { margin-top:12px; padding:9px 11px; border-radius:var(--radius); font-size:13px; display:none; max-width: 340px; }
+  .msg.ok { display:block; background:#E4EEE6; border:1px solid var(--ok); color:var(--ok); }
+  .msg.error { display:block; background:#F3E7E5; border:1px solid var(--thread); color:var(--thread); }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="/">
+    <svg width="26" height="26" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="20" y="4" width="6" height="8" fill="#20241F"/><rect x="14" y="14" width="18" height="8" fill="#20241F"/>
+      <rect x="8" y="26" width="30" height="8" fill="#20241F"/><rect x="2" y="38" width="42" height="6" fill="#9E2B3B"/>
+    </svg>
+    Castellers
+  </a>
+  <div class="links">
+    <a href="/" data-i18n="nav_inici">Inici</a>
+    <a href="/ensayos.html" data-i18n="nav_assajos">Assajos</a>
+    <a href="/actuaciones.html" data-i18n="nav_actuacions">Actuacions</a>
+    <a href="/biblioteca-imagenes.html" data-i18n="nav_imatges">Imatges</a>
+    <a href="/plantillas.html" data-i18n="nav_plantilles">Plantilles</a>
+    <a href="/miembros.html" data-i18n="nav_membres">Membres</a>
+    <a href="/perfil.html" class="active" data-i18n="nav_perfil">El meu perfil</a>
+    <a href="/usuarios.html" id="nav-usuaris" style="display:none;" data-i18n="nav_usuaris">Usuaris</a>
+  </div>
+  <div class="spacer"></div>
+  <div class="lang-dropdown">
+    <button class="lang-dropdown-toggle" id="lang-dropdown-toggle" type="button" aria-label="Canviar idioma">
+      <svg class="lang-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M3 12h18"/>
+        <path d="M12 3c2.8 2.6 4.3 5.7 4.3 9s-1.5 6.4-4.3 9c-2.8-2.6-4.3-5.7-4.3-9s1.5-6.4 4.3-9z"/>
+      </svg>
+      <span class="lang-current-flag" id="lang-current-flag"></span>
+      <svg width="9" height="9" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6"/></svg>
+    </button>
+    <div class="lang-dropdown-menu" id="lang-dropdown-menu">
+      <button class="lang-btn" data-lang="ca" type="button">
+        <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>
+        Català
+      </button>
+      <button class="lang-btn" data-lang="es" type="button">
+        <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#AA151B"/><rect y="3.5" width="20" height="7" fill="#F1BF00"/></svg>
+        Español
+      </button>
+      <button class="lang-btn" data-lang="en" type="button">
+        <svg width="20" height="14" viewBox="0 0 20 14">
+          <rect width="20" height="14" fill="#00247D"/>
+          <path d="M0,0 L20,14 M20,0 L0,14" stroke="#FFFFFF" stroke-width="2.6"/>
+          <path d="M0,0 L20,14 M20,0 L0,14" stroke="#CF142B" stroke-width="1.1"/>
+          <path d="M10,0 V14 M0,7 H20" stroke="#FFFFFF" stroke-width="4.4"/>
+          <path d="M10,0 V14 M0,7 H20" stroke="#CF142B" stroke-width="2.4"/>
+        </svg>
+        English
+      </button>
+    </div>
+  </div>
+  <span class="user-chip" id="user-chip">…</span>
+</nav>
+
+<main>
+  <section class="panel">
+    <div class="panel-head"><h2 data-i18n="titulo_mi_perfil">El meu perfil</h2></div>
+    <div class="panel-body">
+      <div class="perfil-top">
+        <div class="avatar-wrap">
+          <div class="avatar-box" id="avatar-box">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" id="avatar-placeholder">
+              <circle cx="12" cy="8" r="3.5"/>
+              <path d="M4.5 20c0-4 3.3-7 7.5-7s7.5 3 7.5 7"/>
+            </svg>
+            <img id="avatar-img" style="display:none;" alt="">
+          </div>
+          <div class="avatar-edit-badge" id="avatar-edit-badge" title="Canviar foto">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 20h4l10.5-10.5a2 2 0 000-2.8L16.3 4.5a2 2 0 00-2.8 0L3 15v5z"/>
+            </svg>
+          </div>
+          <input type="file" id="avatar-input" accept="image/*" style="display:none;">
+        </div>
+        <div class="perfil-datos">
+          <p class="perfil-nombre" id="perfil-nombre">—</p>
+          <p class="perfil-alies" id="perfil-alies"></p>
+          <div class="perfil-rols" id="perfil-rols"><span class="empty-note" data-i18n="carregant">Carregant…</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2 data-i18n="titulo_permisos">Permisos</h2></div>
+    <div class="panel-body" id="permisos-body">
+      <span class="empty-note" data-i18n="carregant">Carregant…</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2 data-i18n="titulo_contrasenya">Contrasenya</h2></div>
+    <div class="panel-body">
+      <button class="ghost" id="mostrar-form-password-btn" type="button" data-i18n="canviar_contrasenya">Canviar contrasenya</button>
+
+      <form id="password-form" style="display:none; margin-top:16px;">
+        <label for="password-actual" data-i18n="contrasenya_actual">Contrasenya actual</label>
+        <input type="password" id="password-actual" required>
+        <label for="password-nueva" data-i18n="contrasenya_nova">Contrasenya nova</label>
+        <input type="password" id="password-nueva" required minlength="6">
+        <label for="password-repetir" data-i18n="repetir_contrasenya_nova">Repeteix la contrasenya nova</label>
+        <input type="password" id="password-repetir" required minlength="6">
+        <div style="margin-top:16px; display:flex; gap:10px;">
+          <button class="primary" type="submit" id="guardar-password-btn" data-i18n="desar_contrasenya">Desar contrasenya nova</button>
+          <button class="ghost" type="button" id="cancelar-password-btn" data-i18n="cancelar">Cancel·lar</button>
+        </div>
+        <div class="msg" id="password-msg"></div>
+      </form>
+    </div>
+  </section>
+
+  <section class="panel solo-admin" style="display:none;">
+    <div class="panel-head"><h2 data-i18n="titulo_admin">Administració</h2></div>
+    <div class="panel-body">
+      <p class="empty-note" data-i18n="hint_admin" style="margin:0 0 14px;">Com a administrador, també pots gestionar les altes pendents i els permisos de tots els usuaris.</p>
+      <button class="ghost" onclick="location.href='/usuarios.html'" type="button" data-i18n="gestionar_usuaris">Gestionar usuaris →</button>
+    </div>
+  </section>
+</main>
+
+<script>
+const API = '';
+let usuarioActual = null;
+
+const TRADUCCIONES = {
+  ca: {
+    nav_inici: 'Inici', nav_assajos: 'Assajos', nav_actuacions: 'Actuacions', nav_imatges: 'Imatges',
+    nav_plantilles: 'Plantilles', nav_membres: 'Membres', nav_perfil: 'El meu perfil', nav_usuaris: 'Usuaris',
+    chip_tancar: 'Tancar sessió',
+    titulo_mi_perfil: 'El meu perfil', titulo_permisos: 'Permisos', titulo_contrasenya: 'Contrasenya', titulo_admin: 'Administració',
+    carregant: 'Carregant…', sense_vincular: 'Aquest compte encara no està vinculat a cap fitxa de casteller.',
+    sense_permisos: 'Cap permís especial assignat.',
+    canviar_contrasenya: 'Canviar contrasenya', contrasenya_actual: 'Contrasenya actual', contrasenya_nova: 'Contrasenya nova',
+    repetir_contrasenya_nova: 'Repeteix la contrasenya nova', desar_contrasenya: 'Desar contrasenya nova', cancelar: 'Cancel·lar',
+    hint_admin: 'Com a administrador, també pots gestionar les altes pendents i els permisos de tots els usuaris.',
+    gestionar_usuaris: 'Gestionar usuaris →',
+    err_no_coincide: 'Les contrasenyes noves no coincideixen.', contrasenya_desada: 'Contrasenya canviada correctament.',
+    err_foto: 'No s\'ha pogut desar la foto.'
+  },
+  es: {
+    nav_inici: 'Inicio', nav_assajos: 'Ensayos', nav_actuacions: 'Actuaciones', nav_imatges: 'Imágenes',
+    nav_plantilles: 'Plantillas', nav_membres: 'Miembros', nav_perfil: 'Mi perfil', nav_usuaris: 'Usuarios',
+    chip_tancar: 'Cerrar sesión',
+    titulo_mi_perfil: 'Mi perfil', titulo_permisos: 'Permisos', titulo_contrasenya: 'Contraseña', titulo_admin: 'Administración',
+    carregant: 'Cargando…', sense_vincular: 'Esta cuenta aún no está vinculada a ninguna ficha de casteller.',
+    sense_permisos: 'Ningún permiso especial asignado.',
+    canviar_contrasenya: 'Cambiar contraseña', contrasenya_actual: 'Contraseña actual', contrasenya_nova: 'Contraseña nueva',
+    repetir_contrasenya_nova: 'Repite la contraseña nueva', desar_contrasenya: 'Guardar contraseña nueva', cancelar: 'Cancelar',
+    hint_admin: 'Como administrador, también puedes gestionar las altas pendientes y los permisos de todos los usuarios.',
+    gestionar_usuaris: 'Gestionar usuarios →',
+    err_no_coincide: 'Las contraseñas nuevas no coinciden.', contrasenya_desada: 'Contraseña cambiada correctamente.',
+    err_foto: 'No se ha podido guardar la foto.'
+  },
+  en: {
+    nav_inici: 'Home', nav_assajos: 'Rehearsals', nav_actuacions: 'Performances', nav_imatges: 'Images',
+    nav_plantilles: 'Templates', nav_membres: 'Members', nav_perfil: 'My profile', nav_usuaris: 'Users',
+    chip_tancar: 'Log out',
+    titulo_mi_perfil: 'My profile', titulo_permisos: 'Permissions', titulo_contrasenya: 'Password', titulo_admin: 'Administration',
+    carregant: 'Loading…', sense_vincular: 'This account isn\'t linked to a castellers profile yet.',
+    sense_permisos: 'No special permission assigned.',
+    canviar_contrasenya: 'Change password', contrasenya_actual: 'Current password', contrasenya_nova: 'New password',
+    repetir_contrasenya_nova: 'Repeat new password', desar_contrasenya: 'Save new password', cancelar: 'Cancel',
+    hint_admin: 'As an administrator, you can also manage pending sign-ups and everyone\'s permissions.',
+    gestionar_usuaris: 'Manage users →',
+    err_no_coincide: 'The new passwords do not match.', contrasenya_desada: 'Password changed successfully.',
+    err_foto: 'Could not save the photo.'
+  }
+};
+
+const FLAGS_SVG = {
+  ca: '<svg width="18" height="13" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>',
+  es: '<svg width="18" height="13" viewBox="0 0 20 14"><rect width="20" height="14" fill="#AA151B"/><rect y="3.5" width="20" height="7" fill="#F1BF00"/></svg>',
+  en: '<svg width="18" height="13" viewBox="0 0 20 14"><rect width="20" height="14" fill="#00247D"/><path d="M0,0 L20,14 M20,0 L0,14" stroke="#FFFFFF" stroke-width="2.6"/><path d="M0,0 L20,14 M20,0 L0,14" stroke="#CF142B" stroke-width="1.1"/><path d="M10,0 V14 M0,7 H20" stroke="#FFFFFF" stroke-width="4.4"/><path d="M10,0 V14 M0,7 H20" stroke="#CF142B" stroke-width="2.4"/></svg>'
+};
+let idiomaActual = localStorage.getItem('castellers_idioma') || 'ca';
+function t(key) { return (TRADUCCIONES[idiomaActual] || TRADUCCIONES.ca)[key] || key; }
+
+function aplicarIdioma(idioma) {
+  idiomaActual = idioma;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val !== key) el.textContent = val;
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === idioma));
+  localStorage.setItem('castellers_idioma', idioma);
+  document.documentElement.lang = idioma;
+  document.getElementById('lang-current-flag').innerHTML = FLAGS_SVG[idioma] || FLAGS_SVG.ca;
+  document.getElementById('lang-dropdown-menu').classList.remove('open');
+  const chip = document.getElementById('user-chip');
+  if (chip && usuarioActual) chip.textContent = `${usuarioActual.nombre} · ${t('chip_tancar')}`;
+  if (typeof renderRoles === 'function') renderRoles();
+  if (typeof renderPermisos === 'function') renderPermisos();
+}
+window.aplicarIdioma = aplicarIdioma;
+
+const langDropdownToggle = document.getElementById('lang-dropdown-toggle');
+const langDropdownMenu = document.getElementById('lang-dropdown-menu');
+langDropdownToggle.addEventListener('click', (e) => { e.stopPropagation(); langDropdownMenu.classList.toggle('open'); });
+document.addEventListener('click', () => langDropdownMenu.classList.remove('open'));
+langDropdownMenu.addEventListener('click', (e) => e.stopPropagation());
+
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    aplicarIdioma(btn.dataset.lang);
+    if (usuarioActual) {
+      try {
+        await fetch(`${API}/api/auth/idioma`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idioma: btn.dataset.lang }) });
+      } catch (err) { console.error(err); }
+    }
+  });
+});
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+let miCastellerData = null;
+
+function renderCabecera() {
+  const nombreCompleto = [usuarioActual.nombre, usuarioActual.primerApellido, usuarioActual.segundoApellido].filter(Boolean).join(' ');
+  document.getElementById('perfil-nombre').textContent = nombreCompleto;
+  document.getElementById('perfil-alies').textContent = usuarioActual.apodo || '';
+
+  if (usuarioActual.fotoPerfil) {
+    document.getElementById('avatar-img').src = usuarioActual.fotoPerfil;
+    document.getElementById('avatar-img').style.display = 'block';
+    document.getElementById('avatar-placeholder').style.display = 'none';
+  }
+}
+
+function renderRoles() {
+  const cont = document.getElementById('perfil-rols');
+  if (!miCastellerData) { cont.innerHTML = `<span class="empty-note">${t('carregant')}</span>`; return; }
+  if (!miCastellerData.casteller) {
+    cont.innerHTML = `<span class="perfil-sense-vincular">${t('sense_vincular')}</span>`;
+    return;
+  }
+  const c = miCastellerData.casteller;
+  const chips = [];
+  if (c.posicionPinyaNombre) chips.push(`<span class="rol-chip">${escapeHtml(c.posicionPinyaNombre)}</span>`);
+  (c.roles || []).forEach(r => chips.push(`<span class="rol-chip">${escapeHtml(r.nombre)}</span>`));
+  cont.innerHTML = chips.length ? chips.join('') : `<span class="perfil-sense-vincular">${t('sense_vincular')}</span>`;
+}
+
+function renderPermisos() {
+  const cont = document.getElementById('permisos-body');
+  const permisos = usuarioActual.permisos || [];
+  if (!permisos.length) { cont.innerHTML = `<span class="empty-note">${t('sense_permisos')}</span>`; return; }
+  cont.innerHTML = permisos.map(p => `<span class="perm-chip">${escapeHtml(p)}</span>`).join('');
+}
+
+async function cargarMiCasteller() {
+  try {
+    const res = await fetch(`${API}/api/auth/mi-casteller`);
+    miCastellerData = await res.json();
+  } catch (err) {
+    console.error(err);
+    miCastellerData = { casteller: null };
+  }
+  renderRoles();
+}
+
+/* ---------------- Foto de perfil ---------------- */
+
+document.getElementById('avatar-box').addEventListener('click', () => document.getElementById('avatar-input').click());
+document.getElementById('avatar-edit-badge').addEventListener('click', () => document.getElementById('avatar-input').click());
+
+document.getElementById('avatar-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = async () => {
+      // redimensionem a 200x200 màxim abans de desar-la, perquè no pesi massa
+      const canvas = document.createElement('canvas');
+      const mida = 200;
+      canvas.width = mida; canvas.height = mida;
+      const ctx = canvas.getContext('2d');
+      const escala = Math.max(mida / img.width, mida / img.height);
+      const w = img.width * escala, h = img.height * escala;
+      ctx.drawImage(img, (mida - w) / 2, (mida - h) / 2, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+      document.getElementById('avatar-img').src = dataUrl;
+      document.getElementById('avatar-img').style.display = 'block';
+      document.getElementById('avatar-placeholder').style.display = 'none';
+
+      try {
+        await fetch(`${API}/api/auth/foto`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fotoPerfil: dataUrl })
+        });
+      } catch (err) {
+        console.error(err);
+        alert(t('err_foto'));
+      }
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+
+/* ---------------- Canviar contrasenya ---------------- */
+
+document.getElementById('mostrar-form-password-btn').addEventListener('click', () => {
+  document.getElementById('password-form').style.display = 'block';
+  document.getElementById('mostrar-form-password-btn').style.display = 'none';
+});
+document.getElementById('cancelar-password-btn').addEventListener('click', () => {
+  document.getElementById('password-form').style.display = 'none';
+  document.getElementById('mostrar-form-password-btn').style.display = 'block';
+  document.getElementById('password-form').reset();
+  document.getElementById('password-msg').className = 'msg';
+});
+
+document.getElementById('password-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('password-msg');
+  msg.className = 'msg';
+
+  const passwordActual = document.getElementById('password-actual').value;
+  const passwordNueva = document.getElementById('password-nueva').value;
+  const passwordRepetir = document.getElementById('password-repetir').value;
+
+  if (passwordNueva !== passwordRepetir) {
+    msg.textContent = t('err_no_coincide');
+    msg.className = 'msg error';
+    return;
+  }
+
+  const btn = document.getElementById('guardar-password-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/api/auth/perfil`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ passwordActual, passwordNueva })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Error');
+    msg.textContent = t('contrasenya_desada');
+    msg.className = 'msg ok';
+    document.getElementById('password-form').reset();
+  } catch (err) {
+    msg.textContent = err.message;
+    msg.className = 'msg error';
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ---------------- Guardia de sessió ---------------- */
+
+(async function init() {
+  try {
+    const res = await fetch(`${API}/api/auth/me`);
+    const data = await res.json();
+    if (!data.usuario) {
+      location.href = '/login.html';
+      return;
+    }
+    usuarioActual = data.usuario;
+
+    const chip = document.getElementById('user-chip');
+    chip.style.cursor = 'pointer';
+    chip.onclick = async () => {
+      await fetch(`${API}/api/auth/logout`, { method: 'POST' });
+      location.href = '/login.html';
+    };
+
+    const esAdmin = (usuarioActual.permisos || []).includes('AdminGeneral');
+    if (esAdmin) {
+      document.getElementById('nav-usuaris').style.display = '';
+      document.querySelector('.solo-admin').style.display = 'block';
+    }
+
+    renderCabecera();
+    renderPermisos();
+    document.documentElement.classList.add('sessio-confirmada');
+    aplicarIdioma(usuarioActual.idioma || idiomaActual);
+
+    await cargarMiCasteller();
+  } catch (err) {
+    console.error(err);
+    location.href = '/login.html';
+  }
+})();
+</script>
+
+</body>
+</html>

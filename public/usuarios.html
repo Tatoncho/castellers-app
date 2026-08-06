@@ -93,6 +93,7 @@
     <a href="/biblioteca-imagenes.html" data-i18n="nav_imatges">Imatges</a>
     <a href="/plantillas.html" data-i18n="nav_plantilles">Plantilles</a>
     <a href="/miembros.html" data-i18n="nav_membres">Membres</a>
+    <a href="/perfil.html" data-i18n="nav_perfil">El meu perfil</a>
     <a href="/usuarios.html" class="active" data-i18n="nav_usuaris">Usuaris</a>
   </div>
   <div class="spacer"></div>
@@ -157,7 +158,7 @@ const FLAGS_SVG = {
 const TRADUCCIONES = {
   ca: {
     nav_inici: 'Inici', nav_assajos: 'Assajos', nav_actuacions: 'Actuacions', nav_imatges: 'Imatges',
-    nav_plantilles: 'Plantilles', nav_membres: 'Membres', nav_usuaris: 'Usuaris',
+    nav_plantilles: 'Plantilles', nav_membres: 'Membres', nav_perfil: 'El meu perfil', nav_usuaris: 'Usuaris',
     chip_tancar: 'Tancar sessió',
     cal_login: 'Cal iniciar sessió per veure aquesta pàgina.', btn_login: 'Iniciar sessió',
     altes_pendents: 'Altes pendents', tots_usuaris: 'Tots els usuaris', el_meu_perfil: 'El meu perfil',
@@ -170,7 +171,7 @@ const TRADUCCIONES = {
   },
   es: {
     nav_inici: 'Inicio', nav_assajos: 'Ensayos', nav_actuacions: 'Actuaciones', nav_imatges: 'Imágenes',
-    nav_plantilles: 'Plantillas', nav_membres: 'Miembros', nav_usuaris: 'Usuarios',
+    nav_plantilles: 'Plantillas', nav_membres: 'Miembros', nav_perfil: 'Mi perfil', nav_usuaris: 'Usuarios',
     chip_tancar: 'Cerrar sesión',
     cal_login: 'Debes iniciar sesión para ver esta página.', btn_login: 'Iniciar sesión',
     altes_pendents: 'Altas pendientes', tots_usuaris: 'Todos los usuarios', el_meu_perfil: 'Mi perfil',
@@ -183,7 +184,7 @@ const TRADUCCIONES = {
   },
   en: {
     nav_inici: 'Home', nav_assajos: 'Rehearsals', nav_actuacions: 'Performances', nav_imatges: 'Images',
-    nav_plantilles: 'Templates', nav_membres: 'Members', nav_usuaris: 'Users',
+    nav_plantilles: 'Templates', nav_membres: 'Members', nav_perfil: 'My profile', nav_usuaris: 'Users',
     chip_tancar: 'Log out',
     cal_login: 'You must log in to view this page.', btn_login: 'Log in',
     altes_pendents: 'Pending sign-ups', tots_usuaris: 'All users', el_meu_perfil: 'My profile',
@@ -258,6 +259,10 @@ async function cargarSesion() {
     location.href = '/login.html';
     return;
   }
+  if (!(usuarioActual.permisos || []).includes('AdminGeneral')) {
+    location.href = '/perfil.html';
+    return;
+  }
 
   const chip = document.getElementById('user-chip');
   chip.onclick = async () => {
@@ -266,10 +271,6 @@ async function cargarSesion() {
   };
   document.documentElement.classList.add('sessio-confirmada');
   aplicarIdioma(usuarioActual.idioma || idiomaActual);
-}
-
-function esAdmin() {
-  return usuarioActual && (usuarioActual.permisos || []).includes('AdminGeneral');
 }
 
 async function render() {
@@ -284,73 +285,19 @@ async function render() {
     return;
   }
 
-  let html = '';
-
-  if (esAdmin()) {
-    html += `
-      <section class="panel">
-        <div class="panel-head"><h2>${t('altes_pendents')}</h2></div>
-        <div class="panel-body" id="pendientes-body"><p class="empty-note">${t('carregant')}</p></div>
-      </section>
-      <section class="panel">
-        <div class="panel-head"><h2>${t('tots_usuaris')}</h2></div>
-        <div class="panel-body" id="usuarios-body"><p class="empty-note">${t('carregant')}</p></div>
-      </section>
-    `;
-  }
-
-  html += `
+  main.innerHTML = `
     <section class="panel">
-      <div class="panel-head"><h2>${t('el_meu_perfil')}</h2></div>
-      <div class="panel-body">
-        <label for="perfil-nombre">${t('label_nombre')}</label>
-        <input type="text" id="perfil-nombre" value="${escapeHtml(usuarioActual.nombre)}">
-        <label for="perfil-actual">${t('label_password_actual')}</label>
-        <input type="password" id="perfil-actual">
-        <label for="perfil-nueva">${t('label_password_nueva')}</label>
-        <input type="password" id="perfil-nueva">
-        <div style="margin-top:16px;">
-          <button class="primary" id="guardar-perfil-btn" type="button">${t('btn_desar')}</button>
-        </div>
-        <div class="msg" id="perfil-msg"></div>
-      </div>
+      <div class="panel-head"><h2>${t('altes_pendents')}</h2></div>
+      <div class="panel-body" id="pendientes-body"><p class="empty-note">${t('carregant')}</p></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>${t('tots_usuaris')}</h2></div>
+      <div class="panel-body" id="usuarios-body"><p class="empty-note">${t('carregant')}</p></div>
     </section>
   `;
 
-  main.innerHTML = html;
-
-  document.getElementById('guardar-perfil-btn').addEventListener('click', guardarPerfil);
-
-  if (esAdmin()) {
-    await cargarPendientes();
-    await cargarUsuarios();
-  }
-}
-
-async function guardarPerfil() {
-  const msg = document.getElementById('perfil-msg');
-  msg.className = 'msg';
-  const nombre = document.getElementById('perfil-nombre').value.trim();
-  const passwordActual = document.getElementById('perfil-actual').value;
-  const passwordNueva = document.getElementById('perfil-nueva').value;
-
-  try {
-    const res = await fetch(`${API}/api/auth/perfil`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, passwordActual: passwordActual || null, passwordNueva: passwordNueva || null })
-    });
-    const data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data.error || 'Error desconegut');
-    msg.textContent = t('desat_ok');
-    msg.className = 'msg ok';
-    document.getElementById('perfil-actual').value = '';
-    document.getElementById('perfil-nueva').value = '';
-    await cargarSesion();
-  } catch (err) {
-    msg.textContent = err.message;
-    msg.className = 'msg error';
-  }
+  await cargarPendientes();
+  await cargarUsuarios();
 }
 
 /* ---------------- Admin: altes pendents ---------------- */

@@ -120,7 +120,8 @@
     <a href="/biblioteca-imagenes.html" data-i18n="nav_imatges">Imatges</a>
     <a href="/plantillas.html" data-i18n="nav_plantilles">Plantilles</a>
     <a href="/miembros.html" data-i18n="nav_membres">Membres</a>
-    <a href="/usuarios.html" data-i18n="nav_usuaris">Usuaris</a>
+    <a href="/perfil.html" data-i18n="nav_perfil">El meu perfil</a>
+    <a href="/usuarios.html" id="nav-usuaris" style="display:none;" data-i18n="nav_usuaris">Usuaris</a>
   </div>
   <div class="spacer"></div>
   <div class="lang-dropdown">
@@ -172,7 +173,7 @@ const TRADUCCIONES = {
     card_assajos_titulo: 'Assajos', card_assajos_texto: 'Crea assajos, marca l\'assistència i genera propostes de castells i pinyes per a cada dia.',
     card_actuacions_titulo: 'Actuacions', card_actuacions_texto: 'Programa actuacions en plaça a partir de les estructures que ja heu ensajat, amb calendari propi.',
     card_membres_titulo: 'Gestió de membres', card_membres_texto: 'Fitxa completa de cada casteller: dades personals, posició de pinya i rols de castell.',
-    card_usuaris_titulo: 'Gestió d\'usuaris', card_usuaris_texto: 'Comptes, permisos i altes pendents de confirmació. Cadascú pot editar el seu propi perfil.',
+    card_perfil_titulo: 'El meu perfil', card_perfil_titulo_admin: 'El meu perfil / Gestió d\'usuaris', card_perfil_texto: 'Foto, dades personals, permisos i contrasenya del teu compte.', nav_perfil: 'El meu perfil',
     chip_tancar: 'Tancar sessió'
   },
   es: {
@@ -184,7 +185,7 @@ const TRADUCCIONES = {
     card_assajos_titulo: 'Ensayos', card_assajos_texto: 'Crea ensayos, marca la asistencia y genera propuestas de castells y pinyas para cada día.',
     card_actuacions_titulo: 'Actuaciones', card_actuacions_texto: 'Programa actuaciones en plaza a partir de las estructuras que ya habéis ensayado, con calendario propio.',
     card_membres_titulo: 'Gestión de miembros', card_membres_texto: 'Ficha completa de cada casteller: datos personales, posición de pinya y roles de castell.',
-    card_usuaris_titulo: 'Gestión de usuarios', card_usuaris_texto: 'Cuentas, permisos y altas pendientes de confirmación. Cada uno puede editar su propio perfil.',
+    card_perfil_titulo: 'Mi perfil', card_perfil_titulo_admin: 'Mi perfil / Gestión de usuarios', card_perfil_texto: 'Foto, datos personales, permisos y contraseña de tu cuenta.', nav_perfil: 'Mi perfil',
     chip_tancar: 'Cerrar sesión'
   },
   en: {
@@ -196,7 +197,7 @@ const TRADUCCIONES = {
     card_assajos_titulo: 'Rehearsals', card_assajos_texto: 'Create rehearsals, mark attendance and generate castell and pinya proposals for each day.',
     card_actuacions_titulo: 'Performances', card_actuacions_texto: 'Schedule public performances from structures you\'ve already rehearsed, with its own calendar.',
     card_membres_titulo: 'Member management', card_membres_texto: 'Full profile for every casteller: personal data, pinya position and castell roles.',
-    card_usuaris_titulo: 'User management', card_usuaris_texto: 'Accounts, permissions and pending sign-ups. Everyone can edit their own profile.',
+    card_perfil_titulo: 'My profile', card_perfil_titulo_admin: 'My profile / User management', card_perfil_texto: 'Photo, personal data, permissions and password for your account.', nav_perfil: 'My profile',
     chip_tancar: 'Log out'
   }
 };
@@ -216,6 +217,9 @@ function aplicarIdioma(idioma) {
   const chip = document.getElementById('user-chip');
   if (chip && window.usuarioActual) {
     chip.textContent = `${window.usuarioActual.nombre} · ${t.chip_tancar}`;
+  }
+  if (window.usuarioActual && (window.usuarioActual.permisos || []).includes('AdminGeneral')) {
+    document.getElementById('card-perfil-titulo').textContent = t.card_perfil_titulo_admin;
   }
 }
 
@@ -260,6 +264,10 @@ document.querySelectorAll('.lang-btn').forEach(btn => {
         await fetch('/api/auth/logout', { method: 'POST' });
         location.href = '/login.html';
       };
+    }
+    const esAdmin = (data.usuario.permisos || []).includes('AdminGeneral');
+    if (esAdmin) {
+      document.getElementById('nav-usuaris').style.display = '';
     }
     // l'idioma guardat al compte mana per sobre del que hi hagués al
     // navegador — així es respecta la preferència de cada usuari en iniciar
@@ -315,8 +323,7 @@ document.querySelectorAll('.lang-btn').forEach(btn => {
       <p data-i18n="card_membres_texto">Fitxa completa de cada casteller: dades personals, posició de pinya i rols de castell.</p>
     </a>
 
-    <a class="module-card" href="/usuarios.html">
-      <span class="badge" data-i18n="badge_properament">Properament</span>
+    <a class="module-card" href="/perfil.html" id="card-perfil">
       <div class="icon">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <rect x="4" y="10" width="16" height="10" rx="1.5" stroke="#20241F" stroke-width="1.6"/>
@@ -324,8 +331,8 @@ document.querySelectorAll('.lang-btn').forEach(btn => {
           <circle cx="12" cy="15" r="1.4" fill="#9E2B3B"/>
         </svg>
       </div>
-      <h2 data-i18n="card_usuaris_titulo">Gestió d'usuaris</h2>
-      <p data-i18n="card_usuaris_texto">Comptes, permisos i altes pendents de confirmació. Cadascú pot editar el seu propi perfil.</p>
+      <h2 id="card-perfil-titulo" data-i18n="card_perfil_titulo">El meu perfil</h2>
+      <p data-i18n="card_perfil_texto">Foto, dades personals, permisos i contrasenya del teu compte.</p>
     </a>
   </div>
 </main>
