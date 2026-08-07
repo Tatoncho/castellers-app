@@ -156,9 +156,24 @@
     <h3 data-i18n="vincular_titulo">Podria ser algú que ja hi és</h3>
     <p class="empty-note" style="margin:0 0 14px;" data-i18n="vincular_hint">Hem trobat coincidències amb membres ja existents. Vincula el compte amb la fitxa correcta, o continua sense vincular.</p>
     <div id="candidatos-lista"></div>
-    <div class="modal-actions">
+    <div class="modal-actions" style="flex-wrap:wrap;">
       <button class="ghost" id="vincular-cancelar" type="button" data-i18n="cancelar">Cancel·lar</button>
       <button class="ghost" id="vincular-sin" type="button" data-i18n="aprovar_sense_vincular">Aprovar sense vincular</button>
+      <button class="ghost" id="vincular-nova-fitxa" type="button" data-i18n="cap_crear_fitxa">Cap d'aquests — crear una fitxa nova</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="alias-overlay">
+  <div class="modal-box">
+    <h3 data-i18n="alias_titulo">Aquest àlies ja està en ús</h3>
+    <p class="empty-note" id="alias-conflicte-text" style="margin:0 0 14px;"></p>
+    <button class="primary" id="alias-suggerit-btn" type="button" style="width:100%; margin-bottom:14px;"></button>
+    <label for="alias-input" data-i18n="alias_o_escriu">…o escriu un àlies diferent</label>
+    <input type="text" id="alias-input" style="width:100%; padding:9px 10px; border:1px solid var(--line); background:var(--paper); border-radius:var(--radius); margin:6px 0 14px;">
+    <div class="modal-actions">
+      <button class="ghost" id="alias-cancelar" type="button" data-i18n="cancelar">Cancel·lar</button>
+      <button class="primary" id="alias-custom-btn" type="button" data-i18n="usar_aquest_alies">Usar aquest àlies</button>
     </div>
   </div>
 </div>
@@ -166,6 +181,7 @@
 <script>
 const API = '';
 let usuarioActual = null;
+let pendientesActuales = [];
 
 const FLAGS_SVG = {
   ca: '<svg width="18" height="13" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>',
@@ -187,7 +203,12 @@ const TRADUCCIONES = {
     err_permisos: 'No s\'han pogut desar els permisos.', carregant: 'Carregant…',
     vincular_titulo: 'Podria ser algú que ja hi és', vincular_hint: 'Hem trobat coincidències amb membres ja existents. Vincula el compte amb la fitxa correcta, o continua sense vincular.',
     cancelar: 'Cancel·lar', aprovar_sense_vincular: 'Aprovar sense vincular', vincular_amb: 'Vincular amb aquest',
-    label_correu: 'Correu', label_naixement: 'Naixement', coincideix: '✓ coincideix', err_vincular: 'No s\'ha pogut vincular ni aprovar.'
+    label_correu: 'Correu', label_naixement: 'Naixement', coincideix: '✓ coincideix', err_vincular: 'No s\'ha pogut vincular ni aprovar.',
+    cap_crear_fitxa: 'Cap d\'aquests — crear una fitxa nova',
+    alias_titulo: 'Aquest àlies ja està en ús',
+    alias_conflicte: (alias, nom) => `L'àlies "${alias}" ja el fa servir ${nom || 'un altre membre'}. Tria una opció:`,
+    usar_alies: (sugerit) => `Usar "${sugerit}"`,
+    alias_o_escriu: '…o escriu un àlies diferent', usar_aquest_alies: 'Usar aquest àlies'
   },
   es: {
     nav_inici: 'Inicio', nav_assajos: 'Ensayos', nav_actuacions: 'Actuaciones', nav_imatges: 'Imágenes',
@@ -203,7 +224,12 @@ const TRADUCCIONES = {
     err_permisos: 'No se han podido guardar los permisos.', carregant: 'Cargando…',
     vincular_titulo: 'Podría ser alguien que ya está', vincular_hint: 'Hemos encontrado coincidencias con miembros ya existentes. Vincula la cuenta con la ficha correcta, o continúa sin vincular.',
     cancelar: 'Cancelar', aprovar_sense_vincular: 'Aprobar sin vincular', vincular_amb: 'Vincular con este',
-    label_correu: 'Correo', label_naixement: 'Nacimiento', coincideix: '✓ coincide', err_vincular: 'No se ha podido vincular ni aprobar.'
+    label_correu: 'Correo', label_naixement: 'Nacimiento', coincideix: '✓ coincide', err_vincular: 'No se ha podido vincular ni aprobar.',
+    cap_crear_fitxa: 'Ninguno — crear una ficha nueva',
+    alias_titulo: 'Este alias ya está en uso',
+    alias_conflicte: (alias, nom) => `El alias "${alias}" ya lo usa ${nom || 'otro miembro'}. Elige una opción:`,
+    usar_alies: (sugerit) => `Usar "${sugerit}"`,
+    alias_o_escriu: '…o escribe un alias distinto', usar_aquest_alies: 'Usar este alias'
   },
   en: {
     nav_inici: 'Home', nav_assajos: 'Rehearsals', nav_actuacions: 'Performances', nav_imatges: 'Images',
@@ -219,7 +245,12 @@ const TRADUCCIONES = {
     err_permisos: 'Could not save permissions.', carregant: 'Loading…',
     vincular_titulo: 'This could be someone already here', vincular_hint: 'We found matches with existing members. Link the account to the right profile, or continue without linking.',
     cancelar: 'Cancel', aprovar_sense_vincular: 'Approve without linking', vincular_amb: 'Link to this one',
-    label_correu: 'Email', label_naixement: 'Born', coincideix: '✓ matches', err_vincular: 'Could not link or approve.'
+    label_correu: 'Email', label_naixement: 'Born', coincideix: '✓ matches', err_vincular: 'Could not link or approve.',
+    cap_crear_fitxa: 'None — create a new profile',
+    alias_titulo: 'This nickname is already taken',
+    alias_conflicte: (alias, nom) => `The nickname "${alias}" is already used by ${nom || 'another member'}. Choose an option:`,
+    usar_alies: (sugerit) => `Use "${sugerit}"`,
+    alias_o_escriu: '…or type a different nickname', usar_aquest_alies: 'Use this nickname'
   }
 };
 let idiomaActual = localStorage.getItem('castellers_idioma') || 'ca';
@@ -334,6 +365,7 @@ async function cargarPendientes() {
     const res = await fetch(`${API}/api/usuarios/pendientes`);
     const data = await res.json();
     const pendientes = data.data || [];
+    pendientesActuales = pendientes;
     if (!pendientes.length) {
       body.innerHTML = `<p class="empty-note">${t('cap_alta_pendent')}</p>`;
       return;
@@ -376,7 +408,7 @@ async function intentarAprobar(btn) {
     const candidatos = data.candidatos || [];
 
     if (!candidatos.length) {
-      await aprobarDirecto(usuarioId);
+      await crearFichaYVincular(usuarioId, null, btn);
       return;
     }
 
@@ -384,11 +416,11 @@ async function intentarAprobar(btn) {
   } catch (err) {
     console.error(err);
     // si falla la comprovació de candidats, no bloquegem l'aprovació
-    await aprobarDirecto(usuarioId);
+    await aprobarSinFicha(usuarioId);
   }
 }
 
-async function aprobarDirecto(usuarioId) {
+async function aprobarSinFicha(usuarioId) {
   try {
     await fetch(`${API}/api/usuarios/${usuarioId}/aprobar`, { method: 'PUT' });
     await cargarPendientes();
@@ -397,6 +429,57 @@ async function aprobarDirecto(usuarioId) {
     console.error(err);
     alert(t('err_vincular'));
     await cargarPendientes();
+  }
+}
+
+// Crea una fitxa nova de casteller amb les dades del registre i vincula-la
+// a l'usuari, comprovant primer que l'àlies no estigui ja en ús. Si
+// aliasForzat és null, es comprova; si ja ve decidit (perquè l'admin ha
+// triat una opció al conflicte), es fa servir directament sense tornar a
+// comprovar.
+async function crearFichaYVincular(usuarioId, aliasForzat, btnOrigen) {
+  const pendiente = pendientesActuales.find(p => String(p.id) === String(usuarioId));
+  if (!pendiente) { await aprobarSinFicha(usuarioId); return; }
+
+  try {
+    if (aliasForzat === null) {
+      const resAlias = await fetch(`${API}/api/usuarios/${usuarioId}/comprobar-alias`);
+      const dataAlias = await resAlias.json();
+      if (!dataAlias.disponible) {
+        mostrarModalAlias(usuarioId, dataAlias, btnOrigen);
+        return;
+      }
+      aliasForzat = dataAlias.alias; // pot ser null si l'usuari no tenia àlies
+    }
+
+    const resCrear = await fetch(`${API}/api/castellers`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre: pendiente.nombre,
+        primerApellido: pendiente.primerApellido,
+        segundoApellido: pendiente.segundoApellido,
+        apodo: aliasForzat,
+        correo: pendiente.email,
+        fNac: pendiente.fechaNacimiento
+      })
+    });
+    const dataCrear = await resCrear.json();
+    if (!resCrear.ok) throw new Error(dataCrear.error || 'Error creant la fitxa');
+
+    await fetch(`${API}/api/usuarios/${usuarioId}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ castellerId: dataCrear.casteller.id })
+    });
+    await fetch(`${API}/api/usuarios/${usuarioId}/aprobar`, { method: 'PUT' });
+
+    aliasOverlay.classList.remove('open');
+    vincularOverlay.classList.remove('open');
+    await cargarPendientes();
+    await cargarUsuarios();
+  } catch (err) {
+    console.error(err);
+    alert(t('err_vincular'));
+    if (btnOrigen) btnOrigen.disabled = false;
   }
 }
 
@@ -436,9 +519,12 @@ function mostrarModalVincular(usuarioId, candidatos, btnOrigen) {
     });
   });
 
+  document.getElementById('vincular-nova-fitxa').onclick = async () => {
+    await crearFichaYVincular(usuarioId, null, btnOrigen);
+  };
   document.getElementById('vincular-sin').onclick = async () => {
     vincularOverlay.classList.remove('open');
-    await aprobarDirecto(usuarioId);
+    await aprobarSinFicha(usuarioId);
   };
   document.getElementById('vincular-cancelar').onclick = () => {
     vincularOverlay.classList.remove('open');
@@ -448,6 +534,33 @@ function mostrarModalVincular(usuarioId, candidatos, btnOrigen) {
   vincularOverlay.classList.add('open');
 }
 vincularOverlay.addEventListener('click', (e) => { if (e.target === vincularOverlay) vincularOverlay.classList.remove('open'); });
+
+/* ---------------- Conflicte d'àlies duplicat ---------------- */
+
+const aliasOverlay = document.getElementById('alias-overlay');
+
+function mostrarModalAlias(usuarioId, dataAlias, btnOrigen) {
+  document.getElementById('alias-conflicte-text').textContent = t('alias_conflicte')(dataAlias.alias, dataAlias.conflictoCon ? dataAlias.conflictoCon.nombre : '');
+  document.getElementById('alias-suggerit-btn').textContent = t('usar_alies')(dataAlias.sugerido);
+  document.getElementById('alias-input').value = '';
+
+  document.getElementById('alias-suggerit-btn').onclick = () => {
+    crearFichaYVincular(usuarioId, dataAlias.sugerido, btnOrigen);
+  };
+  document.getElementById('alias-custom-btn').onclick = () => {
+    const nuevo = document.getElementById('alias-input').value.trim();
+    if (!nuevo) return;
+    crearFichaYVincular(usuarioId, nuevo, btnOrigen);
+  };
+  document.getElementById('alias-cancelar').onclick = () => {
+    aliasOverlay.classList.remove('open');
+    if (btnOrigen) btnOrigen.disabled = false;
+  };
+
+  vincularOverlay.classList.remove('open');
+  aliasOverlay.classList.add('open');
+}
+aliasOverlay.addEventListener('click', (e) => { if (e.target === aliasOverlay) aliasOverlay.classList.remove('open'); });
 
 /* ---------------- Admin: tots els usuaris ---------------- */
 

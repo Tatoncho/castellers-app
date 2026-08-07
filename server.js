@@ -1884,7 +1884,7 @@ app.get('/api/auth/me', async (req, res) => {
 app.get('/api/usuarios/pendientes', requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT "id","email","nombre","primerApellido","segundoApellido","apodo","created_at" FROM usuarios
+      `SELECT "id","email","nombre","primerApellido","segundoApellido","apodo","fechaNacimiento","created_at" FROM usuarios
        WHERE "estado" = 'pendiente' AND "emailVerificado" = TRUE
        ORDER BY "created_at" ASC`
     );
@@ -1935,6 +1935,37 @@ app.get('/api/usuarios/:id/candidatos-vinculo', requireAdmin, async (req, res) =
       .slice(0, 5);
 
     res.json({ success: true, candidatos });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Comprova si l'àlies d'un usuari pendent ja el fa servir algun altre
+// membre (per evitar l'embolic d'àlies duplicats). Si hi ha conflicte,
+// suggereix "àlies + primer cognom" com a alternativa.
+app.get('/api/usuarios/:id/comprobar-alias', requireAdmin, async (req, res) => {
+  try {
+    const usuarioResult = await pool.query('SELECT * FROM usuarios WHERE "id" = $1', [req.params.id]);
+    if (usuarioResult.rows.length === 0) return res.status(404).json({ success: false, error: 'Usuari no trobat' });
+    const u = usuarioResult.rows[0];
+
+    if (!u.apodo || !u.apodo.trim()) {
+      return res.json({ success: true, disponible: true, alias: null });
+    }
+
+    const conflicto = await pool.query(
+      `SELECT "id","nombre" FROM castellers WHERE LOWER(TRIM("apodo")) = LOWER(TRIM($1))`,
+      [u.apodo]
+    );
+    const sugerido = `${u.apodo.trim()} ${(u.primerApellido || '').trim()}`.trim();
+
+    res.json({
+      success: true,
+      disponible: conflicto.rows.length === 0,
+      alias: u.apodo,
+      sugerido,
+      conflictoCon: conflicto.rows[0] || null
+    });
   } catch (error) {
     errorHandler(res, error);
   }

@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Castellers · Accions massives</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --paper: #EAE6DA; --paper-card: #F1EEE4; --ink: #20241F; --ink-soft: #4B5049;
+    --thread: #9E2B3B; --gold: #B8893D; --line: #C7C2B0; --ok:#3E7A4E; --radius: 3px;
+  }
+  * { box-sizing: border-box; }
+  html:not(.sessio-confirmada) body { visibility: hidden; }
+  body { margin:0; background: linear-gradient(var(--line) 1px, transparent 1px) 0 0/100% 34px, var(--paper); color:var(--ink); font-family:'Work Sans',sans-serif; font-size:14.5px; line-height:1.5; }
+  a { color: var(--thread); }
+
+  nav.topnav { display:flex; align-items:center; gap:22px; padding:18px 28px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  nav.topnav .brand { display:flex; align-items:center; gap:10px; font-family:'Fraunces',serif; font-weight:700; font-size:18px; text-decoration:none; color:var(--ink); font-variant:small-caps; }
+  nav.topnav .links { display:flex; gap:4px; flex-wrap:wrap; }
+  nav.topnav .links a { font-family:'IBM Plex Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; padding:8px 12px; border-radius:var(--radius); text-decoration:none; color:var(--ink-soft); border:1px solid transparent; }
+  nav.topnav .links a:hover { border-color:var(--line); color:var(--ink); }
+  nav.topnav .spacer { margin-left:auto; }
+  .user-chip { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); border:1px solid var(--line); padding:7px 11px; border-radius:var(--radius); cursor:pointer; background:none; }
+  .lang-dropdown { position:relative; }
+  .lang-dropdown-toggle { width:auto; margin:0; display:flex; align-items:center; gap:7px; background:var(--paper-card); border:1.5px solid var(--line); border-radius:var(--radius); padding:7px 10px; cursor:pointer; color:var(--ink); }
+  .lang-dropdown-toggle:hover { border-color: var(--ink); }
+  .lang-dropdown-toggle svg.lang-icon { flex-shrink:0; color: var(--ink-soft); }
+  .lang-current-flag svg { display:block; border-radius:1px; }
+  .lang-dropdown-menu { display:none; position:absolute; top:calc(100% + 6px); right:0; min-width:160px; background:var(--paper-card); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; box-shadow: 0 6px 16px rgba(32,36,31,0.18); z-index:60; }
+  .lang-dropdown-menu.open { display:block; }
+  .lang-btn { width:100%; margin:0; display:flex; align-items:center; gap:9px; background:none; border:none; padding:10px 12px; cursor:pointer; font-family:'Work Sans',sans-serif; font-size:13px; font-weight:400; text-transform:none; letter-spacing:0; color: var(--ink); text-align:left; }
+  .lang-btn:hover { background: var(--paper); }
+  .lang-btn.active { font-weight:600; background: var(--paper); }
+  .lang-btn svg { display:block; border-radius:1px; flex-shrink:0; }
+
+  main { max-width: 900px; margin: 0 auto; padding: 30px 28px 80px; }
+  section.panel { background: var(--paper-card); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 22px; }
+  .panel-head { padding: 15px 18px 10px; border-bottom: 1px solid var(--line); }
+  .panel-head h2 { font-family:'Fraunces',serif; font-weight:600; font-size:17px; margin:0; }
+  .panel-body { padding: 18px; }
+  .hint { color: var(--ink-soft); font-size:12.5px; margin: 0 0 14px; }
+
+  button { cursor:pointer; border:none; border-radius:var(--radius); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.04em; text-transform:uppercase; padding:10px 16px; }
+  button.primary { background: var(--thread); color: var(--paper-card); }
+  button.primary:hover { background:#862432; }
+  button.ghost { background: transparent; border:1px solid var(--ink); color: var(--ink); }
+  button.ghost:hover { background: var(--ink); color: var(--paper-card); }
+  button:disabled { opacity:0.5; cursor:default; }
+
+  .btn-row { display:flex; gap:10px; flex-wrap:wrap; }
+
+  .file-label {
+    display:inline-block; cursor:pointer; background: transparent; border:1px solid var(--ink); color: var(--ink);
+    border-radius:var(--radius); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.04em;
+    text-transform:uppercase; padding:10px 16px;
+  }
+  .file-label:hover { background: var(--ink); color: var(--paper-card); }
+
+  .status-text { font-size:12.5px; color: var(--ink-soft); margin-top:10px; }
+  .status-text.error { color: var(--thread); }
+  .status-text.ok { color: var(--ok); }
+
+  .preview-box { margin-top:14px; border:1px solid var(--line); border-radius:var(--radius); background:var(--paper); padding:12px; display:none; }
+  .preview-box.open { display:block; }
+  .preview-box .preview-count { font-family:'Fraunces',serif; font-weight:600; margin-bottom:8px; }
+  .preview-box table { width:100%; border-collapse:collapse; font-size:11.5px; }
+  .preview-box th, .preview-box td { text-align:left; padding:4px 6px; border-bottom:1px solid var(--line); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px; }
+  .preview-box th { font-family:'IBM Plex Mono',monospace; font-size:9.5px; text-transform:uppercase; color:var(--ink-soft); }
+
+  .delete-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+  .delete-toolbar input[type="text"] { flex:1; min-width:180px; padding:9px 10px; border:1px solid var(--line); background:var(--paper); border-radius:var(--radius); }
+  .selected-count { font-family:'IBM Plex Mono',monospace; font-size:11.5px; color: var(--ink-soft); }
+
+  .delete-table-wrap { max-height: 420px; overflow-y:auto; border:1px solid var(--line); border-radius:var(--radius); }
+  table.delete-table { width:100%; border-collapse:collapse; font-size:13px; }
+  table.delete-table th { position:sticky; top:0; background:var(--paper-card); text-align:left; padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; color:var(--ink-soft); border-bottom:1px solid var(--line); }
+  table.delete-table td { padding:7px 10px; border-bottom:1px solid var(--line); }
+  table.delete-table tr:last-child td { border-bottom:none; }
+  table.delete-table tr.checked { background: #F3E7E5; }
+
+  .confirm-delete-panel { display:none; margin-top:14px; padding:14px; border:1px solid var(--thread); border-radius:var(--radius); background:#F3E7E5; }
+  .confirm-delete-panel.open { display:block; }
+  .confirm-delete-panel input[type="password"] { width:100%; max-width:320px; padding:9px 10px; border:1px solid var(--line); background:var(--paper); border-radius:var(--radius); margin-bottom:10px; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="/">
+    <svg width="26" height="26" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="20" y="4" width="6" height="8" fill="#20241F"/><rect x="14" y="14" width="18" height="8" fill="#20241F"/>
+      <rect x="8" y="26" width="30" height="8" fill="#20241F"/><rect x="2" y="38" width="42" height="6" fill="#9E2B3B"/>
+    </svg>
+    Castellers
+  </a>
+  <div class="links">
+    <a href="/" data-i18n="nav_inici">Inici</a>
+    <a href="/miembros.html" data-i18n="nav_membres">Membres</a>
+    <a href="/perfil.html" data-i18n="nav_perfil">El meu perfil</a>
+  </div>
+  <div class="spacer"></div>
+  <div class="lang-dropdown">
+    <button class="lang-dropdown-toggle" id="lang-dropdown-toggle" type="button" aria-label="Canviar idioma">
+      <svg class="lang-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M3 12h18"/>
+        <path d="M12 3c2.8 2.6 4.3 5.7 4.3 9s-1.5 6.4-4.3 9c-2.8-2.6-4.3-5.7-4.3-9s1.5-6.4 4.3-9z"/>
+      </svg>
+      <span class="lang-current-flag" id="lang-current-flag"></span>
+      <svg width="9" height="9" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6"/></svg>
+    </button>
+    <div class="lang-dropdown-menu" id="lang-dropdown-menu">
+      <button class="lang-btn" data-lang="ca" type="button">
+        <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>
+        Català
+      </button>
+      <button class="lang-btn" data-lang="es" type="button">
+        <svg width="20" height="14" viewBox="0 0 20 14"><rect width="20" height="14" fill="#AA151B"/><rect y="3.5" width="20" height="7" fill="#F1BF00"/></svg>
+        Español
+      </button>
+      <button class="lang-btn" data-lang="en" type="button">
+        <svg width="20" height="14" viewBox="0 0 20 14">
+          <rect width="20" height="14" fill="#00247D"/>
+          <path d="M0,0 L20,14 M20,0 L0,14" stroke="#FFFFFF" stroke-width="2.6"/>
+          <path d="M0,0 L20,14 M20,0 L0,14" stroke="#CF142B" stroke-width="1.1"/>
+          <path d="M10,0 V14 M0,7 H20" stroke="#FFFFFF" stroke-width="4.4"/>
+          <path d="M10,0 V14 M0,7 H20" stroke="#CF142B" stroke-width="2.4"/>
+        </svg>
+        English
+      </button>
+    </div>
+  </div>
+  <span class="user-chip" id="user-chip">…</span>
+</nav>
+
+<main>
+  <h1 style="font-family:'Fraunces',serif; font-size:24px; margin:0 0 22px;" data-i18n="titulo">Accions massives de membres</h1>
+
+  <section class="panel">
+    <div class="panel-head"><h2 data-i18n="exportar_titulo">Exportar membres</h2></div>
+    <div class="panel-body">
+      <p class="hint" data-i18n="exportar_hint">Descarrega tots els membres en el format que et vagi millor.</p>
+      <div class="btn-row">
+        <button class="ghost" id="export-csv-btn" type="button">CSV</button>
+        <button class="ghost" id="export-xlsx-btn" type="button">Excel (.xlsx)</button>
+        <button class="ghost" id="export-json-btn" type="button">JSON</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2 data-i18n="importar_titulo">Importar membres</h2></div>
+    <div class="panel-body">
+      <p class="hint" data-i18n="import_hint">Admet el CSV de Spond (només noms) o l'exportació completa (Nom, Àlies, Posició, etc.).</p>
+      <label class="file-label" for="csv-input" data-i18n="triar_fitxer">Triar fitxer CSV</label>
+      <input type="file" id="csv-input" accept=".csv,text/csv" style="display:none;">
+      <div class="status-text" id="import-status"></div>
+      <div class="preview-box" id="preview-box">
+        <div class="preview-count" id="preview-count"></div>
+        <div style="overflow-x:auto;">
+          <table id="preview-table"></table>
+        </div>
+        <div class="btn-row" style="margin-top:12px;">
+          <button class="primary" id="confirmar-import-btn" type="button" data-i18n="confirmar_importacio">Confirmar importació</button>
+          <button class="ghost" id="cancelar-import-btn" type="button" data-i18n="cancelar">Cancel·lar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2 data-i18n="eliminar_titulo">Eliminar en massa</h2></div>
+    <div class="panel-body">
+      <p class="hint" data-i18n="eliminar_hint" style="margin-bottom:12px;">Selecciona els membres que vulguis eliminar. Aquesta acció no es pot desfer.</p>
+      <div class="delete-toolbar">
+        <input type="text" id="delete-search" placeholder="Cerca per nom o àlies…" data-i18n-placeholder="cerca_nom_alies">
+        <span class="selected-count" id="selected-count">0 seleccionats</span>
+      </div>
+      <div class="delete-table-wrap">
+        <table class="delete-table">
+          <thead>
+            <tr>
+              <th style="width:34px;"><input type="checkbox" id="select-all-check"></th>
+              <th data-i18n="col_nom">Nom</th>
+              <th data-i18n="col_alies">Àlies</th>
+              <th data-i18n="col_correu">Correu</th>
+            </tr>
+          </thead>
+          <tbody id="delete-tbody"></tbody>
+        </table>
+      </div>
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="ghost" id="eliminar-seleccionados-btn" type="button" style="border-color:var(--thread); color:var(--thread);" data-i18n="eliminar_seleccionats" disabled>Eliminar seleccionats</button>
+      </div>
+      <div class="confirm-delete-panel" id="confirm-delete-panel">
+        <p class="hint" id="confirm-delete-text" style="color:var(--thread); margin:0 0 10px;"></p>
+        <input type="password" id="delete-password" placeholder="La teva contrasenya" data-i18n-placeholder="la_teva_contrasenya">
+        <div class="btn-row">
+          <button class="primary" id="confirmar-eliminacio-btn" type="button" style="background:var(--thread);" data-i18n="confirmar_eliminacio">Confirmar eliminació</button>
+          <button class="ghost" id="cancelar-eliminacio-btn" type="button" data-i18n="cancelar">Cancel·lar</button>
+        </div>
+        <div class="status-text" id="delete-msg"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const API = '';
+let allMembers = [];
+let seleccionados = new Set();
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+const TRADUCCIONES = {
+  ca: {
+    nav_inici: 'Inici', nav_membres: 'Membres', nav_perfil: 'El meu perfil', chip_tancar: 'Tancar sessió',
+    titulo: 'Accions massives de membres',
+    exportar_titulo: 'Exportar membres', exportar_hint: 'Descarrega tots els membres en el format que et vagi millor.',
+    importar_titulo: 'Importar membres', import_hint: 'Admet el CSV de Spond (només noms) o l\'exportació completa (Nom, Àlies, Posició, etc.).',
+    triar_fitxer: 'Triar fitxer CSV', confirmar_importacio: 'Confirmar importació', cancelar: 'Cancel·lar',
+    eliminar_titulo: 'Eliminar en massa', eliminar_hint: 'Selecciona els membres que vulguis eliminar. Aquesta acció no es pot desfer.',
+    cerca_nom_alies: 'Cerca per nom o àlies…', seleccionats: (n) => `${n} seleccionat${n === 1 ? '' : 's'}`,
+    col_nom: 'Nom', col_alies: 'Àlies', col_correu: 'Correu', eliminar_seleccionats: 'Eliminar seleccionats',
+    la_teva_contrasenya: 'La teva contrasenya', confirmar_eliminacio: 'Confirmar eliminació',
+    catalegs_no_cargados: 'Encara no s\'han carregat els membres — torna-ho a provar en un segon.',
+    fila_no_valida: 'No s\'ha trobat cap fila vàlida. Comprova el format del fitxer.',
+    previsualitzacio: (n) => `S'importaran ${n} membre${n === 1 ? '' : 's'}`,
+    important_n: (i, tot) => `Important ${i} de ${tot}…`,
+    importados_ok: (ok, tot) => `${ok} de ${tot} importats correctament.`,
+    confirm_eliminar: (n) => `Vas a eliminar ${n} membre${n === 1 ? '' : 's'} de forma permanent. Introdueix la teva contrasenya per confirmar-ho.`,
+    eliminar_cal_contrasenya: 'Cal introduir la teva contrasenya.', eliminant_n: (i, tot) => `Eliminant ${i} de ${tot}…`,
+    eliminats_ok: (n) => `${n} membres eliminats.`, err_eliminar: 'No s\'ha pogut completar l\'eliminació.'
+  },
+  es: {
+    nav_inici: 'Inicio', nav_membres: 'Miembros', nav_perfil: 'Mi perfil', chip_tancar: 'Cerrar sesión',
+    titulo: 'Acciones masivas de miembros',
+    exportar_titulo: 'Exportar miembros', exportar_hint: 'Descarga todos los miembros en el formato que prefieras.',
+    importar_titulo: 'Importar miembros', import_hint: 'Admite el CSV de Spond (solo nombres) o la exportación completa (Nombre, Alias, Posición, etc.).',
+    triar_fitxer: 'Elegir archivo CSV', confirmar_importacio: 'Confirmar importación', cancelar: 'Cancelar',
+    eliminar_titulo: 'Eliminar en masa', eliminar_hint: 'Selecciona los miembros que quieras eliminar. Esta acción no se puede deshacer.',
+    cerca_nom_alies: 'Busca por nombre o alias…', seleccionats: (n) => `${n} seleccionado${n === 1 ? '' : 's'}`,
+    col_nom: 'Nombre', col_alies: 'Alias', col_correu: 'Correo', eliminar_seleccionats: 'Eliminar seleccionados',
+    la_teva_contrasenya: 'Tu contraseña', confirmar_eliminacio: 'Confirmar eliminación',
+    catalegs_no_cargados: 'Aún no se han cargado los miembros — vuelve a intentarlo en un segundo.',
+    fila_no_valida: 'No se ha encontrado ninguna fila válida. Comprueba el formato del archivo.',
+    previsualitzacio: (n) => `Se importarán ${n} miembro${n === 1 ? '' : 's'}`,
+    important_n: (i, tot) => `Importando ${i} de ${tot}…`,
+    importados_ok: (ok, tot) => `${ok} de ${tot} importados correctamente.`,
+    confirm_eliminar: (n) => `Vas a eliminar ${n} miembro${n === 1 ? '' : 's'} de forma permanente. Introduce tu contraseña para confirmarlo.`,
+    eliminar_cal_contrasenya: 'Debes introducir tu contraseña.', eliminant_n: (i, tot) => `Eliminando ${i} de ${tot}…`,
+    eliminats_ok: (n) => `${n} miembros eliminados.`, err_eliminar: 'No se ha podido completar la eliminación.'
+  },
+  en: {
+    nav_inici: 'Home', nav_membres: 'Members', nav_perfil: 'My profile', chip_tancar: 'Log out',
+    titulo: 'Bulk member actions',
+    exportar_titulo: 'Export members', exportar_hint: 'Download all members in whichever format suits you.',
+    importar_titulo: 'Import members', import_hint: 'Accepts the Spond CSV (names only) or the full export (Name, Nickname, Position, etc.).',
+    triar_fitxer: 'Choose CSV file', confirmar_importacio: 'Confirm import', cancelar: 'Cancel',
+    eliminar_titulo: 'Bulk delete', eliminar_hint: 'Select the members you want to delete. This cannot be undone.',
+    cerca_nom_alies: 'Search by name or nickname…', seleccionats: (n) => `${n} selected`,
+    col_nom: 'Name', col_alies: 'Nickname', col_correu: 'Email', eliminar_seleccionats: 'Delete selected',
+    la_teva_contrasenya: 'Your password', confirmar_eliminacio: 'Confirm deletion',
+    catalegs_no_cargados: 'Members haven\'t loaded yet — try again in a second.',
+    fila_no_valida: 'No valid row found. Check the file format.',
+    previsualitzacio: (n) => `${n} member${n === 1 ? '' : 's'} will be imported`,
+    important_n: (i, tot) => `Importing ${i} of ${tot}…`,
+    importados_ok: (ok, tot) => `${ok} of ${tot} imported successfully.`,
+    confirm_eliminar: (n) => `You are about to permanently delete ${n} member${n === 1 ? '' : 's'}. Enter your password to confirm.`,
+    eliminar_cal_contrasenya: 'You must enter your password.', eliminant_n: (i, tot) => `Deleting ${i} of ${tot}…`,
+    eliminats_ok: (n) => `${n} members deleted.`, err_eliminar: 'Could not complete the deletion.'
+  }
+};
+
+const FLAGS_SVG = {
+  ca: '<svg width="18" height="13" viewBox="0 0 20 14"><rect width="20" height="14" fill="#FFCE00"/><rect y="0" width="20" height="2" fill="#DA121A"/><rect y="4" width="20" height="2" fill="#DA121A"/><rect y="8" width="20" height="2" fill="#DA121A"/><rect y="12" width="20" height="2" fill="#DA121A"/></svg>',
+  es: '<svg width="18" height="13" viewBox="0 0 20 14"><rect width="20" height="14" fill="#AA151B"/><rect y="3.5" width="20" height="7" fill="#F1BF00"/></svg>',
+  en: '<svg width="18" height="13" viewBox="0 0 20 14"><rect width="20" height="14" fill="#00247D"/><path d="M0,0 L20,14 M20,0 L0,14" stroke="#FFFFFF" stroke-width="2.6"/><path d="M0,0 L20,14 M20,0 L0,14" stroke="#CF142B" stroke-width="1.1"/><path d="M10,0 V14 M0,7 H20" stroke="#FFFFFF" stroke-width="4.4"/><path d="M10,0 V14 M0,7 H20" stroke="#CF142B" stroke-width="2.4"/></svg>'
+};
+let idiomaActual = localStorage.getItem('castellers_idioma') || 'ca';
+function t(key) { return (TRADUCCIONES[idiomaActual] || TRADUCCIONES.ca)[key] || key; }
+
+function aplicarIdioma(idioma) {
+  idiomaActual = idioma;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val !== key) el.textContent = val;
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    const val = t(key);
+    if (val !== key) el.placeholder = val;
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === idioma));
+  localStorage.setItem('castellers_idioma', idioma);
+  document.documentElement.lang = idioma;
+  document.getElementById('lang-current-flag').innerHTML = FLAGS_SVG[idioma] || FLAGS_SVG.ca;
+  document.getElementById('lang-dropdown-menu').classList.remove('open');
+  const chip = document.getElementById('user-chip');
+  if (chip && window.usuarioActual) chip.textContent = `${window.usuarioActual.nombre} · ${t('chip_tancar')}`;
+  document.getElementById('selected-count').textContent = t('seleccionats')(seleccionados.size);
+  if (allMembers.length) renderDeleteTable();
+}
+window.aplicarIdioma = aplicarIdioma;
+
+const langDropdownToggle = document.getElementById('lang-dropdown-toggle');
+const langDropdownMenu = document.getElementById('lang-dropdown-menu');
+langDropdownToggle.addEventListener('click', (e) => { e.stopPropagation(); langDropdownMenu.classList.toggle('open'); });
+document.addEventListener('click', () => langDropdownMenu.classList.remove('open'));
+langDropdownMenu.addEventListener('click', (e) => e.stopPropagation());
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    aplicarIdioma(btn.dataset.lang);
+    if (window.usuarioActual) {
+      try { await fetch(`${API}/api/auth/idioma`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idioma: btn.dataset.lang }) }); } catch (err) { console.error(err); }
+    }
+  });
+});
+
+function avisarFinestraOrigen() {
+  if (window.opener) {
+    try { window.opener.postMessage('membres-actualitzats', '*'); } catch (err) {}
+  }
+}
+
+/* ---------------- Carregar membres ---------------- */
+
+async function fetchMembers() {
+  const res = await fetch(`${API}/api/castellers`);
+  const data = await res.json();
+  allMembers = data.data || [];
+  renderDeleteTable();
+}
+
+/* ---------------- Exportar ---------------- */
+
+const COLUMNAS_EXPORT = [
+  ['id', 'ID'], ['nombre', 'Nom'], ['apodo', 'Àlies'], ['primerApellido', 'Primer cognom'], ['segundoApellido', 'Segon cognom'],
+  ['posicionPinyaNombre', 'Posició'], ['alturaHombros', 'Alçada espatlles'], ['accesoAPP', 'Te App?'], ['correo', 'E-mail'],
+  ['movil', 'Mòbil'], ['fNac', 'Data naixement'], ['fechaCamisa', 'Data entrega camisa'], ['revisado', 'Revisat?'],
+  ['estadoAcogida', 'Estat acollida'], ['habitual', 'Habitual?'], ['integranteColla', 'Integrant de la colla?'],
+  ['lesionLargoPlazo', 'Lesionat llarga durada?'], ['formularios', 'Formularis']
+];
+
+function valorExport(m, key) {
+  const v = m[key];
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'boolean') return v ? 'Sí' : 'No';
+  return String(v);
+}
+
+function descargarBlob(contenido, nombreArchivo, tipo) {
+  const blob = new Blob([contenido], { type: tipo });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = nombreArchivo;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('export-csv-btn').addEventListener('click', () => {
+  const header = COLUMNAS_EXPORT.map(c => c[1]);
+  const filas = allMembers.map(m => COLUMNAS_EXPORT.map(c => {
+    const v = valorExport(m, c[0]);
+    return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  }).join(','));
+  const csv = '\uFEFF' + [header.join(','), ...filas].join('\n');
+  descargarBlob(csv, 'membres.csv', 'text/csv;charset=utf-8');
+});
+
+document.getElementById('export-json-btn').addEventListener('click', () => {
+  descargarBlob(JSON.stringify(allMembers, null, 2), 'membres.json', 'application/json');
+});
+
+document.getElementById('export-xlsx-btn').addEventListener('click', () => {
+  const header = COLUMNAS_EXPORT.map(c => c[1]);
+  const filas = allMembers.map(m => COLUMNAS_EXPORT.map(c => valorExport(m, c[0])));
+  const ws = XLSX.utils.aoa_to_sheet([header, ...filas]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Membres');
+  XLSX.writeFile(wb, 'membres.xlsx');
+});
+
+/* ---------------- Importar (amb previsualització) ---------------- */
+
+function parseCSV(text) {
+  const clean = text.replace(/^\uFEFF/, '');
+  const lines = clean.split(/\r?\n/).filter(l => l.length);
+  if (!lines.length) return { header: [], rows: [] };
+  const parseLine = (line) => {
+    const result = [];
+    let cur = '', inQuotes = false, i = 0;
+    while (i < line.length) {
+      const c = line[i];
+      if (inQuotes) {
+        if (c === '"') { if (line[i + 1] === '"') { cur += '"'; i += 2; continue; } inQuotes = false; i++; continue; }
+        cur += c; i++; continue;
+      } else {
+        if (c === '"') { inQuotes = true; i++; continue; }
+        if (c === ',') { result.push(cur); cur = ''; i++; continue; }
+        cur += c; i++; continue;
+      }
+    }
+    result.push(cur);
+    return result.map(s => s.trim());
+  };
+  const header = parseLine(lines[0]);
+  const rows = lines.slice(1).map(parseLine);
+  return { header, rows };
+}
+function normalizeHeader(h) { return h.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
+function findCol(normHeader, ...candidates) { return normHeader.findIndex(h => candidates.includes(h)); }
+function parseSiNo(value) {
+  if (!value) return null;
+  const v = value.trim().toLowerCase();
+  if (v === 'si' || v === 'sí') return true;
+  if (v === 'no') return false;
+  return null;
+}
+function dmyToISO(value) {
+  if (!value) return null;
+  const m = value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  const [, d, mo, y] = m;
+  return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
+}
+function toIntOrNull(value) {
+  const n = parseInt(value, 10);
+  return Number.isFinite(n) ? n : null;
+}
+function mapPermisos(value) {
+  if (!value) return [];
+  const v = value.trim();
+  if (v.toLowerCase() === 'no' || v === '') return [];
+  if (v.toLowerCase() === 'administrador') return ['AdminGeneral'];
+  return v.split('/').map(s => s.trim()).filter(Boolean);
+}
+
+let posicionesPinya = [];
+
+function buildPayloads(header, rows) {
+  const normHeader = header.map(normalizeHeader);
+  const idxNom = findCol(normHeader, 'nom');
+  const idxAlies = findCol(normHeader, 'alies');
+  const esFormatComplet = idxNom >= 0 && idxAlies >= 0;
+
+  if (!esFormatComplet) {
+    const idxSimple = findCol(normHeader, 'name', 'nom', 'nombre', 'fullname', 'full name', 'member', 'membre');
+    return rows.map(cols => ({ nombre: idxSimple >= 0 ? cols[idxSimple] : cols[0] })).filter(r => r.nombre);
+  }
+
+  const posicionPorNombre = {};
+  posicionesPinya.forEach(p => { posicionPorNombre[normalizeHeader(p.nombre)] = p.id; });
+
+  const idx = {
+    id: findCol(normHeader, 'id'), nom: idxNom, cognom1: findCol(normHeader, 'primer cognom'), cognom2: findCol(normHeader, 'segon cognom'),
+    alies: idxAlies, posicio: findCol(normHeader, 'posicio'), teApp: findCol(normHeader, 'te app?', 'te app'),
+    email: findCol(normHeader, 'e-mail', 'email'), naixement: findCol(normHeader, 'data naixement'), mobil: findCol(normHeader, 'mobil'),
+    entregaCamisa: findCol(normHeader, 'data entrega camisa'), altura: findCol(normHeader, 'alcada espatlles'),
+    revisat: findCol(normHeader, 'revisat?', 'revisat'), estatAcollida: findCol(normHeader, 'estat acollida'),
+    habitual: findCol(normHeader, 'habitual?', 'habitual'), permisos: findCol(normHeader, 'permisos especials app?', 'permisos especials app'),
+    integrant: findCol(normHeader, 'integrant de la colla?', 'integrant de la colla'), lesionat: findCol(normHeader, 'lesionat llarga durada?', 'lesionat llarga durada'),
+    formularis: findCol(normHeader, 'formularis')
+  };
+  const get = (cols, i) => (i >= 0 ? cols[i] : '');
+
+  return rows.map(cols => {
+    const nom = get(cols, idx.nom);
+    const alies = get(cols, idx.alies);
+    if (!nom && !alies) return null;
+    const posicioTexto = get(cols, idx.posicio);
+    return {
+      id: toIntOrNull(get(cols, idx.id)), nombre: nom || alies, apodo: alies || null,
+      primerApellido: get(cols, idx.cognom1) || null, segundoApellido: get(cols, idx.cognom2) || null,
+      posicionPinyaId: posicioTexto ? (posicionPorNombre[normalizeHeader(posicioTexto)] ?? null) : null,
+      alturaHombros: toIntOrNull(get(cols, idx.altura)), accesoAPP: parseSiNo(get(cols, idx.teApp)),
+      correo: get(cols, idx.email) || null, movil: get(cols, idx.mobil) || null,
+      fNac: dmyToISO(get(cols, idx.naixement)), fechaCamisa: dmyToISO(get(cols, idx.entregaCamisa)),
+      revisado: parseSiNo(get(cols, idx.revisat)), estadoAcogida: get(cols, idx.estatAcollida) || null,
+      habitual: parseSiNo(get(cols, idx.habitual)), permisosAPP: mapPermisos(get(cols, idx.permisos)),
+      integranteColla: parseSiNo(get(cols, idx.integrant)), lesionLargoPlazo: parseSiNo(get(cols, idx.lesionat)),
+      formularios: toIntOrNull(get(cols, idx.formularis))
+    };
+  }).filter(Boolean);
+}
+
+let payloadsPendientes = [];
+
+document.getElementById('csv-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  const statusEl = document.getElementById('import-status');
+  statusEl.className = 'status-text'; statusEl.textContent = '';
+  if (!file) return;
+
+  if (!posicionesPinya.length) {
+    const res = await fetch(`${API}/api/posiciones-pinya`);
+    const data = await res.json();
+    posicionesPinya = data.data || [];
+  }
+
+  const text = await file.text();
+  const { header, rows } = parseCSV(text);
+  const payloads = buildPayloads(header, rows);
+
+  if (!payloads.length) {
+    statusEl.textContent = t('fila_no_valida');
+    statusEl.className = 'status-text error';
+    e.target.value = '';
+    return;
+  }
+
+  payloadsPendientes = payloads;
+  document.getElementById('preview-count').textContent = t('previsualitzacio')(payloads.length);
+  const columnasPreview = ['nombre', 'apodo', 'primerApellido', 'correo'];
+  const tabla = document.getElementById('preview-table');
+  tabla.innerHTML = `
+    <thead><tr>${columnasPreview.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+    <tbody>${payloads.slice(0, 8).map(p => `<tr>${columnasPreview.map(c => `<td>${escapeHtml(p[c] ?? '')}</td>`).join('')}</tr>`).join('')}</tbody>
+  `;
+  document.getElementById('preview-box').classList.add('open');
+});
+
+document.getElementById('cancelar-import-btn').addEventListener('click', () => {
+  payloadsPendientes = [];
+  document.getElementById('preview-box').classList.remove('open');
+  document.getElementById('csv-input').value = '';
+});
+
+document.getElementById('confirmar-import-btn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('import-status');
+  const btn = document.getElementById('confirmar-import-btn');
+  btn.disabled = true;
+  const BATCH_SIZE = 15;
+  let ok = 0;
+  for (let i = 0; i < payloadsPendientes.length; i += BATCH_SIZE) {
+    const batch = payloadsPendientes.slice(i, i + BATCH_SIZE);
+    statusEl.className = 'status-text';
+    statusEl.textContent = t('important_n')(Math.min(i + BATCH_SIZE, payloadsPendientes.length), payloadsPendientes.length);
+    const results = await Promise.allSettled(batch.map(payload =>
+      fetch(`${API}/api/castellers`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+    ));
+    ok += results.filter(r => r.status === 'fulfilled').length;
+  }
+  try { await fetch(`${API}/api/fix-id-sequence`); } catch (err) { console.error(err); }
+
+  statusEl.textContent = t('importados_ok')(ok, payloadsPendientes.length);
+  statusEl.className = 'status-text ok';
+  document.getElementById('preview-box').classList.remove('open');
+  document.getElementById('csv-input').value = '';
+  payloadsPendientes = [];
+  btn.disabled = false;
+  await fetchMembers();
+  avisarFinestraOrigen();
+});
+
+/* ---------------- Eliminar en massa ---------------- */
+
+function renderDeleteTable() {
+  const q = document.getElementById('delete-search').value.trim().toLowerCase();
+  const tbody = document.getElementById('delete-tbody');
+  const filtrados = allMembers.filter(m => {
+    if (!q) return true;
+    return `${m.nombre || ''} ${m.apodo || ''}`.toLowerCase().includes(q);
+  });
+
+  tbody.innerHTML = filtrados.map(m => `
+    <tr class="${seleccionados.has(m.id) ? 'checked' : ''}" data-id="${m.id}">
+      <td><input type="checkbox" class="row-check" data-id="${m.id}" ${seleccionados.has(m.id) ? 'checked' : ''}></td>
+      <td>${escapeHtml(m.nombre || '')}</td>
+      <td>${escapeHtml(m.apodo || '')}</td>
+      <td>${escapeHtml(m.correo || '')}</td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('.row-check').forEach(chk => {
+    chk.addEventListener('change', () => {
+      const id = Number(chk.dataset.id);
+      if (chk.checked) seleccionados.add(id); else seleccionados.delete(id);
+      chk.closest('tr').classList.toggle('checked', chk.checked);
+      actualizarContador();
+    });
+  });
+
+  actualizarContador();
+}
+
+function actualizarContador() {
+  document.getElementById('selected-count').textContent = t('seleccionats')(seleccionados.size);
+  document.getElementById('eliminar-seleccionados-btn').disabled = seleccionados.size === 0;
+  const todosVisiblesMarcados = [...document.querySelectorAll('.row-check')].every(c => c.checked) && document.querySelectorAll('.row-check').length > 0;
+  document.getElementById('select-all-check').checked = todosVisiblesMarcados;
+}
+
+document.getElementById('delete-search').addEventListener('input', renderDeleteTable);
+
+document.getElementById('select-all-check').addEventListener('change', (e) => {
+  document.querySelectorAll('.row-check').forEach(chk => {
+    chk.checked = e.target.checked;
+    const id = Number(chk.dataset.id);
+    if (e.target.checked) seleccionados.add(id); else seleccionados.delete(id);
+    chk.closest('tr').classList.toggle('checked', e.target.checked);
+  });
+  actualizarContador();
+});
+
+document.getElementById('eliminar-seleccionados-btn').addEventListener('click', () => {
+  document.getElementById('confirm-delete-text').textContent = t('confirm_eliminar')(seleccionados.size);
+  document.getElementById('delete-password').value = '';
+  document.getElementById('delete-msg').textContent = '';
+  document.getElementById('delete-msg').className = 'status-text';
+  document.getElementById('confirm-delete-panel').classList.add('open');
+});
+
+document.getElementById('cancelar-eliminacio-btn').addEventListener('click', () => {
+  document.getElementById('confirm-delete-panel').classList.remove('open');
+});
+
+document.getElementById('confirmar-eliminacio-btn').addEventListener('click', async () => {
+  const password = document.getElementById('delete-password').value;
+  const msg = document.getElementById('delete-msg');
+  msg.className = 'status-text';
+
+  if (!password) {
+    msg.textContent = t('eliminar_cal_contrasenya');
+    msg.className = 'status-text error';
+    return;
+  }
+
+  const btn = document.getElementById('confirmar-eliminacio-btn');
+  btn.disabled = true;
+  const ids = [...seleccionados];
+  let ok = 0;
+  for (let i = 0; i < ids.length; i++) {
+    msg.textContent = t('eliminant_n')(i + 1, ids.length);
+    try {
+      const res = await fetch(`${API}/api/castellers/${ids[i]}`, {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) ok++;
+      else if (data.error && data.error.toLowerCase().includes('contrasenya')) {
+        msg.textContent = data.error;
+        msg.className = 'status-text error';
+        btn.disabled = false;
+        return; // contrasenya incorrecta: aturem tot, no continuem esborrant
+      }
+    } catch (err) { console.error(err); }
+  }
+
+  msg.textContent = t('eliminats_ok')(ok);
+  msg.className = 'status-text ok';
+  seleccionados.clear();
+  document.getElementById('confirm-delete-panel').classList.remove('open');
+  btn.disabled = false;
+  await fetchMembers();
+  avisarFinestraOrigen();
+});
+
+/* ---------------- Guardia de sessió ---------------- */
+
+(async function init() {
+  try {
+    const res = await fetch(`${API}/api/auth/me`);
+    const data = await res.json();
+    if (!data.usuario) { location.href = '/login.html'; return; }
+    window.usuarioActual = data.usuario;
+
+    const chip = document.getElementById('user-chip');
+    chip.style.cursor = 'pointer';
+    chip.onclick = async () => { await fetch(`${API}/api/auth/logout`, { method: 'POST' }); location.href = '/login.html'; };
+
+    document.documentElement.classList.add('sessio-confirmada');
+    aplicarIdioma(data.usuario.idioma || idiomaActual);
+
+    await fetchMembers();
+  } catch (err) {
+    console.error(err);
+    location.href = '/login.html';
+  }
+})();
+</script>
+
+</body>
+</html>
