@@ -599,6 +599,28 @@ app.put('/api/castellers/:id', async (req, res) => {
   }
 });
 
+// Elimina un casteller. Exigeix tornar a introduir la contrasenya de qui fa
+// l'acció (l'usuari amb sessió iniciada, no el membre) com a confirmació
+// extra abans d'un esborrat permanent. Les taules relacionades (rols,
+// posicions assignades en assajos, comptes d'usuari vinculats) ja tenen
+// ON DELETE CASCADE / SET NULL definit, així que s'esborren o desvinculen
+// soles.
+app.delete('/api/castellers/:id', async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ success: false, error: 'Cal introduir la contrasenya per confirmar' });
+    const coincide = await bcrypt.compare(password, req.usuarioActual.passwordHash);
+    if (!coincide) return res.status(400).json({ success: false, error: 'Contrasenya incorrecta' });
+
+    const result = await pool.query('DELETE FROM castellers WHERE "id" = $1 RETURNING "id"', [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'No trobat' });
+
+    res.json({ success: true });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
 //api generar castells
 // Cada casteller ahora puede tener VARIOS rols de castell asignados
 // (baix/segon/terç/acotxador/enxaneta), guardados en casteller_roles con un

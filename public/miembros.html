@@ -132,6 +132,43 @@
     background: var(--paper-card);
     border-bottom: 1px solid var(--line);
   }
+  .th-inner { display:flex; align-items:center; gap:5px; }
+  .th-label { flex:1; }
+  .col-filter-btn {
+    flex-shrink:0; width:18px; height:18px; padding:0; border:none; background:none; cursor:pointer;
+    color: var(--ink-soft); display:flex; align-items:center; justify-content:center; border-radius:3px;
+  }
+  .col-filter-btn:hover { background: var(--paper); color: var(--ink); }
+  .col-filter-btn.actiu { color: var(--thread); }
+  .col-filter-btn.actiu svg circle { fill: var(--thread); }
+
+  .col-filter-panel {
+    display:none; position:fixed; z-index:80; width:230px; max-height:360px; overflow-y:auto;
+    background: var(--paper-card); border:1px solid var(--line); border-radius: var(--radius);
+    box-shadow: 0 8px 20px rgba(32,36,31,0.22); padding:10px; font-family:'Work Sans',sans-serif;
+    text-transform:none; letter-spacing:0; font-size:12.5px; white-space:normal;
+  }
+  .col-filter-panel.open { display:block; }
+  .col-filter-panel .sort-row {
+    display:flex; align-items:center; gap:6px; padding:7px 6px; cursor:pointer; border-radius:3px; color: var(--ink);
+  }
+  .col-filter-panel .sort-row:hover { background: var(--paper); }
+  .col-filter-panel .sort-row.actiu { font-weight:600; color: var(--thread); }
+  .col-filter-panel hr { border:none; border-top:1px solid var(--line); margin:8px 0; }
+  .col-filter-panel input[type="text"] {
+    width:100%; padding:6px 8px; border:1px solid var(--line); background:var(--paper); border-radius:3px; margin-bottom:8px; font-size:12.5px;
+  }
+  .col-filter-panel .valors-list { max-height:150px; overflow-y:auto; margin-bottom:8px; }
+  .col-filter-panel .valor-row { display:flex; align-items:center; gap:7px; padding:3px 2px; cursor:pointer; }
+  .col-filter-panel .valor-row label { cursor:pointer; flex:1; word-break:break-word; }
+  .col-filter-panel .selecciona-tot { font-weight:600; border-bottom:1px solid var(--line); padding-bottom:6px; margin-bottom:4px; }
+  .col-filter-panel .panel-actions { display:flex; gap:6px; justify-content:flex-end; }
+  .col-filter-panel .panel-actions button {
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.04em;
+    padding:6px 10px; border-radius:3px; cursor:pointer;
+  }
+  .col-filter-panel .btn-aplicar { background: var(--thread); color: var(--paper-card); border:none; }
+  .col-filter-panel .btn-esborrar { background:none; border:1px solid var(--ink-soft); color: var(--ink-soft); }
   table.full td {
     padding: 7px 10px;
     border-bottom: 1px solid var(--line);
@@ -227,6 +264,8 @@
   .modal-actions {
     display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;
   }
+  .msg.error { display:block !important; color: var(--thread); }
+  .msg.ok { display:block !important; color: var(--ok); }
   button.primary, button.ghost {
     cursor: pointer; border: none; border-radius: var(--radius);
     font-family: 'IBM Plex Mono', monospace; font-size: 12.5px;
@@ -351,39 +390,15 @@
 
   <div class="toolbar">
     <input type="text" id="search" placeholder="Cerca per nom, àlies o correu…" data-i18n-placeholder="placeholder_cerca">
-    <select id="filter-posicio">
-      <option value="" data-i18n="totes_posicions">Totes les posicions</option>
-    </select>
-    <select id="filter-rol">
-      <option value="" data-i18n="tots_rols">Tots els rols de castell</option>
-    </select>
+    <button class="ghost" id="clear-filters-btn" type="button" style="width:auto;" data-i18n="esborrar_filtres">Esborrar tots els filtres</button>
     <span class="count" id="result-count">0 membres</span>
   </div>
 
   <div class="table-wrap">
     <table class="full" id="full-table">
       <thead>
-        <tr>
+        <tr id="table-head-row">
           <th></th>
-          <th data-i18n="col_nom">Nom</th>
-          <th data-i18n="col_alies">Àlies</th>
-          <th data-i18n="col_cognoms">Cognoms</th>
-          <th data-i18n="col_alcada">Alçada</th>
-          <th data-i18n="col_posicio">Posició pinya</th>
-          <th data-i18n="col_rols">Rols de castell</th>
-          <th data-i18n="col_habitual">Habitual</th>
-          <th data-i18n="col_acces">Accés APP</th>
-          <th data-i18n="col_correu">Correu</th>
-          <th data-i18n="col_movil">Mòbil</th>
-          <th data-i18n="col_naixement">Naixement</th>
-          <th data-i18n="col_samarreta">Entrega samarreta</th>
-          <th data-i18n="col_revisat">Revisat</th>
-          <th data-i18n="col_acollida">Estat acollida</th>
-          <th data-i18n="col_permisos">Permisos APP</th>
-          <th data-i18n="col_integrant">Integrant colla</th>
-          <th data-i18n="col_lesionat">Lesionat</th>
-          <th data-i18n="col_formularis">Formularis</th>
-          <th>ID</th>
         </tr>
       </thead>
       <tbody id="table-body">
@@ -391,6 +406,8 @@
       </tbody>
     </table>
   </div>
+
+  <div class="col-filter-panel" id="col-filter-panel"></div>
 </main>
 
 <!-- Modal d'edició -->
@@ -482,8 +499,19 @@
       </div>
 
       <div class="modal-actions">
+        <button class="ghost" type="button" id="eliminar-miembro-btn" data-i18n="eliminar_membre" style="margin-right:auto; border-color:var(--thread); color:var(--thread);">Eliminar</button>
         <button class="ghost" type="button" id="cancel-edit" data-i18n="cancelar">Cancel·lar</button>
         <button class="primary" type="submit" id="save-edit" data-i18n="desar_canvis">Desar canvis</button>
+      </div>
+
+      <div id="eliminar-confirm-panel" style="display:none; margin-top:14px; padding:14px; border:1px solid var(--thread); border-radius:var(--radius); background:#F3E7E5;">
+        <p style="margin:0 0 10px; font-size:13px; color:var(--thread);" data-i18n="eliminar_avis">Aquesta acció no es pot desfer. Introdueix la teva contrasenya per confirmar-la.</p>
+        <input type="password" id="eliminar-password" placeholder="La teva contrasenya" data-i18n-placeholder="la_teva_contrasenya" style="margin-bottom:10px;">
+        <div style="display:flex; gap:8px;">
+          <button class="primary" type="button" id="eliminar-confirmar-btn" style="background:var(--thread);" data-i18n="confirmar_eliminacio">Confirmar eliminació</button>
+          <button class="ghost" type="button" id="eliminar-cancelar-btn" data-i18n="cancelar">Cancel·lar</button>
+        </div>
+        <div class="msg" id="eliminar-msg" style="margin-top:10px; font-size:12.5px; display:none;"></div>
       </div>
     </form>
   </div>
@@ -529,6 +557,12 @@ const TRADUCCIONES = {
     sense_assignar: '— sense assignar —', gestionar_rols: 'Gestionar rols de castell →',
     data_naixement: 'Data naixement', data_samarreta: 'Data entrega samarreta',
     acollida_perdut: 'Perdut', acollida_finalitzat: 'Finalitzat', acollida_no_aplica: 'No aplica', si: 'Sí', no: 'No',
+    filtrar_columna: 'Filtrar columna', cerca_valor: 'Cerca un valor…', seleccionar_tot: 'Selecciona-ho tot',
+    esborrar: 'Esborrar', aplicar: 'Aplicar', ordenar_az: 'Ordenar de A a Z', ordenar_za: 'Ordenar de Z a A',
+    en_blanc: '(en blanc)', esborrar_filtres: 'Esborrar tots els filtres',
+    eliminar_membre: 'Eliminar', eliminar_avis: 'Aquesta acció no es pot desfer. Introdueix la teva contrasenya per confirmar-la.',
+    la_teva_contrasenya: 'La teva contrasenya', confirmar_eliminacio: 'Confirmar eliminació',
+    eliminar_cal_contrasenya: 'Cal introduir la teva contrasenya.',
     permisos_especials: 'Permisos especials APP', lesionat_llarga: 'Lesionat de llarga durada',
     cancelar: 'Cancel·lar', desar_canvis: 'Desar canvis', desar_rols: 'Desar rols', hint_rols: 'Marca els rols que sap fer i arrossega\'ls per ordenar-los (amb el dit o el ratolí) — el de dalt de tot és el principal.',
     carregant: 'Carregant…', no_carregada_llista: 'No s\'ha pogut carregar la llista.', editar: 'Editar',
@@ -557,6 +591,12 @@ const TRADUCCIONES = {
     sense_assignar: '— sin asignar —', gestionar_rols: 'Gestionar roles de castell →',
     data_naixement: 'Fecha nacimiento', data_samarreta: 'Fecha entrega camiseta',
     acollida_perdut: 'Perdido', acollida_finalitzat: 'Finalizado', acollida_no_aplica: 'No aplica', si: 'Sí', no: 'No',
+    filtrar_columna: 'Filtrar columna', cerca_valor: 'Busca un valor…', seleccionar_tot: 'Seleccionar todo',
+    esborrar: 'Borrar', aplicar: 'Aplicar', ordenar_az: 'Ordenar de A a Z', ordenar_za: 'Ordenar de Z a A',
+    en_blanc: '(en blanco)', esborrar_filtres: 'Borrar todos los filtros',
+    eliminar_membre: 'Eliminar', eliminar_avis: 'Esta acción no se puede deshacer. Introduce tu contraseña para confirmarla.',
+    la_teva_contrasenya: 'Tu contraseña', confirmar_eliminacio: 'Confirmar eliminación',
+    eliminar_cal_contrasenya: 'Debes introducir tu contraseña.',
     permisos_especials: 'Permisos especiales APP', lesionat_llarga: 'Lesionado de larga duración',
     cancelar: 'Cancelar', desar_canvis: 'Guardar cambios', desar_rols: 'Guardar roles', hint_rols: 'Marca los roles que sabe hacer y arrástralos para ordenarlos (con el dedo o el ratón) — el de arriba del todo es el principal.',
     carregant: 'Cargando…', no_carregada_llista: 'No se ha podido cargar la lista.', editar: 'Editar',
@@ -585,6 +625,12 @@ const TRADUCCIONES = {
     sense_assignar: '— unassigned —', gestionar_rols: 'Manage castell roles →',
     data_naixement: 'Date of birth', data_samarreta: 'Shirt handover date',
     acollida_perdut: 'Lost', acollida_finalitzat: 'Finished', acollida_no_aplica: 'Not applicable', si: 'Yes', no: 'No',
+    filtrar_columna: 'Filter column', cerca_valor: 'Search a value…', seleccionar_tot: 'Select all',
+    esborrar: 'Clear', aplicar: 'Apply', ordenar_az: 'Sort A to Z', ordenar_za: 'Sort Z to A',
+    en_blanc: '(blank)', esborrar_filtres: 'Clear all filters',
+    eliminar_membre: 'Delete', eliminar_avis: 'This cannot be undone. Enter your password to confirm.',
+    la_teva_contrasenya: 'Your password', confirmar_eliminacio: 'Confirm deletion',
+    eliminar_cal_contrasenya: 'You must enter your password.',
     permisos_especials: 'Special app permissions', lesionat_llarga: 'Long-term injury',
     cancelar: 'Cancel', desar_canvis: 'Save changes', desar_rols: 'Save roles', hint_rols: 'Check the roles they can do and drag to order them (with finger or mouse) — the topmost is the main one.',
     carregant: 'Loading…', no_carregada_llista: 'Could not load the list.', editar: 'Edit',
@@ -622,6 +668,7 @@ function aplicarIdioma(idioma) {
   document.documentElement.lang = idioma;
   const chip = document.getElementById('user-chip');
   if (chip && window.usuarioActual) chip.textContent = `${window.usuarioActual.nombre} · ${t('chip_tancar')}`;
+  if (typeof renderHeaderRow === 'function') renderHeaderRow();
   if (typeof applyFilters === 'function' && allMembers.length) applyFilters();
 }
 window.aplicarIdioma = aplicarIdioma;
@@ -678,6 +725,247 @@ function permisosChips(permisosAPP) {
   return permisosAPP.map(p => `<span class="role-chip">${escapeHtml(p)}</span>`).join('');
 }
 
+/* ---------------- Filtres i ordre per columna (a l'estil Excel) ---------------- */
+
+const COLUMNAS = [
+  { key: 'nombre', i18n: 'col_nom', tipo: 'text', valor: m => m.nombre || '', render: m => cellOr(m.nombre) },
+  { key: 'apodo', i18n: 'col_alies', tipo: 'text', valor: m => m.apodo || '', render: m => cellOr(m.apodo) },
+  { key: 'cognoms', i18n: 'col_cognoms', tipo: 'text', valor: m => [m.primerApellido, m.segundoApellido].filter(Boolean).join(' '), render: m => cellOr([m.primerApellido, m.segundoApellido].filter(Boolean).join(' ')) },
+  { key: 'alturaHombros', i18n: 'col_alcada', tipo: 'numero', valor: m => m.alturaHombros, render: m => (m.alturaHombros !== null && m.alturaHombros !== undefined) ? m.alturaHombros + ' cm' : '<span class="empty-cell">—</span>' },
+  { key: 'posicionPinyaNombre', i18n: 'col_posicio', tipo: 'text', valor: m => m.posicionPinyaNombre || '', render: m => cellOr(m.posicionPinyaNombre) },
+  { key: 'rolesCastell', i18n: 'col_rols', tipo: 'multi', valor: m => (m.rolesCastell || []).map(r => r.nombre), render: m => rolesChips(m.rolesCastell) },
+  { key: 'habitual', i18n: 'col_habitual', tipo: 'bool', valor: m => m.habitual, render: m => yesNo(m.habitual) },
+  { key: 'accesoAPP', i18n: 'col_acces', tipo: 'bool', valor: m => m.accesoAPP, render: m => yesNo(m.accesoAPP) },
+  { key: 'correo', i18n: 'col_correu', tipo: 'text', valor: m => m.correo || '', render: m => cellOr(m.correo) },
+  { key: 'movil', i18n: 'col_movil', tipo: 'text', valor: m => m.movil || '', render: m => cellOr(m.movil) },
+  { key: 'fNac', i18n: 'col_naixement', tipo: 'fecha', valor: m => m.fNac, render: m => dateOr(m.fNac) },
+  { key: 'fechaCamisa', i18n: 'col_samarreta', tipo: 'fecha', valor: m => m.fechaCamisa, render: m => dateOr(m.fechaCamisa) },
+  { key: 'revisado', i18n: 'col_revisat', tipo: 'bool', valor: m => m.revisado, render: m => yesNo(m.revisado) },
+  { key: 'estadoAcogida', i18n: 'col_acollida', tipo: 'text', valor: m => m.estadoAcogida || '', render: m => cellOr(m.estadoAcogida) },
+  { key: 'permisosAPP', i18n: 'col_permisos', tipo: 'multi', valor: m => m.permisosAPP || [], render: m => permisosChips(m.permisosAPP) },
+  { key: 'integranteColla', i18n: 'col_integrant', tipo: 'bool', valor: m => m.integranteColla, render: m => yesNo(m.integranteColla) },
+  { key: 'lesionLargoPlazo', i18n: 'col_lesionat', tipo: 'bool', valor: m => m.lesionLargoPlazo, render: m => yesNo(m.lesionLargoPlazo) },
+  { key: 'formularios', i18n: 'col_formularis', tipo: 'numero', valor: m => m.formularios, render: m => (m.formularios !== null && m.formularios !== undefined) ? m.formularios : '<span class="empty-cell">—</span>' },
+  { key: 'id', i18n: null, tipo: 'numero', valor: m => m.id, render: m => m.id }
+];
+
+// columnFilters[key] = Set de valors permesos (si no existeix, no hi ha filtre en aquesta columna)
+let columnFilters = {};
+let sortState = { key: null, dir: null }; // dir: 'asc' | 'desc'
+
+function valorBuit(t) {
+  return t === 'bool' ? '__buit__' : '';
+}
+function etiquetaValor(v, tipo) {
+  if (tipo === 'bool') {
+    if (v === true) return t('si');
+    if (v === false) return t('no');
+    return t('en_blanc');
+  }
+  if (tipo === 'fecha') return v ? dateOr(v).replace(/<[^>]+>/g, '') : t('en_blanc');
+  if (v === null || v === undefined || v === '') return t('en_blanc');
+  return String(v);
+}
+function claveValor(v, tipo) {
+  if (tipo === 'bool') return v === true ? 'true' : v === false ? 'false' : '__buit__';
+  if (v === null || v === undefined || v === '') return '__buit__';
+  return String(v);
+}
+
+function renderHeaderRow() {
+  const tr = document.getElementById('table-head-row');
+  tr.innerHTML = '<th></th>' + COLUMNAS.map(col => {
+    if (!col.i18n) return `<th>ID</th>`;
+    return `
+      <th data-col="${col.key}">
+        <div class="th-inner">
+          <span class="th-label" data-i18n="${col.i18n}"></span>
+          <button class="col-filter-btn" data-col="${col.key}" type="button" title="${t('filtrar_columna')}">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M1 2h14l-5.5 6.5V14l-3-1.5V8.5L1 2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+              <circle class="indicador" cx="13" cy="3" r="0" fill="none"/>
+            </svg>
+          </button>
+        </div>
+      </th>
+    `;
+  }).join('');
+
+  tr.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val !== key) el.textContent = val;
+  });
+
+  tr.querySelectorAll('.col-filter-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      abrirPanelFiltro(btn.dataset.col, btn);
+    });
+  });
+
+  actualizarIndicadoresCabecera();
+}
+
+function actualizarIndicadoresCabecera() {
+  document.querySelectorAll('.col-filter-btn').forEach(btn => {
+    const key = btn.dataset.col;
+    const activo = (columnFilters[key] && columnFilters[key].size > 0) || sortState.key === key;
+    btn.classList.toggle('actiu', activo);
+  });
+}
+
+const panel = document.getElementById('col-filter-panel');
+
+function abrirPanelFiltro(key, btn) {
+  const col = COLUMNAS.find(c => c.key === key);
+  if (!col) return;
+
+  // els valors disponibles reflecteixen els membres que passen la resta de
+  // filtres actius (però no el d'aquesta mateixa columna) — igual que fa Excel
+  const membresParaValores = allMembers.filter(m => pasaFiltros(m, key));
+
+  const valoresUnicos = new Map(); // clave -> etiqueta
+  membresParaValores.forEach(m => {
+    const v = col.valor(m);
+    const lista = col.tipo === 'multi' ? (v.length ? v : [null]) : [v];
+    lista.forEach(val => {
+      const clave = claveValor(val, col.tipo);
+      if (!valoresUnicos.has(clave)) valoresUnicos.set(clave, etiquetaValor(val, col.tipo));
+    });
+  });
+
+  const seleccionActual = columnFilters[key]; // undefined = tot seleccionat
+  const claves = [...valoresUnicos.keys()].sort((a, b) => {
+    if (a === '__buit__') return 1;
+    if (b === '__buit__') return -1;
+    return valoresUnicos.get(a).localeCompare(valoresUnicos.get(b), undefined, { numeric: true, sensitivity: 'base' });
+  });
+
+  const soportaOrden = col.tipo !== 'multi';
+
+  panel.innerHTML = `
+    ${soportaOrden ? `
+      <div class="sort-row ${sortState.key === key && sortState.dir === 'asc' ? 'actiu' : ''}" data-sort="asc">▲ ${t('ordenar_az')}</div>
+      <div class="sort-row ${sortState.key === key && sortState.dir === 'desc' ? 'actiu' : ''}" data-sort="desc">▼ ${t('ordenar_za')}</div>
+      <hr>
+    ` : ''}
+    <input type="text" id="panel-cerca-valors" placeholder="${t('cerca_valor')}">
+    <div class="valors-list" id="panel-valores">
+      <div class="valor-row selecciona-tot">
+        <input type="checkbox" id="panel-check-tot">
+        <label for="panel-check-tot">${t('seleccionar_tot')}</label>
+      </div>
+      ${claves.map((clave, i) => `
+        <div class="valor-row" data-clave="${escapeHtml(clave)}">
+          <input type="checkbox" id="panel-check-${i}" ${(!seleccionActual || seleccionActual.has(clave)) ? 'checked' : ''}>
+          <label for="panel-check-${i}">${escapeHtml(valoresUnicos.get(clave))}</label>
+        </div>
+      `).join('')}
+    </div>
+    <div class="panel-actions">
+      <button class="btn-esborrar" id="panel-esborrar" type="button">${t('esborrar')}</button>
+      <button class="btn-aplicar" id="panel-aplicar" type="button">${t('aplicar')}</button>
+    </div>
+  `;
+
+  const actualizarSelectAllState = () => {
+    const checks = [...panel.querySelectorAll('.valor-row:not(.selecciona-tot) input[type="checkbox"]')];
+    const todosMarcados = checks.every(c => c.checked);
+    document.getElementById('panel-check-tot').checked = todosMarcados;
+  };
+  actualizarSelectAllState();
+
+  document.getElementById('panel-check-tot').addEventListener('change', (e) => {
+    panel.querySelectorAll('.valor-row:not(.selecciona-tot) input[type="checkbox"]').forEach(c => { c.checked = e.target.checked; });
+  });
+  panel.querySelectorAll('.valor-row:not(.selecciona-tot) input[type="checkbox"]').forEach(c => {
+    c.addEventListener('change', actualizarSelectAllState);
+  });
+
+  document.getElementById('panel-cerca-valors').addEventListener('input', (e) => {
+    const qv = e.target.value.trim().toLowerCase();
+    panel.querySelectorAll('#panel-valores .valor-row:not(.selecciona-tot)').forEach(row => {
+      const texto = row.querySelector('label').textContent.toLowerCase();
+      row.style.display = texto.includes(qv) ? '' : 'none';
+    });
+  });
+
+  if (soportaOrden) {
+    panel.querySelectorAll('.sort-row').forEach(row => {
+      row.addEventListener('click', () => {
+        sortState = { key, dir: row.dataset.sort };
+        cerrarPanel();
+        actualizarIndicadoresCabecera();
+        applyFilters();
+      });
+    });
+  }
+
+  document.getElementById('panel-esborrar').addEventListener('click', () => {
+    delete columnFilters[key];
+    if (sortState.key === key) sortState = { key: null, dir: null };
+    cerrarPanel();
+    actualizarIndicadoresCabecera();
+    applyFilters();
+  });
+
+  document.getElementById('panel-aplicar').addEventListener('click', () => {
+    const marcados = new Set();
+    panel.querySelectorAll('.valor-row:not(.selecciona-tot) input[type="checkbox"]:checked').forEach(c => {
+      marcados.add(c.closest('.valor-row').dataset.clave);
+    });
+    if (marcados.size === claves.length) {
+      delete columnFilters[key]; // tot seleccionat = sense filtre
+    } else {
+      columnFilters[key] = marcados;
+    }
+    cerrarPanel();
+    actualizarIndicadoresCabecera();
+    applyFilters();
+  });
+
+  // posicionem el panell just sota el botó clicat
+  const rect = btn.getBoundingClientRect();
+  panel.style.left = Math.min(rect.left, window.innerWidth - 250) + 'px';
+  panel.style.top = (rect.bottom + 4) + 'px';
+  panel.classList.add('open');
+}
+
+function cerrarPanel() {
+  panel.classList.remove('open');
+}
+document.addEventListener('click', (e) => {
+  if (!panel.contains(e.target)) cerrarPanel();
+});
+panel.addEventListener('click', (e) => e.stopPropagation());
+
+// comprova si un membre passa tots els filtres de columna actius, EXCEPTE
+// (opcionalment) el de la columna que s'està editant ara mateix
+function pasaFiltros(m, exceptoKey) {
+  for (const col of COLUMNAS) {
+    if (col.key === exceptoKey) continue;
+    const filtro = columnFilters[col.key];
+    if (!filtro) continue;
+    const v = col.valor(m);
+    if (col.tipo === 'multi') {
+      const claves = (v.length ? v : [null]).map(x => claveValor(x, col.tipo));
+      if (!claves.some(c => filtro.has(c))) return false;
+    } else {
+      if (!filtro.has(claveValor(v, col.tipo))) return false;
+    }
+  }
+  return true;
+}
+
+document.getElementById('clear-filters-btn').addEventListener('click', () => {
+  columnFilters = {};
+  sortState = { key: null, dir: null };
+  document.getElementById('search').value = '';
+  actualizarIndicadoresCabecera();
+  applyFilters();
+});
+
 /* ---------------- Carga inicial: catálogos + miembros ---------------- */
 
 async function loadCatalogs() {
@@ -689,15 +977,8 @@ async function loadCatalogs() {
   rolesCastillo = rolRes.data || [];
 
   const posSelect = document.getElementById('f-posicionPinyaId');
-  const posFilter = document.getElementById('filter-posicio');
   posicionesPinya.forEach(p => {
     posSelect.insertAdjacentHTML('beforeend', `<option value="${p.id}">${escapeHtml(p.nombre)}</option>`);
-    posFilter.insertAdjacentHTML('beforeend', `<option value="${p.id}">${escapeHtml(p.nombre)}</option>`);
-  });
-
-  const rolFilter = document.getElementById('filter-rol');
-  rolesCastillo.forEach(r => {
-    rolFilter.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(r.nombre.toLowerCase())}">${escapeHtml(r.nombre)}</option>`);
   });
 }
 
@@ -716,21 +997,28 @@ async function fetchAll() {
 
 function applyFilters() {
   const q = document.getElementById('search').value.trim().toLowerCase();
-  const posicioFilter = document.getElementById('filter-posicio').value;
-  const rolFilter = document.getElementById('filter-rol').value;
 
-  const filtered = allMembers.filter(m => {
+  let filtered = allMembers.filter(m => {
     if (q) {
       const haystack = `${m.nombre || ''} ${m.apodo || ''} ${m.correo || ''}`.toLowerCase();
       if (!haystack.includes(q)) return false;
     }
-    if (posicioFilter && String(m.posicionPinyaId) !== posicioFilter) return false;
-    if (rolFilter) {
-      const nombres = (m.rolesCastell || []).map(r => r.nombre.toLowerCase());
-      if (!nombres.includes(rolFilter)) return false;
-    }
-    return true;
+    return pasaFiltros(m, null);
   });
+
+  if (sortState.key) {
+    const col = COLUMNAS.find(c => c.key === sortState.key);
+    const dir = sortState.dir === 'desc' ? -1 : 1;
+    filtered = filtered.slice().sort((a, b) => {
+      let va = col.valor(a), vb = col.valor(b);
+      if (va === null || va === undefined) va = '';
+      if (vb === null || vb === undefined) vb = '';
+      if (col.tipo === 'numero') return (Number(va) - Number(vb)) * dir;
+      if (col.tipo === 'fecha') return (new Date(va || 0) - new Date(vb || 0)) * dir;
+      if (col.tipo === 'bool') return ((va === true ? 1 : 0) - (vb === true ? 1 : 0)) * dir;
+      return String(va).localeCompare(String(vb), undefined, { numeric: true, sensitivity: 'base' }) * dir;
+    });
+  }
 
   document.getElementById('result-count').textContent = t('membre')(filtered.length);
   renderTable(filtered);
@@ -748,37 +1036,15 @@ function renderTable(rows) {
     <path d="M16 4l2.5 2.5" stroke="#20241F" stroke-width="1.6"/>
   </svg>`;
 
-  tbody.innerHTML = rows.map(m => {
-    const cognoms = [m.primerApellido, m.segundoApellido].filter(Boolean).join(' ');
-    return `
-      <tr>
-        <td><button class="icon-btn edit-btn" data-id="${m.id}" type="button" title="${t('editar')}">${pencilSvg}</button></td>
-        <td>${cellOr(m.nombre)}</td>
-        <td>${cellOr(m.apodo)}</td>
-        <td>${cellOr(cognoms)}</td>
-        <td>${m.alturaHombros !== null && m.alturaHombros !== undefined ? m.alturaHombros + ' cm' : '<span class="empty-cell">—</span>'}</td>
-        <td>${cellOr(m.posicionPinyaNombre)}</td>
-        <td>${rolesChips(m.rolesCastell)}</td>
-        <td>${yesNo(m.habitual)}</td>
-        <td>${yesNo(m.accesoAPP)}</td>
-        <td>${cellOr(m.correo)}</td>
-        <td>${cellOr(m.movil)}</td>
-        <td>${dateOr(m.fNac)}</td>
-        <td>${dateOr(m.fechaCamisa)}</td>
-        <td>${yesNo(m.revisado)}</td>
-        <td>${cellOr(m.estadoAcogida)}</td>
-        <td>${permisosChips(m.permisosAPP)}</td>
-        <td>${yesNo(m.integranteColla)}</td>
-        <td>${yesNo(m.lesionLargoPlazo)}</td>
-        <td>${m.formularios !== null && m.formularios !== undefined ? m.formularios : '<span class="empty-cell">—</span>'}</td>
-      </tr>
-    `;
-  }).join('');
+  tbody.innerHTML = rows.map(m => `
+    <tr>
+      <td><button class="icon-btn edit-btn" data-id="${m.id}" type="button" title="${t('editar')}">${pencilSvg}</button></td>
+      ${COLUMNAS.map(col => `<td>${col.render(m)}</td>`).join('')}
+    </tr>
+  `).join('');
 }
 
 document.getElementById('search').addEventListener('input', applyFilters);
-document.getElementById('filter-posicio').addEventListener('change', applyFilters);
-document.getElementById('filter-rol').addEventListener('change', applyFilters);
 
 /* ---------------- Modal d'edició ---------------- */
 
@@ -818,6 +1084,16 @@ function openEdit(m) {
   document.getElementById('perm-junta').checked = permisos.includes('Junta');
   document.getElementById('perm-admin').checked = permisos.includes('AdminGeneral');
 
+  // reiniciem el panell de confirmació d'esborrat cada vegada que s'obre un membre
+  document.getElementById('eliminar-confirm-panel').style.display = 'none';
+  document.getElementById('eliminar-password').value = '';
+  const eliminarMsg = document.getElementById('eliminar-msg');
+  eliminarMsg.textContent = '';
+  eliminarMsg.className = 'msg';
+  document.getElementById('eliminar-miembro-btn').style.display = '';
+  document.getElementById('save-edit').style.display = '';
+  document.getElementById('cancel-edit').style.display = '';
+
   overlay.classList.add('open');
 }
 
@@ -830,6 +1106,58 @@ document.getElementById('table-body').addEventListener('click', (e) => {
 
 document.getElementById('cancel-edit').addEventListener('click', () => overlay.classList.remove('open'));
 overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('open'); });
+
+/* ---------------- Eliminar membre (amb confirmació per contrasenya) ---------------- */
+
+document.getElementById('eliminar-miembro-btn').addEventListener('click', () => {
+  document.getElementById('eliminar-confirm-panel').style.display = 'block';
+  document.getElementById('eliminar-miembro-btn').style.display = 'none';
+  document.getElementById('save-edit').style.display = 'none';
+  document.getElementById('cancel-edit').style.display = 'none';
+  document.getElementById('eliminar-password').focus();
+});
+
+document.getElementById('eliminar-cancelar-btn').addEventListener('click', () => {
+  document.getElementById('eliminar-confirm-panel').style.display = 'none';
+  document.getElementById('eliminar-password').value = '';
+  const msg = document.getElementById('eliminar-msg');
+  msg.textContent = ''; msg.className = 'msg';
+  document.getElementById('eliminar-miembro-btn').style.display = '';
+  document.getElementById('save-edit').style.display = '';
+  document.getElementById('cancel-edit').style.display = '';
+});
+
+document.getElementById('eliminar-confirmar-btn').addEventListener('click', async () => {
+  const password = document.getElementById('eliminar-password').value;
+  const msg = document.getElementById('eliminar-msg');
+  msg.className = 'msg';
+
+  if (!password) {
+    msg.textContent = t('eliminar_cal_contrasenya');
+    msg.className = 'msg error';
+    return;
+  }
+
+  const btn = document.getElementById('eliminar-confirmar-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/api/castellers/${editingId}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Error desconegut');
+
+    overlay.classList.remove('open');
+    await fetchAll();
+  } catch (err) {
+    msg.textContent = err.message;
+    msg.className = 'msg error';
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 document.getElementById('edit-form').addEventListener('submit', async (e) => {
   e.preventDefault();
