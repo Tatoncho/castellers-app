@@ -386,7 +386,7 @@
   </div>
 
   <div class="toolbar">
-    <input type="text" id="search" name="cerca-membres" autocomplete="off" placeholder="Cerca per nom, àlies o correu…" data-i18n-placeholder="placeholder_cerca">
+    <input type="text" id="search" name="cerca-membres" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore readonly onfocus="this.removeAttribute('readonly');" placeholder="Cerca per nom, àlies o correu…" data-i18n-placeholder="placeholder_cerca">
     <button class="ghost" id="clear-filters-btn" type="button" style="width:auto;" data-i18n="esborrar_filtres">Esborrar tots els filtres</button>
     <span class="count" id="result-count">0 membres</span>
   </div>
