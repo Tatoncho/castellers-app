@@ -205,7 +205,11 @@
   <section class="panel">
     <div class="panel-head"><h2 data-i18n="presents_sense_posicio">Presents sense posició</h2></div>
     <div class="panel-body">
-      <input type="text" id="pool-search" name="cerca-disponibles" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore readonly onfocus="this.removeAttribute('readonly');" placeholder="Cerca per nom o àlies…" data-i18n-placeholder="cerca_nom_alies">
+      <div style="position:absolute; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none;" aria-hidden="true">
+          <input type="text" name="username" autocomplete="username" tabindex="-1">
+          <input type="password" name="password" autocomplete="current-password" tabindex="-1">
+        </div>
+        <input type="text" id="pool-search" name="cerca-disponibles" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore readonly onfocus="this.removeAttribute('readonly');" placeholder="Cerca per nom o àlies…" data-i18n-placeholder="cerca_nom_alies">
       <select id="pool-filter-posicio">
         <option value="" data-i18n="totes_posicions_habituals">Totes les posicions habituals</option>
       </select>

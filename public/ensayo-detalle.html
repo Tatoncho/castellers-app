@@ -198,7 +198,11 @@
       <div class="panel-head"><h2 data-i18n="assistencia">Assistència</h2></div>
       <div class="panel-body">
         <div class="attendance-search">
-          <input type="text" id="attendance-search" name="cerca-assistencia" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore readonly onfocus="this.removeAttribute('readonly');" placeholder="Cerca per nom, àlies o cognoms…" data-i18n-placeholder="cerca_nom_alies_cognoms">
+          <div style="position:absolute; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none;" aria-hidden="true">
+          <input type="text" name="username" autocomplete="username" tabindex="-1">
+          <input type="password" name="password" autocomplete="current-password" tabindex="-1">
+        </div>
+        <input type="text" id="attendance-search" name="cerca-assistencia" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore readonly onfocus="this.removeAttribute('readonly');" placeholder="Cerca per nom, àlies o cognoms…" data-i18n-placeholder="cerca_nom_alies_cognoms">
         </div>
         <ul class="attendance-list" id="attendance-list"></ul>
       </div>
