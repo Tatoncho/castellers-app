@@ -1613,6 +1613,7 @@ app.get('/api/migrate-usuarios', async (req, res) => {
     await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "apodo" TEXT`);
     await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "idioma" TEXT NOT NULL DEFAULT 'ca'`);
     await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "fotoPerfil" TEXT`);
+    await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "fechaNacimiento" DATE`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS registros_pendientes (
         "id" SERIAL PRIMARY KEY,
@@ -1622,6 +1623,7 @@ app.get('/api/migrate-usuarios', async (req, res) => {
         "primerApellido" TEXT NOT NULL,
         "segundoApellido" TEXT,
         "apodo" TEXT,
+        "fechaNacimiento" DATE,
         "idioma" TEXT NOT NULL DEFAULT 'ca',
         "token" TEXT UNIQUE NOT NULL,
         "expiraEn" TIMESTAMP NOT NULL,
@@ -1647,12 +1649,15 @@ function escaparHtmlCorreo(str) {
 // Registre: crea l'usuari (pendent), envia correu de verificació
 app.post('/api/auth/registro', async (req, res) => {
   try {
-    const { email, password, nombre, primerApellido, segundoApellido, apodo, idioma } = req.body;
+    const { email, password, nombre, primerApellido, segundoApellido, apodo, idioma, fechaNacimiento } = req.body;
     if (!emailValido(email)) return res.status(400).json({ success: false, error: 'Correu no vàlid' });
     if (!password || password.length < 6) return res.status(400).json({ success: false, error: 'La contrasenya ha de tenir almenys 6 caràcters' });
     if (!nombre || !nombre.trim()) return res.status(400).json({ success: false, error: 'El nom és obligatori' });
     if (!primerApellido || !primerApellido.trim()) return res.status(400).json({ success: false, error: 'El primer cognom és obligatori' });
     const idiomaValido = ['ca', 'es', 'en'].includes(idioma) ? idioma : 'ca';
+    // la data de naixement és opcional — només s'usa per suggerir vincles amb
+    // fitxes de casteller existents i, en el futur, per un calendari d'aniversaris
+    const fechaNacimientoValida = fechaNacimiento && /^\d{4}-\d{2}-\d{2}$/.test(fechaNacimiento) ? fechaNacimiento : null;
 
     const emailNorm = email.toLowerCase();
 
@@ -1687,9 +1692,9 @@ app.post('/api/auth/registro', async (req, res) => {
 
     await pool.query(
       `INSERT INTO registros_pendientes
-         ("email","passwordHash","nombre","primerApellido","segundoApellido","apodo","idioma","token","expiraEn")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      [emailNorm, passwordHash, nombre.trim(), primerApellido.trim(), (segundoApellido || '').trim() || null, (apodo || '').trim() || null, idiomaValido, token, expiraEn]
+         ("email","passwordHash","nombre","primerApellido","segundoApellido","apodo","fechaNacimiento","idioma","token","expiraEn")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [emailNorm, passwordHash, nombre.trim(), primerApellido.trim(), (segundoApellido || '').trim() || null, (apodo || '').trim() || null, fechaNacimientoValida, idiomaValido, token, expiraEn]
     );
 
     const enlace = `${req.protocol}://${req.get('host')}/verificar-email.html?token=${token}`;
@@ -1778,9 +1783,9 @@ app.get('/api/auth/verificar-email', async (req, res) => {
     }
 
     const nuevo = await pool.query(
-      `INSERT INTO usuarios ("email","passwordHash","nombre","primerApellido","segundoApellido","apodo","idioma","emailVerificado")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,TRUE) RETURNING *`,
-      [pendiente.email, pendiente.passwordHash, pendiente.nombre, pendiente.primerApellido, pendiente.segundoApellido, pendiente.apodo, pendiente.idioma || 'ca']
+      `INSERT INTO usuarios ("email","passwordHash","nombre","primerApellido","segundoApellido","apodo","fechaNacimiento","idioma","emailVerificado")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,TRUE) RETURNING *`,
+      [pendiente.email, pendiente.passwordHash, pendiente.nombre, pendiente.primerApellido, pendiente.segundoApellido, pendiente.apodo, pendiente.fechaNacimiento, pendiente.idioma || 'ca']
     );
     const usuario = nuevo.rows[0];
     await pool.query('DELETE FROM registros_pendientes WHERE "id" = $1', [pendiente.id]);
@@ -1824,7 +1829,7 @@ app.post('/api/auth/login', async (req, res) => {
     req.session.usuarioId = usuario.id;
     res.json({
       success: true,
-      usuario: { id: usuario.id, email: usuario.email, nombre: usuario.nombre, primerApellido: usuario.primerApellido, segundoApellido: usuario.segundoApellido, apodo: usuario.apodo, idioma: usuario.idioma, permisos: usuario.permisos, castellerId: usuario.castellerId, fotoPerfil: usuario.fotoPerfil }
+      usuario: { id: usuario.id, email: usuario.email, nombre: usuario.nombre, primerApellido: usuario.primerApellido, segundoApellido: usuario.segundoApellido, apodo: usuario.apodo, idioma: usuario.idioma, permisos: usuario.permisos, castellerId: usuario.castellerId, fotoPerfil: usuario.fotoPerfil, fechaNacimiento: usuario.fechaNacimiento }
     });
   } catch (error) {
     errorHandler(res, error);
@@ -1845,7 +1850,7 @@ app.get('/api/auth/me', async (req, res) => {
       return res.json({ success: true, usuario: null });
     }
     const u = result.rows[0];
-    res.json({ success: true, usuario: { id: u.id, email: u.email, nombre: u.nombre, primerApellido: u.primerApellido, segundoApellido: u.segundoApellido, apodo: u.apodo, idioma: u.idioma, permisos: u.permisos, castellerId: u.castellerId, fotoPerfil: u.fotoPerfil } });
+    res.json({ success: true, usuario: { id: u.id, email: u.email, nombre: u.nombre, primerApellido: u.primerApellido, segundoApellido: u.segundoApellido, apodo: u.apodo, idioma: u.idioma, permisos: u.permisos, castellerId: u.castellerId, fotoPerfil: u.fotoPerfil, fechaNacimiento: u.fechaNacimiento } });
   } catch (error) {
     errorHandler(res, error);
   }
@@ -1871,6 +1876,43 @@ app.get('/api/usuarios', requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(`SELECT "id","email","nombre","primerApellido","segundoApellido","apodo","estado","emailVerificado","permisos","castellerId","created_at" FROM usuarios ORDER BY "created_at" DESC`);
     res.json({ success: true, data: result.rows });
+  } catch (error) {
+    errorHandler(res, error);
+  }
+});
+
+// Compara les dades d'un usuari (nom, cognoms, correu, data de naixement)
+// amb els membres ja existents a la taula de castellers, per suggerir a
+// l'admin si aquest compte podria correspondre a algú que ja hi és.
+// Nomès es tenen en compte castellers que encara no estan vinculats a cap
+// altre usuari.
+app.get('/api/usuarios/:id/candidatos-vinculo', requireAdmin, async (req, res) => {
+  try {
+    const usuarioResult = await pool.query('SELECT * FROM usuarios WHERE "id" = $1', [req.params.id]);
+    if (usuarioResult.rows.length === 0) return res.status(404).json({ success: false, error: 'Usuari no trobat' });
+    const u = usuarioResult.rows[0];
+
+    const result = await pool.query(
+      `SELECT c.*,
+         (CASE WHEN c."correo" IS NOT NULL AND c."correo" <> '' AND LOWER(TRIM(c."correo")) = LOWER(TRIM($1)) THEN 1 ELSE 0 END) AS "matchCorreo",
+         (CASE WHEN LOWER(TRIM(c."nombre")) = LOWER(TRIM($2)) THEN 1 ELSE 0 END) AS "matchNombre",
+         (CASE WHEN c."primerApellido" IS NOT NULL AND LOWER(TRIM(c."primerApellido")) = LOWER(TRIM($3)) THEN 1 ELSE 0 END) AS "matchApellido",
+         (CASE WHEN c."fNac" IS NOT NULL AND $4::date IS NOT NULL AND c."fNac" = $4::date THEN 1 ELSE 0 END) AS "matchFechaNacimiento"
+       FROM castellers c
+       WHERE NOT EXISTS (SELECT 1 FROM usuarios u2 WHERE u2."castellerId" = c."id")`,
+      [u.email, u.nombre, u.primerApellido, u.fechaNacimiento]
+    );
+
+    const candidatos = result.rows
+      .map(c => ({
+        ...c,
+        puntuacion: c.matchCorreo * 2 + c.matchNombre * 1 + c.matchApellido * 1 + c.matchFechaNacimiento * 2
+      }))
+      .filter(c => c.puntuacion >= 2)
+      .sort((a, b) => b.puntuacion - a.puntuacion)
+      .slice(0, 5);
+
+    res.json({ success: true, candidatos });
   } catch (error) {
     errorHandler(res, error);
   }

@@ -107,6 +107,8 @@
       <input type="text" id="segundoApellido">
       <label for="apodo" data-i18n="label_apodo">Àlies (opcional)</label>
       <input type="text" id="apodo">
+      <label for="fecha-nacimiento" data-i18n="label_naixement">Data de naixement (opcional)</label>
+      <input type="date" id="fecha-nacimiento">
       <label for="idioma-preferit" data-i18n="label_idioma">Idioma de preferència</label>
       <select id="idioma-preferit">
         <option value="ca">Català</option>
@@ -132,7 +134,7 @@ const TRADUCCIONES = {
     registro_title: 'Crear compte',
     registro_lead: 'L\'accés quedarà pendent de verificar el correu i que un administrador el validi.',
     label_nombre: 'Nom', label_primerApellido: 'Primer cognom', label_segundoApellido: 'Segon cognom',
-    label_apodo: 'Àlies (opcional)', label_idioma: 'Idioma de preferència', label_correu: 'Correu', label_contrasenya: 'Contrasenya',
+    label_apodo: 'Àlies (opcional)', label_naixement: 'Data de naixement (opcional)', label_idioma: 'Idioma de preferència', label_correu: 'Correu', label_contrasenya: 'Contrasenya',
     label_repetir: 'Repeteix la contrasenya', btn_crear: 'Crear compte',
     foot_ja_compte: 'Ja tens compte?', foot_inicia: 'Inicia sessió',
     err_no_coincide: 'Les contrasenyes no coincideixen.',
@@ -143,7 +145,7 @@ const TRADUCCIONES = {
     registro_title: 'Crear cuenta',
     registro_lead: 'El acceso quedará pendiente de verificar el correo y que un administrador lo valide.',
     label_nombre: 'Nombre', label_primerApellido: 'Primer apellido', label_segundoApellido: 'Segundo apellido',
-    label_apodo: 'Alias (opcional)', label_idioma: 'Idioma de preferencia', label_correu: 'Correo', label_contrasenya: 'Contraseña',
+    label_apodo: 'Alias (opcional)', label_naixement: 'Fecha de nacimiento (opcional)', label_idioma: 'Idioma de preferencia', label_correu: 'Correo', label_contrasenya: 'Contraseña',
     label_repetir: 'Repite la contraseña', btn_crear: 'Crear cuenta',
     foot_ja_compte: '¿Ya tienes cuenta?', foot_inicia: 'Inicia sesión',
     err_no_coincide: 'Las contraseñas no coinciden.',
@@ -154,7 +156,7 @@ const TRADUCCIONES = {
     registro_title: 'Create account',
     registro_lead: 'Access will stay pending until you verify your email and an admin approves it.',
     label_nombre: 'First name', label_primerApellido: 'Last name', label_segundoApellido: 'Second last name',
-    label_apodo: 'Nickname (optional)', label_idioma: 'Preferred language', label_correu: 'Email', label_contrasenya: 'Password',
+    label_apodo: 'Nickname (optional)', label_naixement: 'Date of birth (optional)', label_idioma: 'Preferred language', label_correu: 'Email', label_contrasenya: 'Password',
     label_repetir: 'Repeat password', btn_crear: 'Create account',
     foot_ja_compte: 'Already have an account?', foot_inicia: 'Log in',
     err_no_coincide: 'Passwords do not match.',
@@ -224,6 +226,7 @@ form.addEventListener('submit', async (e) => {
   const primerApellido = document.getElementById('primerApellido').value.trim();
   const segundoApellido = document.getElementById('segundoApellido').value.trim();
   const apodo = document.getElementById('apodo').value.trim();
+  const fechaNacimiento = document.getElementById('fecha-nacimiento').value || null;
   const idioma = document.getElementById('idioma-preferit').value;
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
@@ -241,7 +244,7 @@ form.addEventListener('submit', async (e) => {
     const res = await fetch(`${API}/api/auth/registro`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, primerApellido, segundoApellido, apodo, email, password, idioma })
+      body: JSON.stringify({ nombre, primerApellido, segundoApellido, apodo, fechaNacimiento, email, password, idioma })
     });
     const data = await res.json();
 

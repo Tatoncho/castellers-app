@@ -51,6 +51,11 @@
   .status-badge.pendiente { border-color: var(--gold); color: var(--gold); }
   .status-badge.rechazado { border-color: var(--thread); color: var(--thread); }
   .perm-chip { font-family:'IBM Plex Mono',monospace; font-size:9.5px; padding:1px 7px; border-radius:20px; border:1px solid var(--ink-soft); color:var(--ink-soft); }
+  .candidato-card { border:1px solid var(--line); border-radius:var(--radius); padding:12px; margin-bottom:10px; background:var(--paper); }
+  .candidato-card .c-nombre { font-family:'Fraunces',serif; font-weight:600; font-size:15px; margin-bottom:4px; }
+  .candidato-card .c-dato { font-size:12px; color: var(--ink-soft); margin-bottom:2px; }
+  .candidato-card .c-dato.coincide { color: var(--ok); font-weight:600; }
+  .candidato-card button { margin-top:8px; }
 
   button { cursor:pointer; border:none; border-radius:var(--radius); font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.04em; text-transform:uppercase; padding:8px 12px; }
   button.primary { background: var(--thread); color: var(--paper-card); }
@@ -146,6 +151,18 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="vincular-overlay">
+  <div class="modal-box">
+    <h3 data-i18n="vincular_titulo">Podria ser algú que ja hi és</h3>
+    <p class="empty-note" style="margin:0 0 14px;" data-i18n="vincular_hint">Hem trobat coincidències amb membres ja existents. Vincula el compte amb la fitxa correcta, o continua sense vincular.</p>
+    <div id="candidatos-lista"></div>
+    <div class="modal-actions">
+      <button class="ghost" id="vincular-cancelar" type="button" data-i18n="cancelar">Cancel·lar</button>
+      <button class="ghost" id="vincular-sin" type="button" data-i18n="aprovar_sense_vincular">Aprovar sense vincular</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const API = '';
 let usuarioActual = null;
@@ -167,7 +184,10 @@ const TRADUCCIONES = {
     cap_alta_pendent: 'Cap alta pendent.', cap_usuari: 'Cap usuari.', no_carregat: 'No s\'han pogut carregar.',
     btn_aprovar: 'Aprovar', btn_rebutjar: 'Rebutjar', confirm_rebutjar: 'Segur que vols rebutjar aquesta alta?',
     btn_editar_permisos: 'Editar permisos', permisos_titulo: 'Permisos', btn_cancelar: 'Cancel·lar', btn_guardar: 'Desar',
-    err_permisos: 'No s\'han pogut desar els permisos.', carregant: 'Carregant…'
+    err_permisos: 'No s\'han pogut desar els permisos.', carregant: 'Carregant…',
+    vincular_titulo: 'Podria ser algú que ja hi és', vincular_hint: 'Hem trobat coincidències amb membres ja existents. Vincula el compte amb la fitxa correcta, o continua sense vincular.',
+    cancelar: 'Cancel·lar', aprovar_sense_vincular: 'Aprovar sense vincular', vincular_amb: 'Vincular amb aquest',
+    label_correu: 'Correu', label_naixement: 'Naixement', coincideix: '✓ coincideix', err_vincular: 'No s\'ha pogut vincular ni aprovar.'
   },
   es: {
     nav_inici: 'Inicio', nav_assajos: 'Ensayos', nav_actuacions: 'Actuaciones', nav_imatges: 'Imágenes',
@@ -180,7 +200,10 @@ const TRADUCCIONES = {
     cap_alta_pendent: 'Ninguna alta pendiente.', cap_usuari: 'Ningún usuario.', no_carregat: 'No se han podido cargar.',
     btn_aprovar: 'Aprobar', btn_rebutjar: 'Rechazar', confirm_rebutjar: '¿Seguro que quieres rechazar esta alta?',
     btn_editar_permisos: 'Editar permisos', permisos_titulo: 'Permisos', btn_cancelar: 'Cancelar', btn_guardar: 'Guardar',
-    err_permisos: 'No se han podido guardar los permisos.', carregant: 'Cargando…'
+    err_permisos: 'No se han podido guardar los permisos.', carregant: 'Cargando…',
+    vincular_titulo: 'Podría ser alguien que ya está', vincular_hint: 'Hemos encontrado coincidencias con miembros ya existentes. Vincula la cuenta con la ficha correcta, o continúa sin vincular.',
+    cancelar: 'Cancelar', aprovar_sense_vincular: 'Aprobar sin vincular', vincular_amb: 'Vincular con este',
+    label_correu: 'Correo', label_naixement: 'Nacimiento', coincideix: '✓ coincide', err_vincular: 'No se ha podido vincular ni aprobar.'
   },
   en: {
     nav_inici: 'Home', nav_assajos: 'Rehearsals', nav_actuacions: 'Performances', nav_imatges: 'Images',
@@ -193,7 +216,10 @@ const TRADUCCIONES = {
     cap_alta_pendent: 'No pending sign-ups.', cap_usuari: 'No users.', no_carregat: 'Could not load.',
     btn_aprovar: 'Approve', btn_rebutjar: 'Reject', confirm_rebutjar: 'Are you sure you want to reject this sign-up?',
     btn_editar_permisos: 'Edit permissions', permisos_titulo: 'Permissions', btn_cancelar: 'Cancel', btn_guardar: 'Save',
-    err_permisos: 'Could not save permissions.', carregant: 'Loading…'
+    err_permisos: 'Could not save permissions.', carregant: 'Loading…',
+    vincular_titulo: 'This could be someone already here', vincular_hint: 'We found matches with existing members. Link the account to the right profile, or continue without linking.',
+    cancelar: 'Cancel', aprovar_sense_vincular: 'Approve without linking', vincular_amb: 'Link to this one',
+    label_correu: 'Email', label_naixement: 'Born', coincideix: '✓ matches', err_vincular: 'Could not link or approve.'
   }
 };
 let idiomaActual = localStorage.getItem('castellers_idioma') || 'ca';
@@ -325,14 +351,7 @@ async function cargarPendientes() {
       </li>
     `).join('')}</ul>`;
 
-    body.querySelectorAll('.aprobar-btn').forEach(btn => btn.addEventListener('click', async () => {
-      btn.disabled = true;
-      try {
-        await fetch(`${API}/api/usuarios/${btn.dataset.id}/aprobar`, { method: 'PUT' });
-        await cargarPendientes();
-        await cargarUsuarios();
-      } catch (err) { console.error(err); btn.disabled = false; }
-    }));
+    body.querySelectorAll('.aprobar-btn').forEach(btn => btn.addEventListener('click', () => intentarAprobar(btn)));
     body.querySelectorAll('.rechazar-btn').forEach(btn => btn.addEventListener('click', async () => {
       if (!confirm(t('confirm_rebutjar'))) return;
       btn.disabled = true;
@@ -347,6 +366,88 @@ async function cargarPendientes() {
     body.innerHTML = `<p class="empty-note">${t('no_carregat')}</p>`;
   }
 }
+
+async function intentarAprobar(btn) {
+  btn.disabled = true;
+  const usuarioId = btn.dataset.id;
+  try {
+    const res = await fetch(`${API}/api/usuarios/${usuarioId}/candidatos-vinculo`);
+    const data = await res.json();
+    const candidatos = data.candidatos || [];
+
+    if (!candidatos.length) {
+      await aprobarDirecto(usuarioId);
+      return;
+    }
+
+    mostrarModalVincular(usuarioId, candidatos, btn);
+  } catch (err) {
+    console.error(err);
+    // si falla la comprovació de candidats, no bloquegem l'aprovació
+    await aprobarDirecto(usuarioId);
+  }
+}
+
+async function aprobarDirecto(usuarioId) {
+  try {
+    await fetch(`${API}/api/usuarios/${usuarioId}/aprobar`, { method: 'PUT' });
+    await cargarPendientes();
+    await cargarUsuarios();
+  } catch (err) {
+    console.error(err);
+    alert(t('err_vincular'));
+    await cargarPendientes();
+  }
+}
+
+const vincularOverlay = document.getElementById('vincular-overlay');
+
+function mostrarModalVincular(usuarioId, candidatos, btnOrigen) {
+  const cont = document.getElementById('candidatos-lista');
+  cont.innerHTML = candidatos.map(c => {
+    const nombreCompleto = [c.nombre, c.primerApellido, c.segundoApellido].filter(Boolean).join(' ');
+    return `
+      <div class="candidato-card">
+        <div class="c-nombre">${escapeHtml(nombreCompleto)}</div>
+        ${c.correo ? `<div class="c-dato ${c.matchCorreo ? 'coincide' : ''}">${t('label_correu')}: ${escapeHtml(c.correo)} ${c.matchCorreo ? t('coincideix') : ''}</div>` : ''}
+        ${c.fNac ? `<div class="c-dato ${c.matchFechaNacimiento ? 'coincide' : ''}">${t('label_naixement')}: ${escapeHtml(String(c.fNac).slice(0,10))} ${c.matchFechaNacimiento ? t('coincideix') : ''}</div>` : ''}
+        <button class="primary vincular-btn" data-casteller-id="${c.id}" type="button">${t('vincular_amb')}</button>
+      </div>
+    `;
+  }).join('');
+
+  cont.querySelectorAll('.vincular-btn').forEach(vbtn => {
+    vbtn.addEventListener('click', async () => {
+      vbtn.disabled = true;
+      try {
+        await fetch(`${API}/api/usuarios/${usuarioId}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ castellerId: Number(vbtn.dataset.castellerId) })
+        });
+        await fetch(`${API}/api/usuarios/${usuarioId}/aprobar`, { method: 'PUT' });
+        vincularOverlay.classList.remove('open');
+        await cargarPendientes();
+        await cargarUsuarios();
+      } catch (err) {
+        console.error(err);
+        alert(t('err_vincular'));
+        vbtn.disabled = false;
+      }
+    });
+  });
+
+  document.getElementById('vincular-sin').onclick = async () => {
+    vincularOverlay.classList.remove('open');
+    await aprobarDirecto(usuarioId);
+  };
+  document.getElementById('vincular-cancelar').onclick = () => {
+    vincularOverlay.classList.remove('open');
+    if (btnOrigen) btnOrigen.disabled = false;
+  };
+
+  vincularOverlay.classList.add('open');
+}
+vincularOverlay.addEventListener('click', (e) => { if (e.target === vincularOverlay) vincularOverlay.classList.remove('open'); });
 
 /* ---------------- Admin: tots els usuaris ---------------- */
 
