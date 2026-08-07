@@ -97,7 +97,7 @@
     <a href="/actuaciones.html" data-i18n="nav_actuacions">Actuacions</a>
     <a href="/biblioteca-imagenes.html" data-i18n="nav_imatges">Imatges</a>
     <a href="/plantillas.html" data-i18n="nav_plantilles">Plantilles</a>
-    <a href="/miembros.html" data-i18n="nav_membres">Membres</a>
+    <a href="/miembros.html" id="nav-membres" style="display:none;" data-i18n="nav_membres">Membres</a>
     <a href="/perfil.html" data-i18n="nav_perfil">El meu perfil</a>
     <a href="/usuarios.html" class="active" data-i18n="nav_usuaris">Usuaris</a>
   </div>
@@ -201,6 +201,7 @@ const TRADUCCIONES = {
     btn_aprovar: 'Aprovar', btn_rebutjar: 'Rebutjar', confirm_rebutjar: 'Segur que vols rebutjar aquesta alta?',
     btn_editar_permisos: 'Editar permisos', permisos_titulo: 'Permisos', btn_cancelar: 'Cancel·lar', btn_guardar: 'Desar',
     err_permisos: 'No s\'han pogut desar els permisos.', carregant: 'Carregant…',
+    perm_Tècnica: 'Tècnica', perm_Junta: 'Junta', perm_GestioMembres: 'Gestió de membres', perm_AdminGeneral: 'Administrador general',
     vincular_titulo: 'Podria ser algú que ja hi és', vincular_hint: 'Hem trobat coincidències amb membres ja existents. Vincula el compte amb la fitxa correcta, o continua sense vincular.',
     cancelar: 'Cancel·lar', aprovar_sense_vincular: 'Aprovar sense vincular', vincular_amb: 'Vincular amb aquest',
     label_correu: 'Correu', label_naixement: 'Naixement', coincideix: '✓ coincideix', err_vincular: 'No s\'ha pogut vincular ni aprovar.',
@@ -222,6 +223,7 @@ const TRADUCCIONES = {
     btn_aprovar: 'Aprobar', btn_rebutjar: 'Rechazar', confirm_rebutjar: '¿Seguro que quieres rechazar esta alta?',
     btn_editar_permisos: 'Editar permisos', permisos_titulo: 'Permisos', btn_cancelar: 'Cancelar', btn_guardar: 'Guardar',
     err_permisos: 'No se han podido guardar los permisos.', carregant: 'Cargando…',
+    perm_Tècnica: 'Técnica', perm_Junta: 'Junta', perm_GestioMembres: 'Gestión de miembros', perm_AdminGeneral: 'Administrador general',
     vincular_titulo: 'Podría ser alguien que ya está', vincular_hint: 'Hemos encontrado coincidencias con miembros ya existentes. Vincula la cuenta con la ficha correcta, o continúa sin vincular.',
     cancelar: 'Cancelar', aprovar_sense_vincular: 'Aprobar sin vincular', vincular_amb: 'Vincular con este',
     label_correu: 'Correo', label_naixement: 'Nacimiento', coincideix: '✓ coincide', err_vincular: 'No se ha podido vincular ni aprobar.',
@@ -243,6 +245,7 @@ const TRADUCCIONES = {
     btn_aprovar: 'Approve', btn_rebutjar: 'Reject', confirm_rebutjar: 'Are you sure you want to reject this sign-up?',
     btn_editar_permisos: 'Edit permissions', permisos_titulo: 'Permissions', btn_cancelar: 'Cancel', btn_guardar: 'Save',
     err_permisos: 'Could not save permissions.', carregant: 'Loading…',
+    perm_Tècnica: 'Technical', perm_Junta: 'Board', perm_GestioMembres: 'Member management', perm_AdminGeneral: 'General administrator',
     vincular_titulo: 'This could be someone already here', vincular_hint: 'We found matches with existing members. Link the account to the right profile, or continue without linking.',
     cancelar: 'Cancel', aprovar_sense_vincular: 'Approve without linking', vincular_amb: 'Link to this one',
     label_correu: 'Email', label_naixement: 'Born', coincideix: '✓ matches', err_vincular: 'Could not link or approve.',
@@ -255,6 +258,7 @@ const TRADUCCIONES = {
 };
 let idiomaActual = localStorage.getItem('castellers_idioma') || 'ca';
 function t(key) { return (TRADUCCIONES[idiomaActual] || TRADUCCIONES.ca)[key] || key; }
+function labelPermiso(p) { return t('perm_' + p); }
 
 function aplicarIdioma(idioma) {
   idiomaActual = idioma;
@@ -326,6 +330,8 @@ async function cargarSesion() {
     await fetch(`${API}/api/auth/logout`, { method: 'POST' });
     location.href = '/login.html';
   };
+  const navMembres = document.getElementById('nav-membres');
+  if (navMembres) navMembres.style.display = '';
   document.documentElement.classList.add('sessio-confirmada');
   aplicarIdioma(usuarioActual.idioma || idiomaActual);
 }
@@ -564,7 +570,7 @@ aliasOverlay.addEventListener('click', (e) => { if (e.target === aliasOverlay) a
 
 /* ---------------- Admin: tots els usuaris ---------------- */
 
-const PERMISOS_DISPONIBLES = ['Tècnica', 'Junta', 'AdminGeneral'];
+const PERMISOS_DISPONIBLES = ['Tècnica', 'Junta', 'GestioMembres', 'AdminGeneral'];
 
 async function cargarUsuarios() {
   const body = document.getElementById('usuarios-body');
@@ -582,7 +588,7 @@ async function cargarUsuarios() {
         </div>
         <div class="u-meta">
           <span class="status-badge ${u.estado}">${u.estado}</span>
-          ${(u.permisos || []).map(p => `<span class="perm-chip">${escapeHtml(p)}</span>`).join('')}
+          ${(u.permisos || []).map(p => `<span class="perm-chip">${escapeHtml(labelPermiso(p))}</span>`).join('')}
           <button class="ghost editar-permisos-btn" data-id="${u.id}" type="button">${t('btn_editar_permisos')}</button>
         </div>
       </li>
@@ -605,7 +611,7 @@ function abrirEditorPermisos(usuario) {
   const actuales = new Set(usuario.permisos || []);
   document.getElementById('permisos-titulo').textContent = `${t('permisos_titulo')} · ${nombreCompleto(usuario)}`;
   document.getElementById('permisos-checks').innerHTML = PERMISOS_DISPONIBLES.map(p => `
-    <label><input type="checkbox" value="${escapeHtml(p)}" ${actuales.has(p) ? 'checked' : ''}> ${escapeHtml(p)}</label>
+    <label><input type="checkbox" value="${escapeHtml(p)}" ${actuales.has(p) ? 'checked' : ''}> ${escapeHtml(labelPermiso(p))}</label>
   `).join('');
   permisosOverlay.classList.add('open');
 }

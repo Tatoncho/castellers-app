@@ -678,6 +678,11 @@ document.getElementById('confirmar-eliminacio-btn').addEventListener('click', as
     const data = await res.json();
     if (!data.usuario) { location.href = '/login.html'; return; }
     window.usuarioActual = data.usuario;
+    const permisos = data.usuario.permisos || [];
+    if (!permisos.includes('AdminGeneral') && !permisos.includes('GestioMembres')) {
+      location.href = '/perfil.html';
+      return;
+    }
 
     const chip = document.getElementById('user-chip');
     chip.style.cursor = 'pointer';

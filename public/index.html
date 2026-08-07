@@ -119,7 +119,7 @@
     <a href="/actuaciones.html" data-i18n="nav_actuacions">Actuacions</a>
     <a href="/biblioteca-imagenes.html" data-i18n="nav_imatges">Imatges</a>
     <a href="/plantillas.html" data-i18n="nav_plantilles">Plantilles</a>
-    <a href="/miembros.html" data-i18n="nav_membres">Membres</a>
+    <a href="/miembros.html" id="nav-membres" style="display:none;" data-i18n="nav_membres">Membres</a>
     <a href="/perfil.html" data-i18n="nav_perfil">El meu perfil</a>
     <a href="/usuarios.html" id="nav-usuaris" style="display:none;" data-i18n="nav_usuaris">Usuaris</a>
   </div>
@@ -269,6 +269,10 @@ document.querySelectorAll('.lang-btn').forEach(btn => {
     if (esAdmin) {
       document.getElementById('nav-usuaris').style.display = '';
     }
+    if (esAdmin || (data.usuario.permisos || []).includes('GestioMembres')) {
+      document.getElementById('nav-membres').style.display = '';
+      document.getElementById('card-membres').style.display = '';
+    }
     // l'idioma guardat al compte mana per sobre del que hi hagués al
     // navegador — així es respecta la preferència de cada usuari en iniciar
     // sessió, des de qualsevol dispositiu
@@ -310,7 +314,7 @@ document.querySelectorAll('.lang-btn').forEach(btn => {
       <p data-i18n="card_actuacions_texto">Programa actuacions en plaça a partir de les estructures que ja heu ensajat, amb calendari propi.</p>
     </a>
 
-    <a class="module-card" href="/miembros.html">
+    <a class="module-card" href="/miembros.html" id="card-membres" style="display:none;">
       <div class="icon">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="9" cy="8" r="3.2" stroke="#20241F" stroke-width="1.6"/>

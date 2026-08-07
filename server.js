@@ -122,6 +122,16 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+// Exigeix el permís "GestioMembres" (o ser AdminGeneral, que sempre té accés
+// a tot) — protegeix les accions de gestió del mòdul de membres.
+function requireGestioMembres(req, res, next) {
+  const permisos = (req.usuarioActual && req.usuarioActual.permisos) || [];
+  if (!permisos.includes('GestioMembres') && !permisos.includes('AdminGeneral')) {
+    return res.status(403).json({ success: false, error: 'Necessites permisos de gestió de membres' });
+  }
+  next();
+}
+
 // 🔒 Guardia global: TOTA la API exigeix sessió iniciada, tret de les rutes
 // d'autenticació en si mateixes (login/registre/verificació...) i de les
 // rutes temporals de migració (que ja de per si s'han d'esborrar aviat).
@@ -378,7 +388,7 @@ app.get('/api/fix-id-sequence', async (req, res) => {
 });
 
 // api para cargar miembros y sus datos
-app.post('/api/castellers', async (req, res) => {
+app.post('/api/castellers', requireGestioMembres, async (req, res) => {
   try {
     const {
       id, nombre, primerApellido, segundoApellido, apodo, posicionPinyaId,
@@ -509,7 +519,7 @@ app.get('/api/castellers/:id/roles', async (req, res) => {
 });
 
 //api per desar el vector de rols (ordenat, el primer és el principal) d'un casteller
-app.put('/api/castellers/:id/roles', async (req, res) => {
+app.put('/api/castellers/:id/roles', requireGestioMembres, async (req, res) => {
   const { id } = req.params;
   const { rolIds } = req.body; // array ordenat d'ids de roles_castillo
 
@@ -540,7 +550,7 @@ app.put('/api/castellers/:id/roles', async (req, res) => {
 });
 
 //api para editar un miembro existente
-app.put('/api/castellers/:id', async (req, res) => {
+app.put('/api/castellers/:id', requireGestioMembres, async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -605,7 +615,7 @@ app.put('/api/castellers/:id', async (req, res) => {
 // posicions assignades en assajos, comptes d'usuari vinculats) ja tenen
 // ON DELETE CASCADE / SET NULL definit, així que s'esborren o desvinculen
 // soles.
-app.delete('/api/castellers/:id', async (req, res) => {
+app.delete('/api/castellers/:id', requireGestioMembres, async (req, res) => {
   try {
     const { password } = req.body;
     if (!password) return res.status(400).json({ success: false, error: 'Cal introduir la contrasenya per confirmar' });

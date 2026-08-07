@@ -361,7 +361,13 @@
       return;
     }
     window.usuarioActual = data.usuario;
-    if ((data.usuario.permisos || []).includes('AdminGeneral')) {
+    const permisos = data.usuario.permisos || [];
+    const teAccesMembres = permisos.includes('AdminGeneral') || permisos.includes('GestioMembres');
+    if (!teAccesMembres) {
+      location.href = '/perfil.html';
+      return;
+    }
+    if (permisos.includes('AdminGeneral')) {
       const navUsuaris = document.getElementById('nav-usuaris');
       if (navUsuaris) navUsuaris.style.display = '';
     }

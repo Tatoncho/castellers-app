@@ -99,7 +99,7 @@
     <a href="/actuaciones.html" data-i18n="nav_actuacions">Actuacions</a>
     <a href="/biblioteca-imagenes.html" data-i18n="nav_imatges">Imatges</a>
     <a href="/plantillas.html" data-i18n="nav_plantilles">Plantilles</a>
-    <a href="/miembros.html" data-i18n="nav_membres">Membres</a>
+    <a href="/miembros.html" id="nav-membres" style="display:none;" data-i18n="nav_membres">Membres</a>
     <a href="/perfil.html" class="active" data-i18n="nav_perfil">El meu perfil</a>
     <a href="/usuarios.html" id="nav-usuaris" style="display:none;" data-i18n="nav_usuaris">Usuaris</a>
   </div>
@@ -216,6 +216,7 @@ const TRADUCCIONES = {
     titulo_mi_perfil: 'El meu perfil', titulo_permisos: 'Permisos', titulo_contrasenya: 'Contrasenya', titulo_admin: 'Administració',
     carregant: 'Carregant…', sense_vincular: 'Aquest compte encara no està vinculat a cap fitxa de casteller.',
     sense_permisos: 'Cap permís especial assignat.',
+    perm_Tècnica: 'Tècnica', perm_Junta: 'Junta', perm_GestioMembres: 'Gestió de membres', perm_AdminGeneral: 'Administrador general',
     canviar_contrasenya: 'Canviar contrasenya', contrasenya_actual: 'Contrasenya actual', contrasenya_nova: 'Contrasenya nova',
     repetir_contrasenya_nova: 'Repeteix la contrasenya nova', desar_contrasenya: 'Desar contrasenya nova', cancelar: 'Cancel·lar',
     hint_admin: 'Com a administrador, també pots gestionar les altes pendents i els permisos de tots els usuaris.',
@@ -230,6 +231,7 @@ const TRADUCCIONES = {
     titulo_mi_perfil: 'Mi perfil', titulo_permisos: 'Permisos', titulo_contrasenya: 'Contraseña', titulo_admin: 'Administración',
     carregant: 'Cargando…', sense_vincular: 'Esta cuenta aún no está vinculada a ninguna ficha de casteller.',
     sense_permisos: 'Ningún permiso especial asignado.',
+    perm_Tècnica: 'Técnica', perm_Junta: 'Junta', perm_GestioMembres: 'Gestión de miembros', perm_AdminGeneral: 'Administrador general',
     canviar_contrasenya: 'Cambiar contraseña', contrasenya_actual: 'Contraseña actual', contrasenya_nova: 'Contraseña nueva',
     repetir_contrasenya_nova: 'Repite la contraseña nueva', desar_contrasenya: 'Guardar contraseña nueva', cancelar: 'Cancelar',
     hint_admin: 'Como administrador, también puedes gestionar las altas pendientes y los permisos de todos los usuarios.',
@@ -244,6 +246,7 @@ const TRADUCCIONES = {
     titulo_mi_perfil: 'My profile', titulo_permisos: 'Permissions', titulo_contrasenya: 'Password', titulo_admin: 'Administration',
     carregant: 'Loading…', sense_vincular: 'This account isn\'t linked to a castellers profile yet.',
     sense_permisos: 'No special permission assigned.',
+    perm_Tècnica: 'Technical', perm_Junta: 'Board', perm_GestioMembres: 'Member management', perm_AdminGeneral: 'General administrator',
     canviar_contrasenya: 'Change password', contrasenya_actual: 'Current password', contrasenya_nova: 'New password',
     repetir_contrasenya_nova: 'Repeat new password', desar_contrasenya: 'Save new password', cancelar: 'Cancel',
     hint_admin: 'As an administrator, you can also manage pending sign-ups and everyone\'s permissions.',
@@ -335,7 +338,7 @@ function renderPermisos() {
   const cont = document.getElementById('permisos-body');
   const permisos = usuarioActual.permisos || [];
   if (!permisos.length) { cont.innerHTML = `<span class="empty-note">${t('sense_permisos')}</span>`; return; }
-  cont.innerHTML = permisos.map(p => `<span class="perm-chip">${escapeHtml(p)}</span>`).join('');
+  cont.innerHTML = permisos.map(p => `<span class="perm-chip">${escapeHtml(t('perm_' + p))}</span>`).join('');
 }
 
 async function cargarMiCasteller() {
@@ -459,6 +462,10 @@ document.getElementById('password-form').addEventListener('submit', async (e) =>
     };
 
     const esAdmin = (usuarioActual.permisos || []).includes('AdminGeneral');
+    if (esAdmin || (usuarioActual.permisos || []).includes('GestioMembres')) {
+      const navMembres = document.getElementById('nav-membres');
+      if (navMembres) navMembres.style.display = '';
+    }
     if (esAdmin) {
       document.getElementById('nav-usuaris').style.display = '';
       document.querySelector('.solo-admin').style.display = 'block';

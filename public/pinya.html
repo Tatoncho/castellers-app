@@ -127,7 +127,7 @@
     <a href="/actuaciones.html" data-i18n="nav_actuacions">Actuacions</a>
     <a href="/plantillas.html" data-i18n="nav_plantilles">Plantilles</a>
     <a href="/biblioteca-imagenes.html" data-i18n="nav_imatges">Imatges</a>
-    <a href="/miembros.html" data-i18n="nav_membres">Membres</a>
+    <a href="/miembros.html" id="nav-membres" style="display:none;" data-i18n="nav_membres">Membres</a>
     <a href="/perfil.html" data-i18n="nav_perfil">El meu perfil</a>
     <a href="/usuarios.html" id="nav-usuaris" style="display:none;" data-i18n="nav_usuaris">Usuaris</a>
   </div>
@@ -175,6 +175,10 @@
       return;
     }
     window.usuarioActual = data.usuario;
+    if ((data.usuario.permisos || []).includes('AdminGeneral') || (data.usuario.permisos || []).includes('GestioMembres')) {
+      const navMembres = document.getElementById('nav-membres');
+      if (navMembres) navMembres.style.display = '';
+    }
     if ((data.usuario.permisos || []).includes('AdminGeneral')) {
       const navUsuaris = document.getElementById('nav-usuaris');
       if (navUsuaris) navUsuaris.style.display = '';
