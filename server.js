@@ -122,6 +122,17 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+// Exigeix el permís "Tècnica" (o ser AdminGeneral) — protegeix la gestió
+// d'assajos: crear-los, publicar-los, marcar assistència, generar/desar
+// estructures.
+function requireTecnica(req, res, next) {
+  const permisos = (req.usuarioActual && req.usuarioActual.permisos) || [];
+  if (!permisos.includes('Tècnica') && !permisos.includes('AdminGeneral')) {
+    return res.status(403).json({ success: false, error: 'Necessites permisos de Tècnica' });
+  }
+  next();
+}
+
 // Exigeix el permís "GestioMembres" (o ser AdminGeneral, que sempre té accés
 // a tot) — protegeix les accions de gestió del mòdul de membres.
 function requireGestioMembres(req, res, next) {
@@ -858,7 +869,7 @@ app.get('/api/migrate-estructuras', async (req, res) => {
 
 // Crear una estructura guardada dentro de un assaig (p.ex. al pulsar
 // "Desar aquesta proposta" en el modal de propostes de castells)
-app.post('/api/ensayos/:id/estructuras', async (req, res) => {
+app.post('/api/ensayos/:id/estructuras', requireTecnica, async (req, res) => {
   const client = await pool.connect();
   try {
     const { id } = req.params;
@@ -941,6 +952,15 @@ app.post('/api/ensayos/:id/estructuras', async (req, res) => {
 app.get('/api/ensayos/:id/estructuras', async (req, res) => {
   try {
     const { id } = req.params;
+
+    const ensayoPadre = await pool.query('SELECT "publicado" FROM ensayos WHERE "id" = $1', [id]);
+    if (ensayoPadre.rows.length === 0) return res.status(404).json({ error: 'Ensayo no trobat' });
+    const permisos = (req.usuarioActual && req.usuarioActual.permisos) || [];
+    const esTecnica = permisos.includes('Tècnica') || permisos.includes('AdminGeneral');
+    if (!ensayoPadre.rows[0].publicado && !esTecnica) {
+      return res.status(403).json({ success: false, error: 'Aquest assaig encara és un esborrany' });
+    }
+
     const result = await pool.query(`
       SELECT ee.*,
         COUNT(ep."id")::int AS "totalPosiciones",
@@ -965,6 +985,13 @@ app.get('/api/estructuras/:id', async (req, res) => {
     const estructura = await pool.query('SELECT * FROM estructuras_ensayo WHERE "id" = $1', [id]);
     if (estructura.rows.length === 0) return res.status(404).json({ error: 'Estructura no trobada' });
 
+    const ensayoPadre = await pool.query('SELECT "publicado" FROM ensayos WHERE "id" = $1', [estructura.rows[0].ensayoId]);
+    const permisos = (req.usuarioActual && req.usuarioActual.permisos) || [];
+    const esTecnica = permisos.includes('Tècnica') || permisos.includes('AdminGeneral');
+    if (ensayoPadre.rows.length && !ensayoPadre.rows[0].publicado && !esTecnica) {
+      return res.status(403).json({ success: false, error: 'Aquest assaig encara és un esborrany' });
+    }
+
     const posiciones = await pool.query(`
       SELECT ep."slot", ep."slotIndex", ep."castellerId", c."nombre" AS "castellerNombre"
       FROM estructura_posiciones ep
@@ -982,7 +1009,7 @@ app.get('/api/estructuras/:id', async (req, res) => {
 // Asignar (o vaciar, con castellerId null) un casteller a una posición
 // concreta. Sirve tanto para el "arrastrar y soltar" como para colocar
 // manualmente en una pinya en blanco.
-app.put('/api/estructuras/:id/posiciones', async (req, res) => {
+app.put('/api/estructuras/:id/posiciones', requireTecnica, async (req, res) => {
   try {
     const { id } = req.params;
     const { slot, slotIndex, castellerId } = req.body;
@@ -1005,7 +1032,7 @@ app.put('/api/estructuras/:id/posiciones', async (req, res) => {
 // Intercambiar quién ocupa dos posiciones (drag&drop de sujeto sobre
 // sujeto, o el "clic en B, clic en A" que también queréis soportar).
 // Crea las filas si alguna posición todavía no existía (pinya en blanco).
-app.put('/api/estructuras/:id/swap', async (req, res) => {
+app.put('/api/estructuras/:id/swap', requireTecnica, async (req, res) => {
   const { id } = req.params;
   const { a, b } = req.body; // { slot, slotIndex } cada una
   if (!a || !b || !a.slot || !b.slot) {
@@ -1056,7 +1083,7 @@ app.put('/api/estructuras/:id/swap', async (req, res) => {
 });
 
 // Descartar una estructura guardada (p.ex. una prova que no ha quedat bé)
-app.delete('/api/estructuras/:id', async (req, res) => {
+app.delete('/api/estructuras/:id', requireTecnica, async (req, res) => {
   try {
     const { id } = req.params;
     await pool.query('DELETE FROM estructuras_ensayo WHERE "id" = $1', [id]);
@@ -1070,10 +1097,16 @@ app.delete('/api/estructuras/:id', async (req, res) => {
 // per restringir la visibilitat dels privats; això arribarà amb el login)
 app.get('/api/ensayos', async (req, res) => {
   try {
+    const permisos = (req.usuarioActual && req.usuarioActual.permisos) || [];
+    const esTecnica = permisos.includes('Tècnica') || permisos.includes('AdminGeneral');
+
+    // Els esborranys (encara no publicats) només els veu Tècnica/Admin —
+    // per a la resta, ni tan sols apareixen a la llista.
     const result = await pool.query(`
       SELECT e.*, COUNT(ea."castellerId")::int AS "numAsistentes"
       FROM ensayos e
       LEFT JOIN ensayo_asistentes ea ON ea."ensayoId" = e."id"
+      ${esTecnica ? '' : 'WHERE e."publicado" = TRUE'}
       GROUP BY e."id"
       ORDER BY e."fecha" DESC, e."id" DESC
     `);
@@ -1084,7 +1117,7 @@ app.get('/api/ensayos', async (req, res) => {
 });
 
 // Crear un ensayo nou
-app.post('/api/ensayos', async (req, res) => {
+app.post('/api/ensayos', requireTecnica, async (req, res) => {
   try {
     const { fecha, horaInicio, horaFin, notas } = req.body;
     if (!fecha) return res.status(400).json({ error: 'fecha es obligatoria' });
@@ -1107,6 +1140,12 @@ app.get('/api/ensayos/:id', async (req, res) => {
     const ensayo = await pool.query('SELECT * FROM ensayos WHERE "id" = $1', [id]);
     if (ensayo.rows.length === 0) return res.status(404).json({ error: 'Ensayo no trobat' });
 
+    const permisos = (req.usuarioActual && req.usuarioActual.permisos) || [];
+    const esTecnica = permisos.includes('Tècnica') || permisos.includes('AdminGeneral');
+    if (!ensayo.rows[0].publicado && !esTecnica) {
+      return res.status(403).json({ success: false, error: 'Aquest assaig encara és un esborrany' });
+    }
+
     const asistentes = await pool.query(
       'SELECT "castellerId" FROM ensayo_asistentes WHERE "ensayoId" = $1',
       [id]
@@ -1122,7 +1161,7 @@ app.get('/api/ensayos/:id', async (req, res) => {
 });
 
 // Marcar/desmarcar l'assistència d'un casteller a un ensayo
-app.put('/api/ensayos/:id/asistencia', async (req, res) => {
+app.put('/api/ensayos/:id/asistencia', requireTecnica, async (req, res) => {
   try {
     const { id } = req.params;
     const { castellerId, asiste } = req.body;
@@ -1147,7 +1186,7 @@ app.put('/api/ensayos/:id/asistencia', async (req, res) => {
 });
 
 // Publicar un ensayo (deixa de ser esborrany privat)
-app.put('/api/ensayos/:id/publicar', async (req, res) => {
+app.put('/api/ensayos/:id/publicar', requireTecnica, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
@@ -1168,7 +1207,7 @@ app.put('/api/ensayos/:id/publicar', async (req, res) => {
 // ?criterio=altura -> suggereix qui podria anar de pom (més baixos) i de
 // base (més alts). ?criterio=ninguno (o sense el paràmetre) -> només
 // comprova viabilitat per nombre de gent.
-app.get('/api/ensayos/:id/propuestas', async (req, res) => {
+app.get('/api/ensayos/:id/propuestas', requireTecnica, async (req, res) => {
   try {
     const { id } = req.params;
     const criterio = req.query.criterio === 'altura' ? 'altura' : 'ninguno';

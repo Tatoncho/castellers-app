@@ -311,7 +311,7 @@ const TRADUCCIONES = {
     generar_pinya_titulo: 'Generar pinya', hint_pinya_blanc: 'Crea una pinya en blanc per a aquest assaig i col·loca-hi la gent al constructor (arrossegant o a cops de clic).',
     tipus_castell: 'Tipus de castell', crear_obrir: 'Crear i obrir constructor',
     assaig_titulo: (f) => `Assaig · ${f}`, publicat: 'Publicat', esborrany: 'Esborrany',
-    err_obrir_assaig: 'No s\'ha pogut obrir l\'assaig.', err_publicar: 'No s\'ha pogut publicar.', err_desar: 'No s\'ha pogut desar.',
+    err_obrir_assaig: 'No s\'ha pogut obrir l\'assaig.', err_esborrany_sense_permis: 'Aquest assaig encara és un esborrany — només Tècnica hi pot accedir.', err_publicar: 'No s\'ha pogut publicar.', err_desar: 'No s\'ha pogut desar.',
     cap_membre_cerca: 'Cap membre coincideix amb la cerca.',
     cap_estructura: 'Encara no s\'ha desat cap estructura.', no_estructures: 'No s\'han pogut carregar les estructures.',
     posicions_assignades: (a, tt) => `${a}/${tt || '?'} posicions assignades`,
@@ -336,7 +336,7 @@ const TRADUCCIONES = {
     generar_pinya_titulo: 'Generar pinya', hint_pinya_blanc: 'Crea una pinya en blanco para este ensayo y coloca a la gente en el constructor (arrastrando o a golpe de clic).',
     tipus_castell: 'Tipo de castell', crear_obrir: 'Crear y abrir constructor',
     assaig_titulo: (f) => `Ensayo · ${f}`, publicat: 'Publicado', esborrany: 'Borrador',
-    err_obrir_assaig: 'No se ha podido abrir el ensayo.', err_publicar: 'No se ha podido publicar.', err_desar: 'No se ha podido guardar.',
+    err_obrir_assaig: 'No se ha podido abrir el ensayo.', err_esborrany_sense_permis: 'Este ensayo todavía es un borrador — solo Tècnica puede acceder.', err_publicar: 'No se ha podido publicar.', err_desar: 'No se ha podido guardar.',
     cap_membre_cerca: 'Ningún miembro coincide con la búsqueda.',
     cap_estructura: 'Aún no se ha guardado ninguna estructura.', no_estructures: 'No se han podido cargar las estructuras.',
     posicions_assignades: (a, tt) => `${a}/${tt || '?'} posiciones asignadas`,
@@ -361,7 +361,7 @@ const TRADUCCIONES = {
     generar_pinya_titulo: 'Generate pinya', hint_pinya_blanc: 'Create a blank pinya for this rehearsal and place people in the builder (dragging or by click).',
     tipus_castell: 'Castell type', crear_obrir: 'Create and open builder',
     assaig_titulo: (f) => `Rehearsal · ${f}`, publicat: 'Published', esborrany: 'Draft',
-    err_obrir_assaig: 'Could not open the rehearsal.', err_publicar: 'Could not publish.', err_desar: 'Could not save.',
+    err_obrir_assaig: 'Could not open the rehearsal.', err_esborrany_sense_permis: 'This rehearsal is still a draft — only Tècnica can access it.', err_publicar: 'Could not publish.', err_desar: 'Could not save.',
     cap_membre_cerca: 'No member matches the search.',
     cap_estructura: 'No structure saved yet.', no_estructures: 'Could not load structures.',
     posicions_assignades: (a, tt) => `${a}/${tt || '?'} positions assigned`,
@@ -456,6 +456,13 @@ async function cargarAssaig() {
   try {
     const res = await fetch(`${API}/api/ensayos/${ensayoId}`);
     const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      alert(res.status === 403 ? t('err_esborrany_sense_permis') : t('err_obrir_assaig'));
+      location.href = '/ensayos.html';
+      return;
+    }
+
     ensayoActual = data.ensayo;
     asistentesSet = new Set(data.asistentesIds || []);
 
@@ -471,6 +478,7 @@ async function cargarAssaig() {
   } catch (err) {
     console.error(err);
     alert(t('err_obrir_assaig'));
+    location.href = '/ensayos.html';
   }
 }
 
