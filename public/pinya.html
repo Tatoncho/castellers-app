@@ -47,7 +47,20 @@
   .approx-note { font-size: 11.5px; color: var(--gold); border:1px solid var(--gold); padding: 3px 10px; border-radius: 20px; font-family:'IBM Plex Mono',monospace; }
 
   main { max-width: 1750px; margin: 0 auto; padding: 22px 28px 80px; display: grid; grid-template-columns: 260px 1fr 420px; gap: 20px; align-items: start; }
-  @media (max-width: 1300px) { main { grid-template-columns: 1fr; } }
+  @media (max-width: 1300px) {
+    main {
+      grid-template-columns: 1.3fr 1fr;
+      grid-template-areas: "pinya pool" "tower tower";
+      gap: 14px;
+    }
+    #panel-pinya { grid-area: pinya; }
+    #panel-pool { grid-area: pool; }
+    #panel-tower { grid-area: tower; }
+  }
+  @media (max-width: 480px) {
+    main { grid-template-columns: 1.5fr 1fr; gap: 8px; padding: 14px 10px 60px; }
+    #pool-list { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap:6px; }
+  }
 
   section.panel { background: var(--paper-card); border: 1px solid var(--line); border-radius: var(--radius); }
   .panel-head { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
@@ -59,16 +72,20 @@
     border-radius:var(--radius); font-family:'Work Sans',sans-serif; font-size:13px; margin-bottom:8px;
   }
 
-  #pool-list { list-style:none; margin:0; padding:0; max-height: 620px; overflow-y:auto; }
+  #pool-list {
+    list-style:none; margin:0; padding:0; max-height: 620px; overflow-y:auto;
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap:8px; align-content:start;
+  }
   #pool-list li.pool-chip {
-    display:flex; align-items:center; gap:8px; padding:8px 9px; margin-bottom:6px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    padding:9px 6px; text-align:center; min-height:56px;
     background:var(--paper); border:1px solid var(--line); border-radius:var(--radius);
-    cursor: grab; font-size:13px;
+    cursor: grab; font-size:12px; line-height:1.2; word-break:break-word;
     user-select:none; -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none;
     -webkit-touch-callout: none; touch-action: none;
   }
   #pool-list li.pool-chip.selected { border-color: var(--thread); background:#F3E7E5; }
-  #pool-list li.pool-chip .pos-tag { margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--ink-soft); }
+  #pool-list li.pool-chip .pos-tag { font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:var(--ink-soft); }
   .empty-note { padding: 12px 0; text-align:center; color: var(--ink-soft); font-style: italic; font-size: 12.5px; }
 
   #canvas-wrap { position: relative; overflow: auto; background: #FDFCF8; border: 1px solid var(--line); border-radius: var(--radius); }
@@ -210,7 +227,7 @@
 </header>
 
 <main>
-  <section class="panel">
+  <section class="panel" id="panel-pool">
     <div class="panel-head"><h2 data-i18n="presents_sense_posicio">Presents sense posició</h2></div>
     <div class="panel-body">
       <div style="position:absolute; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none;" aria-hidden="true">
@@ -225,7 +242,7 @@
     </div>
   </section>
 
-  <section class="panel">
+  <section class="panel" id="panel-pinya">
     <div class="panel-head"><h2 data-i18n="planta_pinya">Planta de la pinya</h2></div>
     <div class="panel-body">
       <p style="font-size:12px;color:var(--ink-soft);margin:0 0 10px;" data-i18n="hint_arrossega">
@@ -241,7 +258,7 @@
     </div>
   </section>
 
-  <section class="panel">
+  <section class="panel" id="panel-tower">
     <div class="panel-head"><h2 id="castell-titulo">Castell</h2></div>
     <div class="panel-body">
       <div id="castell-imagen-wrap" style="position:relative; width:100%; aspect-ratio: 960/760; background:#FDFCF8; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; display:none; margin-bottom:12px;">
@@ -629,10 +646,11 @@ function renderPool() {
   }
   list.innerHTML = pool.map(m => {
     const isSel = selected && selected.type === 'pool' && selected.id === m.id;
+    const etiqueta = m.apodo || m.nombre;
     return `
-      <li class="pool-chip ${isSel ? 'selected' : ''}" data-id="${m.id}">
-        ${escapeHtml(m.nombre)}${m.apodo ? ' · ' + escapeHtml(m.apodo) : ''}
-        <span class="pos-tag">${escapeHtml(m.posicionPinyaNombre || '')}</span>
+      <li class="pool-chip ${isSel ? 'selected' : ''}" data-id="${m.id}" title="${escapeHtml(m.nombre)}${m.apodo ? ' · ' + escapeHtml(m.apodo) : ''}">
+        <span>${escapeHtml(etiqueta)}</span>
+        ${m.posicionPinyaNombre ? `<span class="pos-tag">${escapeHtml(m.posicionPinyaNombre)}</span>` : ''}
       </li>
     `;
   }).join('');
