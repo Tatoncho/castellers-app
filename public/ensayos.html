@@ -223,6 +223,11 @@
       return;
     }
     window.usuarioActual = data.usuario;
+    window.isTecnica = (data.usuario.permisos || []).includes('Tècnica') || (data.usuario.permisos || []).includes('AdminGeneral');
+    if (!window.isTecnica) {
+      const crearPanel = document.getElementById('crear-assaig-panel');
+      if (crearPanel) crearPanel.style.display = 'none';
+    }
     if ((data.usuario.permisos || []).includes('AdminGeneral') || (data.usuario.permisos || []).includes('GestioMembres')) {
       const navMembres = document.getElementById('nav-membres');
       if (navMembres) navMembres.style.display = '';
@@ -248,7 +253,7 @@
 
 <main>
 <div class="top-row">
-  <section class="panel">
+  <section class="panel" id="crear-assaig-panel">
     <div class="panel-head">
       <h2 data-i18n="nou_assaig">Nou assaig</h2>
       <span class="count" id="assajos-count">0 assajos</span>
@@ -354,6 +359,7 @@ const TRADUCCIONES = {
     publicat: 'Publicat', esborrany: 'Esborrany', assistent: (n) => `${n} assistent${n === 1 ? '' : 's'}`,
     gestionar: 'Gestionar', veure_assaig: 'Veure l\'assaig', veure_imatge: 'Veure imatge',
     cap_castell_creat: 'Encara no hi ha cap castell creat en aquest assaig.',
+    esborrany_sense_detall: 'Encara és un esborrany — els detalls només els pot veure Tècnica.',
     calculant: 'Calculant…', no_calcular: 'No s\'ha pogut calcular.', error_calcular: 'Error calculant les propostes.',
     desant: 'Desant…', desada_ok: 'Desada ✓', desar_proposta: 'Desar aquesta proposta',
     confirm_eliminar_estructura: 'Vols eliminar aquesta estructura desada?', err_eliminar: 'No s\'ha pogut eliminar.',
@@ -386,6 +392,7 @@ const TRADUCCIONES = {
     publicat: 'Publicado', esborrany: 'Borrador', assistent: (n) => `${n} asistente${n === 1 ? '' : 's'}`,
     gestionar: 'Gestionar', veure_assaig: 'Ver el ensayo', veure_imatge: 'Ver imagen',
     cap_castell_creat: 'Aún no hay ningún castell creado en este ensayo.',
+    esborrany_sense_detall: 'Todavía es un borrador — los detalles solo puede verlos Tècnica.',
     calculant: 'Calculando…', no_calcular: 'No se ha podido calcular.', error_calcular: 'Error calculando las propuestas.',
     desant: 'Guardando…', desada_ok: 'Guardada ✓', desar_proposta: 'Guardar esta propuesta',
     confirm_eliminar_estructura: '¿Quieres eliminar esta estructura guardada?', err_eliminar: 'No se ha podido eliminar.',
@@ -418,6 +425,7 @@ const TRADUCCIONES = {
     publicat: 'Published', esborrany: 'Draft', assistent: (n) => `${n} attendee${n === 1 ? '' : 's'}`,
     gestionar: 'Manage', veure_assaig: 'View rehearsal', veure_imatge: 'View image',
     cap_castell_creat: 'No castell created for this rehearsal yet.',
+    esborrany_sense_detall: 'Still a draft — only Tècnica can see the details.',
     calculant: 'Calculating…', no_calcular: 'Could not calculate.', error_calcular: 'Error calculating proposals.',
     desant: 'Saving…', desada_ok: 'Saved ✓', desar_proposta: 'Save this proposal',
     confirm_eliminar_estructura: 'Delete this saved structure?', err_eliminar: 'Could not delete.',
@@ -515,7 +523,7 @@ function renderCalendario() {
   const hoyISO = fechaISOSinHora(new Date().toISOString());
 
   const ensayosPorFecha = {};
-  ensayosVisibles().forEach(e => {
+  ensayosList.forEach(e => {
     const key = fechaISOSinHora(e.fecha);
     if (!ensayosPorFecha[key]) ensayosPorFecha[key] = [];
     ensayosPorFecha[key].push(e);
@@ -577,16 +585,28 @@ async function mostrarDia(key, ensayosDelDia) {
   diaOverlay.classList.add('open');
 
   const items = await Promise.all(ensayosDelDia.map(async (e) => {
+    if (e.visibilidadLimitada) return { ensayo: e, estructuras: [], limitado: true };
     let estructuras = [];
     try {
       const res = await fetch(`${API}/api/ensayos/${e.id}/estructuras`);
       const data = await res.json();
       estructuras = data.data || [];
     } catch (err) { console.error(err); }
-    return { ensayo: e, estructuras };
+    return { ensayo: e, estructuras, limitado: false };
   }));
 
-  contenido.innerHTML = items.map(({ ensayo, estructuras }) => `
+  contenido.innerHTML = items.map(({ ensayo, estructuras, limitado }) => {
+    if (limitado) {
+      return `
+        <div class="dia-item">
+          <div class="dia-meta">
+            <span class="status-badge">${t('esborrany')}</span>
+          </div>
+          <p class="empty-note" style="padding:4px 0;">${t('esborrany_sense_detall')}</p>
+        </div>
+      `;
+    }
+    return `
     <div class="dia-item">
       <div class="dia-meta">
         ${ensayo.horaInicio ? escapeHtml(ensayo.horaInicio.slice(0,5)) + 'h · ' : ''}${t('assistent')(ensayo.numAsistentes)} ·
@@ -606,7 +626,8 @@ async function mostrarDia(key, ensayosDelDia) {
         <button class="ghost small veure-assaig-btn" data-id="${ensayo.id}" type="button">${t('veure_assaig')}</button>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   contenido.querySelectorAll('.veure-assaig-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -617,10 +638,10 @@ async function mostrarDia(key, ensayosDelDia) {
 }
 
 function ensayosVisibles() {
-  // Ara TOTS els assajos es veuen a la llista i al calendari (amb la marca
-  // d'Esborrany/Publicat) — el que canvia és quant contingut es mostra en
-  // obrir-los, no si es veuen que existeixen.
-  return ensayosList;
+  // A la LLISTA només hi surten els assajos amb dades completes — els
+  // esborranys "de visibilitat limitada" (algú sense Tècnica) només es
+  // veuen com a marca al calendari, mai aquí.
+  return ensayosList.filter(e => !e.visibilidadLimitada);
 }
 
 function renderEnsayosList() {

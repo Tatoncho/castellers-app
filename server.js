@@ -1100,17 +1100,22 @@ app.get('/api/ensayos', async (req, res) => {
     const permisos = (req.usuarioActual && req.usuarioActual.permisos) || [];
     const esTecnica = permisos.includes('Tècnica') || permisos.includes('AdminGeneral');
 
-    // Els esborranys (encara no publicats) només els veu Tècnica/Admin —
-    // per a la resta, ni tan sols apareixen a la llista.
     const result = await pool.query(`
       SELECT e.*, COUNT(ea."castellerId")::int AS "numAsistentes"
       FROM ensayos e
       LEFT JOIN ensayo_asistentes ea ON ea."ensayoId" = e."id"
-      ${esTecnica ? '' : 'WHERE e."publicado" = TRUE'}
       GROUP BY e."id"
       ORDER BY e."fecha" DESC, e."id" DESC
     `);
-    res.json({ success: true, data: result.rows });
+
+    // Qui no sigui Tècnica pot saber que un dia hi ha un esborrany (per al
+    // calendari), però no res més: ni hora, ni notes, ni quanta gent hi va.
+    const data = esTecnica ? result.rows : result.rows.map(e => {
+      if (e.publicado) return e;
+      return { id: e.id, fecha: e.fecha, publicado: false, visibilidadLimitada: true };
+    });
+
+    res.json({ success: true, data });
   } catch (error) {
     errorHandler(res, error);
   }
