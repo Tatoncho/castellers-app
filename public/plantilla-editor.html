@@ -58,7 +58,12 @@
   button.ghost:hover { background: var(--ink); color: var(--paper-card); }
   .hint { font-size: 11.5px; color: var(--ink-soft); margin-top: 12px; }
 
-  #canvas-wrap { position: relative; overflow: hidden; background: #E4DFCF; border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; display:flex; justify-content:center; }
+  #canvas-wrap {
+    position: relative; overflow: hidden; background: #E4DFCF; border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 24px; display:flex; justify-content:center;
+    user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;
+    -webkit-touch-callout: none; touch-action: none;
+  }
   #canvas-viewport { position: relative; overflow: hidden; background: #FDFCF8; }
   #workspace { position: absolute; transform-origin: top left; }
   #frame-border { position: absolute; border: 2px solid var(--ink); pointer-events: none; }
@@ -113,7 +118,11 @@
   .add-form > div { flex: 1; min-width: 90px; }
   .add-form button { width:auto; margin-top:0; }
 
-  .blocks-palette { display:flex; gap:10px; margin-top: 8px; }
+  .blocks-palette {
+    display:flex; gap:10px; margin-top: 8px;
+    user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;
+    -webkit-touch-callout: none;
+  }
   .block-sample {
     flex: 1; display:flex; flex-direction:column; align-items:center; gap:6px;
     padding: 10px 4px; border: 1px solid var(--line); border-radius: var(--radius);

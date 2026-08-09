@@ -63,7 +63,9 @@
   #pool-list li.pool-chip {
     display:flex; align-items:center; gap:8px; padding:8px 9px; margin-bottom:6px;
     background:var(--paper); border:1px solid var(--line); border-radius:var(--radius);
-    cursor: grab; user-select:none; font-size:13px;
+    cursor: grab; font-size:13px;
+    user-select:none; -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none;
+    -webkit-touch-callout: none; touch-action: none;
   }
   #pool-list li.pool-chip.selected { border-color: var(--thread); background:#F3E7E5; }
   #pool-list li.pool-chip .pos-tag { margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--ink-soft); }
@@ -76,7 +78,9 @@
     position: absolute; transform: translate(-50%, -50%);
     display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
     border: 1.6px solid var(--ink); background: var(--paper-card); border-radius: 4px;
-    cursor: grab; user-select:none; padding: 2px 4px; font-size: 11px; line-height:1.25;
+    cursor: grab; padding: 2px 4px; font-size: 11px; line-height:1.25;
+    user-select:none; -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none;
+    -webkit-touch-callout: none; touch-action: none;
   }
   .slot-box.empty { background: var(--paper); border-style: dashed; color: var(--ink-soft); }
   .slot-box.selected { border-color: var(--thread); box-shadow: 0 0 0 2px rgba(158,43,59,0.25); }
